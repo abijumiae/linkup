@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Sparkles, X } from "lucide-react";
+import { Image, Plus, Search, Sparkles, X } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import {
   createGroup,
@@ -23,8 +23,10 @@ export default function GroupsPageClient() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createName, setCreateName] = useState("");
   const [createDescription, setCreateDescription] = useState("");
+  const [createCoverImage, setCreateCoverImage] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const loadGroups = useCallback(async () => {
     try {
@@ -89,10 +91,13 @@ export default function GroupsPageClient() {
     setIsCreating(true);
 
     try {
-      const created = await createGroup({
+      const payload = {
         name: createName.trim(),
         description: createDescription.trim(),
-      });
+        coverImage: createCoverImage.trim() || undefined,
+      };
+
+      const created = await createGroup(payload);
       setGroups((prev) => [
         {
           id: created.id,
@@ -111,6 +116,7 @@ export default function GroupsPageClient() {
       setShowCreateModal(false);
       setCreateName("");
       setCreateDescription("");
+      setCreateCoverImage("");
     } catch (err) {
       setCreateError(
         err instanceof ApiError ? err.message : "Unable to create group.",
@@ -144,14 +150,28 @@ export default function GroupsPageClient() {
                 own premium space.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center gap-2 rounded-full bg-violet-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-violet-400"
-            >
-              <Plus className="h-4 w-4" />
-              Create group
-            </button>
+            <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+              <div className="w-full rounded-full border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-600 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-300 sm:w-64">
+                <div className="flex items-center gap-2">
+                  <Search className="h-4 w-4 text-slate-400" />
+                  <input
+                    type="search"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Search groups"
+                    className="w-full bg-transparent outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(true)}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
+              >
+                <Plus className="h-4 w-4" />
+                Create group
+              </button>
+            </div>
           </div>
         </header>
 
@@ -181,15 +201,24 @@ export default function GroupsPageClient() {
                     You have not joined any groups yet.
                   </p>
                 ) : (
-                  myGroups.map((group) => (
-                    <GroupCard
-                      key={group.id}
-                      group={group}
-                      onJoin={handleJoin}
-                      onLeave={handleLeave}
-                      isLoading={actionGroupId === group.id}
-                    />
-                  ))
+                  myGroups
+                    .filter((group) => {
+                      if (!searchQuery.trim()) return true;
+                      const q = searchQuery.toLowerCase();
+                      return (
+                        group.name.toLowerCase().includes(q) ||
+                        group.description.toLowerCase().includes(q)
+                      );
+                    })
+                    .map((group) => (
+                      <GroupCard
+                        key={group.id}
+                        group={group}
+                        onJoin={handleJoin}
+                        onLeave={handleLeave}
+                        isLoading={actionGroupId === group.id}
+                      />
+                    ))
                 )}
               </div>
             </div>
@@ -216,15 +245,24 @@ export default function GroupsPageClient() {
                     No other groups to discover right now.
                   </p>
                 ) : (
-                  discoverGroups.map((group) => (
-                    <GroupCard
-                      key={group.id}
-                      group={group}
-                      onJoin={handleJoin}
-                      onLeave={handleLeave}
-                      isLoading={actionGroupId === group.id}
-                    />
-                  ))
+                  discoverGroups
+                    .filter((group) => {
+                      if (!searchQuery.trim()) return true;
+                      const q = searchQuery.toLowerCase();
+                      return (
+                        group.name.toLowerCase().includes(q) ||
+                        group.description.toLowerCase().includes(q)
+                      );
+                    })
+                    .map((group) => (
+                      <GroupCard
+                        key={group.id}
+                        group={group}
+                        onJoin={handleJoin}
+                        onLeave={handleLeave}
+                        isLoading={actionGroupId === group.id}
+                      />
+                    ))
                 )}
               </div>
             </div>
@@ -259,6 +297,24 @@ export default function GroupsPageClient() {
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
                   placeholder="e.g. Design Creators"
                 />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm text-slate-600 dark:text-slate-400">
+                  Cover image URL (optional)
+                </label>
+                <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 dark:border-white/10 dark:bg-slate-950">
+                  <Image className="h-4 w-4 text-slate-500" />
+                  <input
+                    value={createCoverImage}
+                    onChange={(e) => setCreateCoverImage(e.target.value)}
+                    type="url"
+                    className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
+                    placeholder="https://example.com/cover.jpg"
+                  />
+                </div>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Used as the banner image on your group card.
+                </p>
               </div>
               <div>
                 <label className="mb-2 block text-sm text-slate-600 dark:text-slate-400">
