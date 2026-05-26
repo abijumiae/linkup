@@ -7,6 +7,7 @@ import { useAuth } from "@/src/lib/AuthProvider";
 import { Eye, EyeOff, Globe, Lock, Mail, User } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import { AccountType, signup } from "@/src/lib/auth";
+import { COUNTRIES } from "@/src/lib/profileOptions";
 import { ThemeToggle } from "../components/ThemeToggle";
 
 export default function SignupPage() {
@@ -24,7 +25,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [accountType, setAccountType] = useState<AccountType>("PERSONAL");
-  const [country, setCountry] = useState("UAE");
+  const [country, setCountry] = useState("United Arab Emirates");
   const [language, setLanguage] = useState("en");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -195,14 +196,18 @@ export default function SignupPage() {
               <span className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-300">Country</span>
               <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 transition focus-within:border-violet-400/60 dark:border-white/10 dark:bg-slate-950/70 dark:focus-within:border-violet-400/50">
                 <Globe className="h-4 w-4 text-slate-500" />
-                <input
-                  className="w-full bg-transparent text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
-                  placeholder="UAE"
-                  type="text"
+                <select
+                  className="w-full bg-transparent text-sm text-slate-900 outline-none dark:text-white"
                   value={country}
                   onChange={(event) => setCountry(event.target.value)}
                   disabled={isLoading}
-                />
+                >
+                  {COUNTRIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
               </div>
             </label>
           </div>
@@ -211,14 +216,17 @@ export default function SignupPage() {
             <span className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-300">Language</span>
             <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 transition focus-within:border-violet-400/60 dark:border-white/10 dark:bg-slate-950/70 dark:focus-within:border-violet-400/50">
               <Globe className="h-4 w-4 text-slate-500" />
-              <input
-                className="w-full bg-transparent text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
-                placeholder="en"
-                type="text"
+              <select
+                className="w-full bg-transparent text-sm text-slate-900 outline-none dark:text-white"
                 value={language}
                 onChange={(event) => setLanguage(event.target.value)}
                 disabled={isLoading}
-              />
+              >
+                <option value="en">English</option>
+                <option value="ar">Arabic</option>
+                <option value="hi">Hindi</option>
+                <option value="ur">Urdu</option>
+              </select>
             </div>
           </label>
 

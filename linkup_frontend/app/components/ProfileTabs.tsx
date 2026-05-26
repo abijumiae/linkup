@@ -1,22 +1,54 @@
-const tabs = ["Posts", "Reels", "Groups", "Saved"];
+"use client";
 
-export default function ProfileTabs() {
+import { useState } from "react";
+
+const tabs = ["Posts", "Reels", "Groups", "Saved"] as const;
+export type ProfileTab = (typeof tabs)[number];
+
+type ProfileTabsProps = {
+  activeTab?: ProfileTab;
+  onTabChange?: (tab: ProfileTab) => void;
+};
+
+export default function ProfileTabs({
+  activeTab: controlledTab,
+  onTabChange,
+}: ProfileTabsProps) {
+  const [internalTab, setInternalTab] = useState<ProfileTab>("Posts");
+  const activeTab = controlledTab ?? internalTab;
+
+  function handleTabClick(tab: ProfileTab) {
+    if (onTabChange) {
+      onTabChange(tab);
+    } else {
+      setInternalTab(tab);
+    }
+  }
+
   return (
-    <div className="rounded-[2rem] border border-slate-200 bg-white p-4 shadow-xl shadow-slate-950/10 transition duration-300 hover:-translate-y-0.5 hover:border-violet-400/30 dark:border-white/10 dark:bg-slate-950/80 dark:shadow-slate-950/20 backdrop-blur-xl">
-      <div className="flex flex-wrap gap-3">
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition duration-300 ${
-              tab === "Posts"
-                ? "bg-violet-500 text-slate-950"
-                : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
+    <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-lg shadow-slate-950/5 dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20 sm:p-4">
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {tabs.map((tab) => {
+          const isActive = tab === activeTab;
+
+          return (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => handleTabClick(tab)}
+              className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                isActive
+                  ? "bg-gradient-to-r from-violet-600 to-sky-600 text-white shadow-md shadow-violet-600/20"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+              }`}
+            >
+              {tab}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
 }
+
+export { tabs as profileTabs };
