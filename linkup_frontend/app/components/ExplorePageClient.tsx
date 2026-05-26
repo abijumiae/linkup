@@ -1,8 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, TrendingUp, Users } from "lucide-react";
+import {
+  Briefcase,
+  CalendarDays,
+  Search,
+  ShoppingBag,
+  TrendingUp,
+  Users,
+} from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import { getCurrentUser } from "@/src/lib/auth";
 import { fetchExplorePosts, searchAll, SearchUser } from "@/src/lib/discovery";
@@ -12,6 +20,57 @@ import AuthLoadingScreen from "./AuthLoadingScreen";
 import FeedPostCard from "./FeedPostCard";
 import SearchUserCard from "./SearchUserCard";
 
+type ExploreTab =
+  | "posts"
+  | "people"
+  | "groups"
+  | "marketplace"
+  | "jobs"
+  | "events";
+
+const tabs: { id: ExploreTab; label: string; icon: typeof TrendingUp }[] = [
+  { id: "posts", label: "Top Posts", icon: TrendingUp },
+  { id: "people", label: "People", icon: Users },
+  { id: "groups", label: "Groups", icon: Users },
+  { id: "marketplace", label: "Marketplace", icon: ShoppingBag },
+  { id: "jobs", label: "Jobs", icon: Briefcase },
+  { id: "events", label: "Events", icon: CalendarDays },
+];
+
+function DiscoveryHub({
+  title,
+  description,
+  href,
+  cta,
+  icon: Icon,
+}: {
+  title: string;
+  description: string;
+  href: string;
+  cta: string;
+  icon: typeof ShoppingBag;
+}) {
+  return (
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center dark:border-white/15 dark:bg-slate-900/60">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-300">
+        <Icon className="h-5 w-5" />
+      </div>
+      <h3 className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">
+        {title}
+      </h3>
+      <p className="mx-auto mt-2 max-w-md text-sm text-slate-600 dark:text-slate-400">
+        {description}
+      </p>
+      <Link
+        href={href}
+        className="mt-5 inline-flex rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
+      >
+        {cta}
+      </Link>
+    </div>
+  );
+}
+
 export default function ExplorePageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -20,6 +79,7 @@ export default function ExplorePageClient() {
 
   const [searchInput, setSearchInput] = useState(queryParam);
   const [activeQuery, setActiveQuery] = useState(queryParam);
+  const [activeTab, setActiveTab] = useState<ExploreTab>("posts");
   const [explorePosts, setExplorePosts] = useState<FeedPost[]>([]);
   const [searchUsers, setSearchUsers] = useState<SearchUser[]>([]);
   const [searchPosts, setSearchPosts] = useState<FeedPost[]>([]);
@@ -70,6 +130,7 @@ export default function ExplorePageClient() {
 
       if (queryParam.trim()) {
         await loadSearch(queryParam);
+        setActiveTab("posts");
       } else {
         await loadExplore();
       }
@@ -98,7 +159,135 @@ export default function ExplorePageClient() {
   }
 
   const isSearchMode = activeQuery.trim().length > 0;
-  const displayPosts = isSearchMode ? searchPosts : explorePosts;
+
+  function renderTabContent() {
+    if (activeTab === "posts") {
+      const posts = isSearchMode ? searchPosts : explorePosts;
+
+      if (posts.length === 0) {
+        return (
+          <p className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600 dark:border-white/10 dark:bg-slate-900/80 dark:text-slate-400">
+            {isSearchMode
+              ? "No posts found for this search."
+              : "No public posts yet. Be the first to share something on the home feed."}
+          </p>
+        );
+      }
+
+      return (
+        <div className="space-y-4">
+          {posts.map((post) => (
+            <FeedPostCard
+              key={post.id}
+              post={post}
+              currentUserId={currentUserId}
+            />
+          ))}
+        </div>
+      );
+    }
+
+    if (activeTab === "people") {
+      if (!isSearchMode) {
+        return (
+          <DiscoveryHub
+            title="Find people on LinkUp"
+            description="Search by name, username, or email to discover creators and professionals in the community."
+            href="/explore"
+            cta="Use search above"
+            icon={Users}
+          />
+        );
+      }
+
+      if (searchUsers.length === 0) {
+        return (
+          <p className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600 dark:border-white/10 dark:bg-slate-900/80 dark:text-slate-400">
+            No users found.
+          </p>
+        );
+      }
+
+      return (
+        <div className="space-y-3">
+          {searchUsers.map((user) => (
+            <SearchUserCard
+              key={user.id}
+              user={user}
+              currentUserId={currentUserId}
+            />
+          ))}
+        </div>
+      );
+    }
+
+    if (activeTab === "groups") {
+      return (
+        <DiscoveryHub
+          title="Explore groups"
+          description="Join communities, collaborate with others, and discover groups that match your interests."
+          href="/groups"
+          cta="Browse groups"
+          icon={Users}
+        />
+      );
+    }
+
+    if (activeTab === "marketplace") {
+      const href = isSearchMode
+        ? `/marketplace?q=${encodeURIComponent(activeQuery)}`
+        : "/marketplace";
+      return (
+        <DiscoveryHub
+          title="Browse marketplace"
+          description={
+            isSearchMode
+              ? `Continue searching "${activeQuery}" in marketplace listings.`
+              : "Find services, templates, and products shared by the community."
+          }
+          href={href}
+          cta={isSearchMode ? "Search marketplace" : "Open marketplace"}
+          icon={ShoppingBag}
+        />
+      );
+    }
+
+    if (activeTab === "jobs") {
+      const href = isSearchMode
+        ? `/jobs?q=${encodeURIComponent(activeQuery)}`
+        : "/jobs";
+      return (
+        <DiscoveryHub
+          title="Discover jobs"
+          description={
+            isSearchMode
+              ? `Continue searching "${activeQuery}" in job listings.`
+              : "Explore open roles and opportunities posted by LinkUp members."
+          }
+          href={href}
+          cta={isSearchMode ? "Search jobs" : "Open jobs"}
+          icon={Briefcase}
+        />
+      );
+    }
+
+    const href = isSearchMode
+      ? `/events?q=${encodeURIComponent(activeQuery)}`
+      : "/events";
+    return (
+      <DiscoveryHub
+        title="Find events"
+        description={
+          isSearchMode
+            ? `Continue searching "${activeQuery}" in upcoming events.`
+            : "See what's happening in the community and join events near you."
+        }
+        href={href}
+        cta={isSearchMode ? "Search events" : "Open events"}
+        icon={CalendarDays}
+      />
+    );
+  }
 
   if (isLoading) {
     return <AuthLoadingScreen message="Loading explore..." />;
@@ -107,106 +296,78 @@ export default function ExplorePageClient() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="space-y-8">
-          <header className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-950/20 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80">
+        <div className="space-y-6">
+          <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
             <div className="flex flex-col gap-4">
               <div>
-                <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
+                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
                   Explore
                 </p>
                 <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">
                   {isSearchMode
                     ? `Results for "${activeQuery}"`
-                    : "Discover new content, creators, and communities"}
+                    : "Discover content, people, and communities"}
                 </h1>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                  Search across LinkUp or browse trending posts and discovery
+                  hubs.
+                </p>
               </div>
               <form onSubmit={handleSearchSubmit} className="relative max-w-2xl">
                 <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
-                  className="w-full rounded-full border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100 dark:placeholder:text-slate-500"
+                  className="w-full rounded-full border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100 dark:placeholder:text-slate-500"
                   placeholder="Search people and posts..."
                 />
               </form>
             </div>
           </header>
 
-          {error ? <p className="text-sm text-red-500 dark:text-red-400">{error}</p> : null}
+          {error ? (
+            <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">
+              {error}
+            </p>
+          ) : null}
+
+          <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white p-3 shadow-lg dark:border-white/10 dark:bg-slate-900/80">
+            <div className="flex gap-2">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                      isActive
+                        ? "bg-gradient-to-r from-violet-600 to-sky-600 text-white shadow-md shadow-violet-600/20"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
-            <section className="space-y-6">
-              {isSearchMode ? (
-                <>
-                  <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl shadow-slate-950/20 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80">
-                    <div className="flex items-center gap-3">
-                      <Users className="h-5 w-5 text-violet-300" />
-                      <h2 className="text-xl font-semibold text-slate-900 dark:text-white">People</h2>
-                    </div>
-                    <div className="mt-4 space-y-3">
-                      {searchUsers.length === 0 ? (
-                        <p className="text-sm text-slate-600 dark:text-slate-400">No users found.</p>
-                      ) : (
-                        searchUsers.map((user) => (
-                          <SearchUserCard
-                            key={user.id}
-                            user={user}
-                            currentUserId={currentUserId}
-                          />
-                        ))
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Posts</h2>
-                    {searchPosts.length === 0 ? (
-                      <p className="rounded-[2rem] border border-slate-200 bg-white p-6 text-sm text-slate-600 dark:border-white/10 dark:bg-slate-900/80 dark:text-slate-400">
-                        No posts found.
-                      </p>
-                    ) : (
-                      searchPosts.map((post) => (
-                        <FeedPostCard
-                          key={post.id}
-                          post={post}
-                          currentUserId={currentUserId}
-                        />
-                      ))
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <TrendingUp className="h-5 w-5 text-violet-300" />
-                    <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
-                      Trending & latest posts
-                    </h2>
-                  </div>
-                  {displayPosts.length === 0 ? (
-                    <p className="rounded-[2rem] border border-slate-200 bg-white p-6 text-sm text-slate-600 dark:border-white/10 dark:bg-slate-900/80 dark:text-slate-400">
-                      No public posts yet. Be the first to share something on the home feed.
-                    </p>
-                  ) : (
-                    displayPosts.map((post) => (
-                      <FeedPostCard
-                        key={post.id}
-                        post={post}
-                        currentUserId={currentUserId}
-                      />
-                    ))
-                  )}
-                </div>
-              )}
-            </section>
+            <section>{renderTabContent()}</section>
 
             <aside className="space-y-6">
-              <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl shadow-slate-950/20 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80">
-                <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg dark:border-white/10 dark:bg-slate-900/80">
+                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
                   Trending
                 </p>
-                <h2 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">Hot hashtags</h2>
-                <div className="mt-4 flex flex-wrap gap-3">
+                <h2 className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">
+                  Hot topics
+                </h2>
+                <div className="mt-4 flex flex-wrap gap-2">
                   {exploreTrendingTags.map((tag) => (
                     <button
                       key={tag}
@@ -215,13 +376,50 @@ export default function ExplorePageClient() {
                         const term = tag.replace("#", "");
                         router.push(`/explore?q=${encodeURIComponent(term)}`);
                       }}
-                      className="rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                      className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1.5 text-sm text-slate-700 transition hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
                     >
                       {tag}
                     </button>
                   ))}
                 </div>
               </div>
+
+              {!isSearchMode && explorePosts.length > 0 ? (
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg dark:border-white/10 dark:bg-slate-900/80">
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+                    Latest posts
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                    {explorePosts.length} public posts in explore right now.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("posts")}
+                    className="mt-4 text-sm font-semibold text-violet-600 transition hover:text-violet-500 dark:text-violet-300 dark:hover:text-violet-200"
+                  >
+                    View top posts →
+                  </button>
+                </div>
+              ) : null}
+
+              {isSearchMode && searchUsers.length > 0 ? (
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg dark:border-white/10 dark:bg-slate-900/80">
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+                    Suggested people
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                    {searchUsers.length} user
+                    {searchUsers.length === 1 ? "" : "s"} matched your search.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("people")}
+                    className="mt-4 text-sm font-semibold text-violet-600 transition hover:text-violet-500 dark:text-violet-300 dark:hover:text-violet-200"
+                  >
+                    View people →
+                  </button>
+                </div>
+              ) : null}
             </aside>
           </div>
         </div>
