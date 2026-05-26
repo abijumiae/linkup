@@ -26,7 +26,10 @@ export default function LayoutContent({
   const pathname = usePathname();
   const { isAuthenticated } = useAuth();
 
-  const isAuthPage = pathname === "/login" || pathname === "/signup";
+  const isAuthPage =
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname === "/";
   const showNavigation = isAuthenticated && !isAuthPage;
 
   return (
