@@ -32,6 +32,19 @@ import { ThemeToggle } from "../../components/ThemeToggle";
 
 type Visibility = "PUBLIC" | "PRIVATE";
 type MessagePolicy = "EVERYONE" | "FOLLOWERS" | "NO_ONE";
+const LOCAL_PREFS_KEY = "linkup_settings_ui_prefs_v1";
+
+type LocalUiPrefs = {
+  profession: string;
+  interests: string;
+  visibility: Visibility;
+  allowMessages: MessagePolicy;
+  showCountry: boolean;
+  notifyMessages: boolean;
+  notifyLikesComments: boolean;
+  notifyFollows: boolean;
+  notifyUpdates: boolean;
+};
 
 function ToggleRow({
   label,
@@ -104,6 +117,7 @@ export default function SettingsPage() {
   const [notifyLikesComments, setNotifyLikesComments] = useState(true);
   const [notifyFollows, setNotifyFollows] = useState(true);
   const [notifyUpdates, setNotifyUpdates] = useState(false);
+  const [uiPrefsReady, setUiPrefsReady] = useState(false);
 
   const handleAuthFailure = useCallback(() => {
     logout();
@@ -139,6 +153,41 @@ export default function SettingsPage() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(LOCAL_PREFS_KEY);
+      if (!stored) {
+        setUiPrefsReady(true);
+        return;
+      }
+
+      const parsed = JSON.parse(stored) as Partial<LocalUiPrefs>;
+      if (typeof parsed.profession === "string") setProfession(parsed.profession);
+      if (typeof parsed.interests === "string") setInterests(parsed.interests);
+      if (parsed.visibility === "PUBLIC" || parsed.visibility === "PRIVATE") {
+        setVisibility(parsed.visibility);
+      }
+      if (
+        parsed.allowMessages === "EVERYONE" ||
+        parsed.allowMessages === "FOLLOWERS" ||
+        parsed.allowMessages === "NO_ONE"
+      ) {
+        setAllowMessages(parsed.allowMessages);
+      }
+      if (typeof parsed.showCountry === "boolean") setShowCountry(parsed.showCountry);
+      if (typeof parsed.notifyMessages === "boolean") setNotifyMessages(parsed.notifyMessages);
+      if (typeof parsed.notifyLikesComments === "boolean") {
+        setNotifyLikesComments(parsed.notifyLikesComments);
+      }
+      if (typeof parsed.notifyFollows === "boolean") setNotifyFollows(parsed.notifyFollows);
+      if (typeof parsed.notifyUpdates === "boolean") setNotifyUpdates(parsed.notifyUpdates);
+    } catch {
+      // Ignore malformed local prefs and continue with defaults.
+    } finally {
+      setUiPrefsReady(true);
+    }
+  }, []);
+
   const interestsList = useMemo(() => {
     return interests
       .split(",")
@@ -166,6 +215,18 @@ export default function SettingsPage() {
       const updated = await fetchUserProfile();
       setProfileUser(updated);
       setUser(updated);
+      const localPrefs: LocalUiPrefs = {
+        profession,
+        interests,
+        visibility,
+        allowMessages,
+        showCountry,
+        notifyMessages,
+        notifyLikesComments,
+        notifyFollows,
+        notifyUpdates,
+      };
+      localStorage.setItem(LOCAL_PREFS_KEY, JSON.stringify(localPrefs));
       setSuccess("Settings saved successfully.");
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -184,6 +245,18 @@ export default function SettingsPage() {
   }
 
   if (isLoading) {
+    return (
+      <div className="min-h-[60vh] bg-slate-50 px-4 py-10 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+        <div className="mx-auto max-w-6xl">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg dark:border-white/10 dark:bg-slate-900/80">
+            Loading settings...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!uiPrefsReady) {
     return (
       <div className="min-h-[60vh] bg-slate-50 px-4 py-10 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
         <div className="mx-auto max-w-6xl">
@@ -574,7 +647,7 @@ export default function SettingsPage() {
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-lg shadow-slate-950/5 dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
             <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
               <Bell className="h-4 w-4" />
-              Privacy and notification preferences are UI-only right now.
+              Privacy, notification, profession, and interest preferences are saved locally.
             </div>
             <button
               type="submit"
