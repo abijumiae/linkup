@@ -1,11 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin, ShoppingBag } from "lucide-react";
-import {
-  formatPrice,
-  MarketplaceItem,
-} from "@/src/lib/marketplace";
+import { Mail, MapPin, ShoppingBag, Tag } from "lucide-react";
+import { formatPrice, MarketplaceItem } from "@/src/lib/marketplace";
 
 type MarketplaceCardProps = {
   item: MarketplaceItem;
@@ -13,57 +10,80 @@ type MarketplaceCardProps = {
 
 export default function MarketplaceCard({ item }: MarketplaceCardProps) {
   return (
-    <article className="card-float flex h-full flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white/90 shadow-slate-950/10 transition duration-300 hover:-translate-y-1 hover:border-violet-400/30 hover:shadow-violet-500/20 dark:border-white/10 dark:bg-slate-950/85">
+    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-950/5 transition duration-300 hover:-translate-y-1 hover:border-violet-400/30 hover:shadow-violet-500/10 dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
       {item.imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={item.imageUrl}
           alt=""
-          className="h-40 w-full object-cover"
+          className="h-44 w-full object-cover"
         />
       ) : (
-        <div className="flex h-40 items-center justify-center bg-gradient-to-br from-violet-500/20 via-slate-900 to-slate-950">
-          <ShoppingBag className="h-10 w-10 text-violet-300/60" />
+        <div className="flex h-44 items-center justify-center bg-gradient-to-br from-violet-500/15 via-slate-100 to-sky-500/10 dark:from-violet-500/20 dark:via-slate-900 dark:to-slate-950">
+          <ShoppingBag className="h-12 w-12 text-violet-500/40 dark:text-violet-300/50" />
         </div>
       )}
-      <div className="flex flex-1 flex-col p-6">
-        <p className="text-sm uppercase tracking-[0.25em] text-violet-300/80">
-          {item.category}
+
+      <div className="flex flex-1 flex-col p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-violet-500/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-200">
+            {item.category}
+          </span>
+          {item.condition ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600 dark:bg-white/5 dark:text-slate-300">
+              <Tag className="h-3 w-3" />
+              {item.condition}
+            </span>
+          ) : null}
+        </div>
+
+        <h3 className="mt-3 line-clamp-2 text-lg font-semibold text-slate-900 dark:text-white">
+          {item.title}
+        </h3>
+
+        <p className="mt-2 text-xl font-semibold text-violet-700 dark:text-violet-200">
+          {formatPrice(item.price, item.currency)}
         </p>
-        <h3 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">{item.title}</h3>
-        <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
+
+        {item.location ? (
+          <p className="mt-2 flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400">
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-violet-500 dark:text-violet-300" />
+            {item.location}
+          </p>
+        ) : null}
+
+        <p className="mt-3 line-clamp-2 flex-1 text-sm leading-6 text-slate-600 dark:text-slate-400">
           {item.description}
         </p>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-3xl bg-slate-100 p-4 dark:bg-slate-900/80">
-            <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
-              Price
-            </p>
-            <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">
-              {formatPrice(item.price, item.currency)}
-            </p>
-          </div>
-          {item.location && (
-            <div className="rounded-3xl bg-slate-100 p-4 dark:bg-slate-900/80">
-              <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                Location
-              </p>
-              <p className="mt-2 flex items-center gap-1 text-sm text-slate-700 dark:text-slate-300">
-                <MapPin className="h-3.5 w-3.5 shrink-0 text-violet-300" />
-                {item.location}
-              </p>
-            </div>
+
+        <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
+          Seller:{" "}
+          <span className="font-medium text-slate-700 dark:text-slate-200">
+            {item.seller.name}
+          </span>
+        </p>
+
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+          <Link
+            href={`/marketplace/${item.id}`}
+            className="inline-flex flex-1 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-slate-700 transition hover:border-violet-400/40 hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+          >
+            View details
+          </Link>
+          {!item.isOwner ? (
+            <Link
+              href={`/messages?userId=${item.seller.id}&listingId=${item.id}`}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-white shadow-md shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
+            >
+              <Mail className="h-3.5 w-3.5" />
+              Message seller
+            </Link>
+          ) : (
+            <span className="inline-flex flex-1 items-center justify-center rounded-full border border-violet-400/30 bg-violet-500/10 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-violet-700 dark:text-violet-200">
+              Your listing
+            </span>
           )}
         </div>
-        <div className="mt-5 flex items-center justify-between gap-3 text-sm text-slate-500 dark:text-slate-400">
-          <span>Seller: {item.seller.name}</span>
-        </div>
-        <Link
-          href={`/marketplace/${item.id}`}
-          className="mt-5 inline-flex justify-center rounded-full border border-violet-500/30 bg-violet-500/10 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.2em] text-violet-700 transition hover:bg-violet-500/15 dark:border-white/10 dark:bg-violet-500/15 dark:text-violet-200 dark:hover:bg-violet-500/25"
-        >
-          View details
-        </Link>
       </div>
     </article>
   );

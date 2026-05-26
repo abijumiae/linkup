@@ -167,7 +167,7 @@ export default function MarketplaceDetailClient({
             <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">
               {item.title}
             </h1>
-            <p className="mt-4 text-2xl font-semibold text-violet-200">
+            <p className="mt-4 text-2xl font-semibold text-violet-700 dark:text-violet-200">
               {formatPrice(item.price, item.currency)}
             </p>
 
@@ -228,7 +228,7 @@ export default function MarketplaceDetailClient({
               ) : (
                 <Link
                   href={`/messages?userId=${item.seller.id}&listingId=${item.id}`}
-                  className="inline-flex items-center gap-2 rounded-full bg-violet-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-violet-400"
+                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
                 >
                   <Mail className="h-4 w-4" />
                   Message seller
