@@ -232,6 +232,18 @@ export default function ProfilePageClient() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
+        <header className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
+          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
+            Profile
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">
+            Your public profile
+          </h1>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+            Manage your details and review the posts you&apos;ve shared.
+          </p>
+        </header>
+
         {success ? (
           <div className="mb-5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-200">
             {success}
@@ -248,6 +260,7 @@ export default function ProfilePageClient() {
           followers={profileUser.followersCount}
           following={profileUser.followingCount}
           posts={profileUser.postsCount}
+          isEditing={isEditing}
           onEditProfile={() => {
             setSuccess(null);
             setIsEditing(true);
@@ -265,10 +278,26 @@ export default function ProfilePageClient() {
           </div>
         ) : null}
 
-        <div className="mt-6 space-y-4">
+        <section className="mt-8 space-y-4">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-violet-600 dark:text-violet-300/80">
+                Activity
+              </p>
+              <h2 className="mt-1 text-xl font-semibold text-slate-900 dark:text-white">
+                Your posts
+              </h2>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                {userPosts.length === 0
+                  ? "You haven't shared any posts yet."
+                  : `${userPosts.length} post${userPosts.length === 1 ? "" : "s"} on your profile.`}
+              </p>
+            </div>
+          </div>
+
           <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
           {renderTabContent()}
-        </div>
+        </section>
       </div>
     </div>
   );
