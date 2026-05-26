@@ -1,13 +1,22 @@
-import { Bell, Briefcase, CalendarDays, Heart, MessageCircle, ShoppingBag, UserPlus, Users } from "lucide-react";
-import type { NotificationType } from "@/src/lib/notifications";
+import {
+  Bell,
+  Briefcase,
+  CalendarDays,
+  Heart,
+  MessageCircle,
+  ShoppingBag,
+  UserPlus,
+  Users,
+} from "lucide-react";
+import type { NotificationActor, NotificationType } from "@/src/lib/notifications";
 
 type NotificationItemProps = {
   type: NotificationType;
-  actorName: string;
+  actor: NotificationActor;
   message: string;
   time: string;
   unread?: boolean;
-  onClick?: () => void;
+  onMarkRead?: () => void;
 };
 
 const iconMap = {
@@ -15,56 +24,117 @@ const iconMap = {
   COMMENT: MessageCircle,
   FOLLOW: UserPlus,
   GROUP_JOIN: Users,
-  MARKETPLACE_INQUIRY: ShoppingBag,
+  MARKETPLACE_INQUIRY: MessageCircle,
   JOB_APPLICATION: Briefcase,
   EVENT_JOIN: CalendarDays,
 };
 
-const iconColorMap = {
-  LIKE: "text-pink-400",
-  COMMENT: "text-sky-300",
-  FOLLOW: "text-violet-300",
-  GROUP_JOIN: "text-emerald-300",
-  MARKETPLACE_INQUIRY: "text-amber-300",
-  JOB_APPLICATION: "text-cyan-300",
-  EVENT_JOIN: "text-indigo-300",
+const typeLabelMap: Record<NotificationType, string> = {
+  LIKE: "Like",
+  COMMENT: "Comment",
+  FOLLOW: "Follow",
+  GROUP_JOIN: "Group",
+  MARKETPLACE_INQUIRY: "Message",
+  JOB_APPLICATION: "Job",
+  EVENT_JOIN: "Event",
 };
+
+const iconColorMap: Record<NotificationType, string> = {
+  LIKE: "text-pink-500 dark:text-pink-400",
+  COMMENT: "text-sky-500 dark:text-sky-400",
+  FOLLOW: "text-violet-500 dark:text-violet-400",
+  GROUP_JOIN: "text-emerald-600 dark:text-emerald-400",
+  MARKETPLACE_INQUIRY: "text-amber-600 dark:text-amber-400",
+  JOB_APPLICATION: "text-cyan-600 dark:text-cyan-400",
+  EVENT_JOIN: "text-indigo-500 dark:text-indigo-400",
+};
+
+const badgeColorMap: Record<NotificationType, string> = {
+  LIKE: "bg-pink-500/10 text-pink-700 dark:text-pink-200",
+  COMMENT: "bg-sky-500/10 text-sky-700 dark:text-sky-200",
+  FOLLOW: "bg-violet-500/10 text-violet-700 dark:text-violet-200",
+  GROUP_JOIN: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-200",
+  MARKETPLACE_INQUIRY: "bg-amber-500/10 text-amber-700 dark:text-amber-200",
+  JOB_APPLICATION: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-200",
+  EVENT_JOIN: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-200",
+};
+
+function getInitials(name: string, username: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+  return (name[0] ?? username[0] ?? "U").toUpperCase();
+}
 
 export default function NotificationItem({
   type,
-  actorName,
+  actor,
   message,
   time,
-  unread,
-  onClick,
+  unread = false,
+  onMarkRead,
 }: NotificationItemProps) {
   const Icon = iconMap[type] ?? Bell;
+  const typeLabel = typeLabelMap[type] ?? "Update";
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex w-full items-center justify-between gap-4 rounded-[1.75rem] border border-slate-200 bg-white p-4 text-left transition duration-300 dark:border-white/10 dark:bg-slate-950/85 ${
+    <article
+      className={`rounded-xl border p-4 transition duration-200 ${
         unread
-          ? "border-violet-400/30 bg-violet-500/10"
-          : "hover:border-slate-300 hover:bg-slate-50 dark:hover:border-white/20 dark:hover:bg-white/5"
+          ? "border-violet-400/30 bg-violet-500/5 shadow-sm dark:bg-violet-500/10"
+          : "border-slate-200 bg-white dark:border-white/10 dark:bg-slate-900/70"
       }`}
     >
-      <div className="flex items-center gap-4">
-        <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-violet-500/15 text-violet-600 dark:text-violet-300">
-          <Icon className={`h-5 w-5 ${iconColorMap[type]}`} />
+      <div className="flex items-start gap-4">
+        <div className="relative shrink-0">
+          {actor.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={actor.avatarUrl}
+              alt=""
+              className="h-12 w-12 rounded-xl object-cover ring-2 ring-violet-500/20"
+            />
+          ) : (
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-sky-500 text-sm font-semibold text-white">
+              {getInitials(actor.name, actor.username)}
+            </div>
+          )}
+          <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border border-white bg-white shadow dark:border-slate-900 dark:bg-slate-900">
+            <Icon className={`h-3.5 w-3.5 ${iconColorMap[type]}`} />
+          </div>
         </div>
-        <div>
-          <p className="text-sm font-medium text-slate-900 dark:text-white">{actorName}</p>
-          <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">{message}</p>
-          <p className="mt-1 text-xs text-slate-500">{time}</p>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-semibold text-slate-900 dark:text-white">
+              {actor.name}
+            </p>
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide ${badgeColorMap[type]}`}
+            >
+              {typeLabel}
+            </span>
+            {unread ? (
+              <span className="inline-flex h-2 w-2 rounded-full bg-violet-500" aria-label="Unread" />
+            ) : null}
+          </div>
+          <p className="mt-1 text-sm leading-6 text-slate-700 dark:text-slate-300">
+            {message}
+          </p>
+          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{time}</p>
         </div>
+
+        {unread && onMarkRead ? (
+          <button
+            type="button"
+            onClick={onMarkRead}
+            className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+          >
+            Mark read
+          </button>
+        ) : null}
       </div>
-      {unread ? (
-        <span className="rounded-full bg-violet-500 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-950">
-          New
-        </span>
-      ) : null}
-    </button>
+    </article>
   );
 }
