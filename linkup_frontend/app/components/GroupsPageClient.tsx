@@ -31,10 +31,14 @@ export default function GroupsPageClient() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createName, setCreateName] = useState("");
   const [createDescription, setCreateDescription] = useState("");
+  const [createCategory, setCreateCategory] = useState("");
   const [createCoverImage, setCreateCoverImage] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState<"all" | "joined" | "discover">(
+    "all",
+  );
 
   const loadGroups = useCallback(async () => {
     try {
@@ -124,6 +128,7 @@ export default function GroupsPageClient() {
       setShowCreateModal(false);
       setCreateName("");
       setCreateDescription("");
+      setCreateCategory("");
       setCreateCoverImage("");
     } catch (err) {
       setCreateError(
@@ -142,8 +147,13 @@ export default function GroupsPageClient() {
 
   const myGroups = groups.filter((group) => group.isMember);
   const discoverGroups = groups.filter((group) => !group.isMember);
-  const filteredMyGroups = myGroups.filter(matchesGroup);
-  const filteredDiscoverGroups = discoverGroups.filter(matchesGroup);
+  const searchedGroups = groups.filter(matchesGroup);
+  const filteredGroups =
+    activeFilter === "joined"
+      ? searchedGroups.filter((group) => group.isMember)
+      : activeFilter === "discover"
+        ? searchedGroups.filter((group) => !group.isMember)
+        : searchedGroups;
 
   if (isLoading) {
     return <AuthLoadingScreen />;
@@ -155,15 +165,14 @@ export default function GroupsPageClient() {
         <header className="mb-8 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
+              <p className="text-sm uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
                 Groups
               </p>
               <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">
-                Gather your communities in one place
+                Groups
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400">
-                Manage your communities, discover new groups, and launch your
-                own premium space.
+                Discover communities and build conversations.
               </p>
             </div>
             <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
@@ -197,75 +206,69 @@ export default function GroupsPageClient() {
           </p>
         )}
 
-        <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-          <section className="space-y-6">
-            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
-                    My groups
-                  </p>
-                  <h2 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
-                    Your communities
-                  </h2>
-                </div>
-                <Sparkles className="h-5 w-5 text-violet-300" />
-              </div>
-              <div className="mt-6 grid gap-4">
-                {myGroups.length === 0 ? (
-                  <EmptyState message="No groups yet. Join your first community to see it here." />
-                ) : filteredMyGroups.length === 0 ? (
-                  <EmptyState message="No groups match your search." />
-                ) : (
-                  filteredMyGroups.map((group) => (
-                    <GroupCard
-                      key={group.id}
-                      group={group}
-                      onJoin={handleJoin}
-                      onLeave={handleLeave}
-                      isLoading={actionGroupId === group.id}
-                    />
-                  ))
-                )}
-              </div>
+        <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
+          <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
+                Communities
+              </p>
+              <h2 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
+                Find your next group
+              </h2>
             </div>
-          </section>
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-violet-500 dark:text-violet-300" />
+              <span className="text-sm text-slate-600 dark:text-slate-400">
+                {myGroups.length} joined · {discoverGroups.length} to discover
+              </span>
+            </div>
+          </div>
 
-          <aside className="space-y-6">
-            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
-                    Discover
-                  </p>
-                  <h2 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
-                    Groups to join
-                  </h2>
-                </div>
-                <span className="rounded-full bg-violet-500/15 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-violet-200">
-                  All groups
-                </span>
-              </div>
-              <div className="mt-6 grid gap-4">
-                {discoverGroups.length === 0 ? (
-                  <EmptyState message="No groups yet to discover right now." />
-                ) : filteredDiscoverGroups.length === 0 ? (
-                  <EmptyState message="No groups match your search." />
-                ) : (
-                  filteredDiscoverGroups.map((group) => (
-                    <GroupCard
-                      key={group.id}
-                      group={group}
-                      onJoin={handleJoin}
-                      onLeave={handleLeave}
-                      isLoading={actionGroupId === group.id}
-                    />
-                  ))
-                )}
-              </div>
+          <div className="mb-6 flex flex-wrap gap-2">
+            {[
+              { id: "all", label: "All groups" },
+              { id: "joined", label: "Joined" },
+              { id: "discover", label: "Discover" },
+            ].map((chip) => (
+              <button
+                key={chip.id}
+                type="button"
+                onClick={() => setActiveFilter(chip.id as typeof activeFilter)}
+                className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+                  activeFilter === chip.id
+                    ? "border-violet-500/50 bg-violet-600 text-white shadow-md shadow-violet-600/20"
+                    : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                }`}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+
+          {filteredGroups.length === 0 ? (
+            <EmptyState
+              message={
+                activeFilter === "joined"
+                  ? "No groups yet. Join your first community to see it here."
+                  : activeFilter === "discover"
+                    ? "No groups available to discover right now."
+                    : "No groups match your search."
+              }
+            />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {filteredGroups.map((group) => (
+                <GroupCard
+                  key={group.id}
+                  group={group}
+                  onJoin={handleJoin}
+                  onLeave={handleLeave}
+                  isLoading={actionGroupId === group.id}
+                />
+              ))}
             </div>
-          </aside>
-        </div>
+          )}
+        </section>
       </div>
 
       {showCreateModal && (
@@ -313,6 +316,18 @@ export default function GroupsPageClient() {
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   Used as the banner image on your group card.
                 </p>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm text-slate-600 dark:text-slate-400">
+                  Category (optional)
+                </label>
+                <input
+                  value={createCategory}
+                  onChange={(e) => setCreateCategory(e.target.value)}
+                  maxLength={40}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
+                  placeholder="e.g. Design, Startups, Tech"
+                />
               </div>
               <div>
                 <label className="mb-2 block text-sm text-slate-600 dark:text-slate-400">
