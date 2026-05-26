@@ -2,13 +2,21 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import { useAuth } from "@/src/lib/AuthProvider";
 import { ArrowRight, Globe, Lock, Mail, Sparkles, User } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import { AccountType, signup } from "@/src/lib/auth";
 
 export default function SignupPage() {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace("/home");
+    }
+  }, [isAuthenticated, router]);
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");

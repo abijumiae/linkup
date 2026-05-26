@@ -3,16 +3,22 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
+import { useAuth } from "@/src/lib/AuthProvider";
 import { ArrowRight, Lock, Mail, Sparkles } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import { login } from "@/src/lib/auth";
-import { useAuth } from "@/src/lib/AuthProvider";
 import AuthLoadingScreen from "../components/AuthLoadingScreen";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { setUser } = useAuth();
+  const { setUser, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace("/home");
+    }
+  }, [isAuthenticated, router]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
