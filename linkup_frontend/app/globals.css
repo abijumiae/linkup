@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+:root {
+  --background: #050816;
+  --foreground: #e2e8f0;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html,
+body {
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background: radial-gradient(circle at top left, rgba(139, 92, 246, 0.22), transparent 22%),
+    radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.18), transparent 20%),
+    linear-gradient(180deg, #02040d 0%, #090c1d 100%);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+::selection {
+  background: rgba(139, 92, 246, 0.35);
+  color: white;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.page-panel {
+  border-radius: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.92);
+  box-shadow: 0 40px 120px rgba(79, 70, 229, 0.1);
+  backdrop-filter: blur(18px);
+}
+
+.card-float {
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.card-float:hover {
+  transform: translateY(-0.25rem);
+  box-shadow: 0 30px 120px rgba(79, 70, 229, 0.18);
+  border-color: rgba(139, 92, 246, 0.3);
+}
