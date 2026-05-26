@@ -54,19 +54,19 @@ function LoginForm() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-white px-4 py-8 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="relative flex min-h-screen items-center justify-center bg-slate-50 px-4 py-8 text-slate-900 dark:bg-slate-950 dark:text-white">
       <div className="absolute right-4 top-4">
         <ThemeToggle />
       </div>
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white/85 p-8 shadow-2xl shadow-slate-950/10 backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/50">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-slate-900 shadow-xl shadow-slate-950/10 backdrop-blur-sm dark:border-white/10 dark:bg-white/5 dark:text-white dark:shadow-slate-950/50">
         {/* Logo */}
         <div className="mb-8 text-center">
           <p className="text-sm font-semibold uppercase tracking-widest text-violet-400">LinkUp</p>
         </div>
 
         {/* Heading */}
-        <h1 className="mb-2 text-center text-2xl font-semibold text-slate-900 dark:text-white">Login to LinkUp</h1>
-        <p className="mb-8 text-center text-sm text-slate-600 dark:text-slate-400">Welcome back. Sign in to continue.</p>
+        <h1 className="mb-2 text-center text-2xl font-semibold text-slate-950 dark:text-white">Login to LinkUp</h1>
+        <p className="mb-8 text-center text-sm text-slate-600 dark:text-slate-300">Welcome back. Sign in to continue.</p>
 
         {/* Messages */}
         {success && (
@@ -84,10 +84,10 @@ function LoginForm() {
         <form className="space-y-5" onSubmit={handleSubmit}>
           <label className="block space-y-2">
             <span className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-300">Email</span>
-            <div className="flex items-center gap-3 rounded-lg border border-slate-300 bg-white px-3 py-2.5 transition focus-within:border-violet-400/60 dark:border-white/10 dark:bg-slate-950/50 dark:focus-within:border-violet-400/50">
+            <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 transition focus-within:border-violet-400/60 dark:border-white/10 dark:bg-slate-950/70 dark:focus-within:border-violet-400/50">
               <Mail className="h-4 w-4 text-slate-500" />
               <input
-                className="w-full bg-transparent text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-600"
+                className="w-full bg-transparent text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
                 placeholder="you@example.com"
                 type="email"
                 value={email}
@@ -101,10 +101,10 @@ function LoginForm() {
 
           <label className="block space-y-2">
             <span className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-300">Password</span>
-            <div className="flex items-center gap-3 rounded-lg border border-slate-300 bg-white px-3 py-2.5 transition focus-within:border-violet-400/60 dark:border-white/10 dark:bg-slate-950/50 dark:focus-within:border-violet-400/50">
+            <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 transition focus-within:border-violet-400/60 dark:border-white/10 dark:bg-slate-950/70 dark:focus-within:border-violet-400/50">
               <Lock className="h-4 w-4 text-slate-500" />
               <input
-                className="w-full bg-transparent text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-600"
+                className="w-full bg-transparent text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
                 placeholder="Enter your password"
                 type="password"
                 value={password}
