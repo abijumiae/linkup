@@ -14,8 +14,22 @@ async function bootstrap() {
     }),
   );
 
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-  app.enableCors({ origin: frontendUrl, credentials: true });
+  const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    'http://localhost:3000',
+    'http://localhost:3001',
+  ].filter(Boolean);
+
+  app.enableCors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('CORS policy: origin not allowed'));
+      }
+    },
+    credentials: true,
+  });
 
   await app.listen(process.env.PORT ?? 3000);
 }

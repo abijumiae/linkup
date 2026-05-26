@@ -40,7 +40,24 @@ LinkUp is a full social platform with a NestJS backend and a Next.js frontend. I
 
 ## Backend Deployment
 
-For production deploys, build then start the compiled server:
+Render deployment settings:
+
+- Root directory: `linkup_backend`
+- Build command:
+  ```bash
+  npm install && npx prisma generate && npm run build
+  ```
+- Start command:
+  ```bash
+  npm run start
+  ```
+- Required environment variables:
+  - `DATABASE_URL`
+  - `JWT_SECRET`
+  - `FRONTEND_URL`
+  - `PORT`
+
+For production deploys locally or elsewhere, build then start the compiled server:
 
 ```bash
 cd linkup_backend
@@ -69,6 +86,18 @@ FRONTEND_URL="https://app.example.com"
    ```bash
    npm run dev
    ```
+
+## Frontend Deployment
+
+Vercel deployment settings:
+
+- Root directory: `linkup_frontend`
+- Build command: `npm run build`
+- Output: Next.js default
+- Required environment variable:
+  - `NEXT_PUBLIC_API_URL`
+
+Set `NEXT_PUBLIC_API_URL` to your deployed backend URL in production.
 
 ## Prisma Commands
 
