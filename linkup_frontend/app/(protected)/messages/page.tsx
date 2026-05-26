@@ -202,25 +202,25 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {error ? (
-          <p className="mb-4 text-sm text-red-400">{error}</p>
+          <p className="mb-4 text-sm text-red-500 dark:text-red-400">{error}</p>
         ) : null}
 
         <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)]">
-          <aside className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-5 shadow-2xl shadow-slate-950/20 backdrop-blur-xl">
+          <aside className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
                   Messages
                 </p>
-                <h2 className="mt-2 text-xl font-semibold text-white">Chats</h2>
+                <h2 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">Chats</h2>
               </div>
             </div>
             <div className="mt-5 space-y-3">
               {conversations.length === 0 ? (
-                <p className="rounded-[1.75rem] border border-white/10 bg-slate-950/85 p-4 text-sm text-slate-400">
+                <p className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-slate-950/85 dark:text-slate-400">
                   No conversations yet. Message someone from your feed.
                 </p>
               ) : (
@@ -241,19 +241,19 @@ export default function MessagesPage() {
             </div>
           </aside>
 
-          <main className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-5 shadow-2xl shadow-slate-950/20 backdrop-blur-xl">
+          <main className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
             {activeUser ? (
               <div className="flex h-[min(70vh,720px)] flex-col gap-5">
-                <div className="flex flex-wrap items-center justify-between gap-4 rounded-[1.75rem] bg-slate-950/85 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-4 rounded-[1.75rem] bg-slate-50 p-4 dark:bg-slate-950/85">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-violet-500/15 text-lg font-semibold text-violet-300">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-violet-500/15 text-lg font-semibold text-violet-600 dark:text-violet-300">
                       {activeUser.name[0]}
                     </div>
                     <div>
                       <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
                         Chat
                       </p>
-                      <h2 className="text-xl font-semibold text-white">
+                      <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
                         {activeUser.name}
                       </h2>
                       <p className="text-sm text-slate-500">
@@ -281,8 +281,8 @@ export default function MessagesPage() {
                   <div ref={messagesEndRef} />
                 </div>
 
-                <div className="rounded-[1.75rem] border border-white/10 bg-slate-950/80 p-4">
-                  <div className="flex items-center gap-3 rounded-full border border-white/10 bg-slate-900/90 px-4 py-3">
+                <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-slate-950/80">
+                  <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-slate-900/90">
                     <input
                       value={messageInput}
                       onChange={(event) => setMessageInput(event.target.value)}
@@ -292,7 +292,7 @@ export default function MessagesPage() {
                           void handleSendMessage();
                         }
                       }}
-                      className="flex-1 bg-transparent text-sm text-slate-100 outline-none placeholder:text-slate-500"
+                      className="flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
                       placeholder="Write a message..."
                     />
                     <button

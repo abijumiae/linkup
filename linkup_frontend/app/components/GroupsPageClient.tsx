@@ -128,18 +128,18 @@ export default function GroupsPageClient() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="mb-8 rounded-[2rem] border border-white/10 bg-slate-900/80 p-6 shadow-2xl shadow-slate-950/20 backdrop-blur-xl">
+        <header className="mb-8 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
                 Groups
               </p>
-              <h1 className="mt-3 text-3xl font-semibold text-white">
+              <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">
                 Gather your communities in one place
               </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400">
                 Manage your communities, discover new groups, and launch your
                 own premium space.
               </p>
@@ -156,20 +156,20 @@ export default function GroupsPageClient() {
         </header>
 
         {error && (
-          <p className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          <p className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">
             {error}
           </p>
         )}
 
         <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
           <section className="space-y-6">
-            <div className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-6 shadow-xl shadow-slate-950/20 backdrop-blur-xl">
+            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
                     My groups
                   </p>
-                  <h2 className="mt-2 text-xl font-semibold text-white">
+                  <h2 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
                     Your communities
                   </h2>
                 </div>
@@ -177,7 +177,7 @@ export default function GroupsPageClient() {
               </div>
               <div className="mt-6 grid gap-4">
                 {myGroups.length === 0 ? (
-                  <p className="text-sm text-slate-400">
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
                     You have not joined any groups yet.
                   </p>
                 ) : (
@@ -196,13 +196,13 @@ export default function GroupsPageClient() {
           </section>
 
           <aside className="space-y-6">
-            <div className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-6 shadow-xl shadow-slate-950/20 backdrop-blur-xl">
+            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
                     Discover
                   </p>
-                  <h2 className="mt-2 text-xl font-semibold text-white">
+                  <h2 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
                     Groups to join
                   </h2>
                 </div>
@@ -212,7 +212,7 @@ export default function GroupsPageClient() {
               </div>
               <div className="mt-6 grid gap-4">
                 {discoverGroups.length === 0 ? (
-                  <p className="text-sm text-slate-400">
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
                     No other groups to discover right now.
                   </p>
                 ) : (
@@ -234,20 +234,20 @@ export default function GroupsPageClient() {
 
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-slate-900 p-6 shadow-2xl">
+          <div className="w-full max-w-md rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-slate-900">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">Create group</h2>
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Create group</h2>
               <button
                 type="button"
                 onClick={() => setShowCreateModal(false)}
-                className="rounded-full p-2 text-slate-400 hover:bg-white/5 hover:text-white"
+                className="rounded-full p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="mb-2 block text-sm text-slate-400">
+                <label className="mb-2 block text-sm text-slate-600 dark:text-slate-400">
                   Group name
                 </label>
                 <input
@@ -256,12 +256,12 @@ export default function GroupsPageClient() {
                   required
                   minLength={2}
                   maxLength={80}
-                  className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-violet-400/50"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
                   placeholder="e.g. Design Creators"
                 />
               </div>
               <div>
-                <label className="mb-2 block text-sm text-slate-400">
+                <label className="mb-2 block text-sm text-slate-600 dark:text-slate-400">
                   Description
                 </label>
                 <textarea
@@ -271,12 +271,12 @@ export default function GroupsPageClient() {
                   minLength={1}
                   maxLength={500}
                   rows={4}
-                  className="w-full resize-none rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-violet-400/50"
+                  className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
                   placeholder="What is this group about?"
                 />
               </div>
               {createError && (
-                <p className="text-sm text-red-300">{createError}</p>
+                <p className="text-sm text-red-600 dark:text-red-300">{createError}</p>
               )}
               <button
                 type="submit"

@@ -165,15 +165,15 @@ export default function EventsPageClient() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8 rounded-[2rem] border border-white/10 bg-slate-900/80 p-6 shadow-2xl shadow-slate-950/20 backdrop-blur-xl">
+        <div className="mb-8 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
                 Events
               </p>
-              <h1 className="mt-3 text-3xl font-semibold text-white">
+              <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">
                 Find events and share your next experience
               </h1>
             </div>
@@ -190,12 +190,12 @@ export default function EventsPageClient() {
             onSubmit={handleSearch}
             className="mt-6 grid gap-4 lg:grid-cols-[1.4fr_1fr] xl:grid-cols-[1.2fr_0.9fr_0.9fr]"
           >
-            <div className="relative rounded-[1.75rem] border border-white/10 bg-slate-950/80 px-4 py-3 lg:col-span-1 xl:col-span-1">
+            <div className="relative rounded-[1.75rem] border border-slate-200 bg-white px-4 py-3 lg:col-span-1 xl:col-span-1 dark:border-white/10 dark:bg-slate-950/80">
               <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                className="w-full bg-transparent pl-11 text-sm text-slate-100 outline-none placeholder:text-slate-500"
+                className="w-full bg-transparent pl-11 text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
                 placeholder="Search events"
               />
             </div>
@@ -211,7 +211,7 @@ export default function EventsPageClient() {
                 className={`rounded-full border px-4 py-2 text-sm transition ${
                   activeCategory === filter
                     ? "border-violet-400/50 bg-violet-500/20 text-violet-100"
-                    : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+                    : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
                 }`}
               >
                 {filter}
@@ -221,13 +221,13 @@ export default function EventsPageClient() {
         </div>
 
         {error && (
-          <p className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          <p className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">
             {error}
           </p>
         )}
 
         {events.length === 0 ? (
-          <p className="rounded-2xl border border-white/10 bg-slate-900/60 p-8 text-center text-sm text-slate-400">
+          <p className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-600 dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-400">
             No upcoming events. Create the first one.
           </p>
         ) : (
@@ -247,13 +247,13 @@ export default function EventsPageClient() {
 
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/80 p-4 backdrop-blur-sm">
-          <div className="my-8 w-full max-w-lg rounded-[2rem] border border-white/10 bg-slate-900 p-6 shadow-2xl">
+          <div className="my-8 w-full max-w-lg rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-slate-900">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">Create event</h2>
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Create event</h2>
               <button
                 type="button"
                 onClick={() => setShowCreateModal(false)}
-                className="rounded-full p-2 text-slate-400 hover:bg-white/5 hover:text-white"
+                className="rounded-full p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -264,7 +264,7 @@ export default function EventsPageClient() {
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
                 placeholder="Event title"
-                className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
               />
               <textarea
                 required
@@ -274,7 +274,7 @@ export default function EventsPageClient() {
                 }
                 rows={4}
                 placeholder="Description"
-                className="w-full resize-none rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none"
+                className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
               />
               <input
                 required
@@ -283,11 +283,11 @@ export default function EventsPageClient() {
                   setForm({ ...form, location: e.target.value })
                 }
                 placeholder="Location"
-                className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
               />
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-2 block text-xs text-slate-400">
+                  <label className="mb-2 block text-xs text-slate-600 dark:text-slate-400">
                     Start date
                   </label>
                   <input
@@ -297,11 +297,11 @@ export default function EventsPageClient() {
                     onChange={(e) =>
                       setForm({ ...form, startDate: e.target.value })
                     }
-                    className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none"
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:focus:border-violet-400/50"
                   />
                 </div>
                 <div>
-                  <label className="mb-2 block text-xs text-slate-400">
+                  <label className="mb-2 block text-xs text-slate-600 dark:text-slate-400">
                     End date (optional)
                   </label>
                   <input
@@ -310,7 +310,7 @@ export default function EventsPageClient() {
                     onChange={(e) =>
                       setForm({ ...form, endDate: e.target.value })
                     }
-                    className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none"
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:focus:border-violet-400/50"
                   />
                 </div>
               </div>
@@ -319,7 +319,7 @@ export default function EventsPageClient() {
                 onChange={(e) =>
                   setForm({ ...form, category: e.target.value })
                 }
-                className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:focus:border-violet-400/50"
               >
                 {eventFilterOptions
                   .filter((option) => option !== "Date")
@@ -335,10 +335,10 @@ export default function EventsPageClient() {
                   setForm({ ...form, imageUrl: e.target.value })
                 }
                 placeholder="Image URL (optional)"
-                className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
               />
               {createError && (
-                <p className="text-sm text-red-300">{createError}</p>
+                <p className="text-sm text-red-600 dark:text-red-300">{createError}</p>
               )}
               <button
                 type="submit"

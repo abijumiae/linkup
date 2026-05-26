@@ -68,37 +68,37 @@ export default function JobApplicationsClient({
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
         <Link
           href={`/jobs/${jobId}`}
-          className="mb-6 inline-flex items-center gap-2 text-sm text-slate-400 transition hover:text-white"
+          className="mb-6 inline-flex items-center gap-2 text-sm text-slate-600 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to job
         </Link>
 
-        <header className="mb-8 rounded-[2rem] border border-white/10 bg-slate-900/80 p-6">
+        <header className="mb-8 rounded-[2rem] border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-slate-900/80">
           <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
             Applications
           </p>
-          <h1 className="mt-2 text-2xl font-semibold text-white">
+          <h1 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
             {job?.title ?? "Job"}
           </h1>
-          <p className="mt-2 text-sm text-slate-400">
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
             {applications.length}{" "}
             {applications.length === 1 ? "application" : "applications"}
           </p>
         </header>
 
         {error && (
-          <p className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          <p className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">
             {error}
           </p>
         )}
 
         {applications.length === 0 ? (
-          <p className="rounded-2xl border border-white/10 bg-slate-900/60 p-8 text-center text-sm text-slate-400">
+          <p className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-600 dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-400">
             No applications yet.
           </p>
         ) : (
@@ -106,14 +106,14 @@ export default function JobApplicationsClient({
             {applications.map((application) => (
               <article
                 key={application.id}
-                className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-6"
+                className="rounded-[2rem] border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-slate-900/80"
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <p className="text-lg font-semibold text-white">
+                    <p className="text-lg font-semibold text-slate-900 dark:text-white">
                       {application.applicant.name}
                     </p>
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
                       @{application.applicant.username} ·{" "}
                       {application.applicant.email}
                     </p>
@@ -123,7 +123,7 @@ export default function JobApplicationsClient({
                   </span>
                 </div>
                 {application.coverLetter && (
-                  <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-300">
+                  <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-700 dark:text-slate-300">
                     {application.coverLetter}
                   </p>
                 )}

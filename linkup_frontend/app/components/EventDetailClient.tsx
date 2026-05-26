@@ -163,24 +163,24 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
 
   if (!event) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-300">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-700 dark:bg-slate-950 dark:text-slate-300">
         {error ?? "Event not found."}
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
         <Link
           href="/events"
-          className="mb-6 inline-flex items-center gap-2 text-sm text-slate-400 transition hover:text-white"
+          className="mb-6 inline-flex items-center gap-2 text-sm text-slate-600 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to events
         </Link>
 
-        <article className="overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900/80 shadow-xl backdrop-blur-xl">
+        <article className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80">
           {event.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -196,48 +196,48 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
             <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
               {event.category ?? "Event"}
             </p>
-            <h1 className="mt-2 text-3xl font-semibold text-white">
+            <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">
               {event.title}
             </h1>
 
-            <div className="mt-5 flex flex-wrap gap-3 text-sm text-slate-300">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1">
+            <div className="mt-5 flex flex-wrap gap-3 text-sm text-slate-700 dark:text-slate-300">
+              <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 dark:border-white/10">
                 <CalendarDays className="h-4 w-4 text-violet-300" />
                 {formatEventDate(event.startDate)}
               </span>
               {event.endDate && (
-                <span className="rounded-full border border-white/10 px-3 py-1">
+                <span className="rounded-full border border-slate-200 px-3 py-1 dark:border-white/10">
                   Ends {formatEventDate(event.endDate)}
                 </span>
               )}
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1">
+              <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 dark:border-white/10">
                 <MapPin className="h-4 w-4 text-slate-400" />
                 {event.location}
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1">
+              <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 dark:border-white/10">
                 <Users className="h-4 w-4 text-violet-300" />
                 {event.attendeesCount} going
               </span>
             </div>
 
-            <p className="mt-6 whitespace-pre-wrap text-sm leading-7 text-slate-300">
+            <p className="mt-6 whitespace-pre-wrap text-sm leading-7 text-slate-700 dark:text-slate-300">
               {event.description}
             </p>
 
-            <div className="mt-8 rounded-2xl border border-white/10 bg-slate-950/60 p-5">
+            <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-white/10 dark:bg-slate-950/60">
               <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
                 Organizer
               </p>
-              <p className="mt-2 text-lg font-semibold text-white">
+              <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">
                 {event.organizer.name}
               </p>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 @{event.organizer.username}
               </p>
             </div>
 
             {error && (
-              <p className="mt-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+              <p className="mt-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">
                 {error}
               </p>
             )}
@@ -248,7 +248,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                   <button
                     type="button"
                     onClick={() => setShowEditModal(true)}
-                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
                   >
                     <Pencil className="h-4 w-4" />
                     Edit

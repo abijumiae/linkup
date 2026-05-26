@@ -89,15 +89,15 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8 rounded-[2rem] border border-white/10 bg-slate-900/80 p-6 shadow-2xl shadow-slate-950/20 backdrop-blur-xl">
+        <div className="mb-8 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
                 Notifications
               </p>
-              <h1 className="mt-3 text-3xl font-semibold text-white">
+              <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">
                 Stay on top of activity across LinkUp
               </h1>
             </div>
@@ -114,13 +114,13 @@ export default function NotificationsPage() {
         </div>
 
         {error ? (
-          <p className="mb-4 text-sm text-red-400">{error}</p>
+          <p className="mb-4 text-sm text-red-500 dark:text-red-400">{error}</p>
         ) : null}
 
         <div className="space-y-4">
           {notifications.length === 0 ? (
-            <div className="rounded-[1.75rem] border border-white/10 bg-slate-950/85 p-8 text-center">
-              <p className="text-sm text-slate-400">No notifications yet.</p>
+            <div className="rounded-[1.75rem] border border-slate-200 bg-white p-8 text-center dark:border-white/10 dark:bg-slate-950/85">
+              <p className="text-sm text-slate-600 dark:text-slate-400">No notifications yet.</p>
               <p className="mt-2 text-xs text-slate-500">
                 Likes, comments, and follows will show up here.
               </p>

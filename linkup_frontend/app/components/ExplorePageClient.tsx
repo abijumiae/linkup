@@ -105,16 +105,16 @@ export default function ExplorePageClient() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="space-y-8">
-          <header className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-6 shadow-2xl shadow-slate-950/20 backdrop-blur-xl">
+          <header className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
             <div className="flex flex-col gap-4">
               <div>
                 <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
                   Explore
                 </p>
-                <h1 className="mt-3 text-3xl font-semibold text-white">
+                <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">
                   {isSearchMode
                     ? `Results for "${activeQuery}"`
                     : "Discover new content, creators, and communities"}
@@ -125,27 +125,27 @@ export default function ExplorePageClient() {
                 <input
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
-                  className="w-full rounded-full border border-white/10 bg-slate-950/80 py-3 pl-11 pr-4 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
+                  className="w-full rounded-full border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100 dark:placeholder:text-slate-500"
                   placeholder="Search people and posts..."
                 />
               </form>
             </div>
           </header>
 
-          {error ? <p className="text-sm text-red-400">{error}</p> : null}
+          {error ? <p className="text-sm text-red-500 dark:text-red-400">{error}</p> : null}
 
           <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
             <section className="space-y-6">
               {isSearchMode ? (
                 <>
-                  <div className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-5 shadow-xl shadow-slate-950/20 backdrop-blur-xl">
+                  <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
                     <div className="flex items-center gap-3">
                       <Users className="h-5 w-5 text-violet-300" />
-                      <h2 className="text-xl font-semibold text-white">People</h2>
+                      <h2 className="text-xl font-semibold text-slate-900 dark:text-white">People</h2>
                     </div>
                     <div className="mt-4 space-y-3">
                       {searchUsers.length === 0 ? (
-                        <p className="text-sm text-slate-400">No users found.</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">No users found.</p>
                       ) : (
                         searchUsers.map((user) => (
                           <SearchUserCard
@@ -159,9 +159,9 @@ export default function ExplorePageClient() {
                   </div>
 
                   <div className="space-y-4">
-                    <h2 className="text-xl font-semibold text-white">Posts</h2>
+                    <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Posts</h2>
                     {searchPosts.length === 0 ? (
-                      <p className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-6 text-sm text-slate-400">
+                      <p className="rounded-[2rem] border border-slate-200 bg-white p-6 text-sm text-slate-600 dark:border-white/10 dark:bg-slate-900/80 dark:text-slate-400">
                         No posts found.
                       </p>
                     ) : (
@@ -179,12 +179,12 @@ export default function ExplorePageClient() {
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
                     <TrendingUp className="h-5 w-5 text-violet-300" />
-                    <h2 className="text-xl font-semibold text-white">
+                    <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
                       Trending & latest posts
                     </h2>
                   </div>
                   {displayPosts.length === 0 ? (
-                    <p className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-6 text-sm text-slate-400">
+                    <p className="rounded-[2rem] border border-slate-200 bg-white p-6 text-sm text-slate-600 dark:border-white/10 dark:bg-slate-900/80 dark:text-slate-400">
                       No public posts yet. Be the first to share something on the home feed.
                     </p>
                   ) : (
@@ -201,11 +201,11 @@ export default function ExplorePageClient() {
             </section>
 
             <aside className="space-y-6">
-              <div className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-5 shadow-xl shadow-slate-950/20 backdrop-blur-xl">
+              <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
                 <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
                   Trending
                 </p>
-                <h2 className="mt-2 text-xl font-semibold text-white">Hot hashtags</h2>
+                <h2 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">Hot hashtags</h2>
                 <div className="mt-4 flex flex-wrap gap-3">
                   {exploreTrendingTags.map((tag) => (
                     <button
@@ -215,7 +215,7 @@ export default function ExplorePageClient() {
                         const term = tag.replace("#", "");
                         router.push(`/explore?q=${encodeURIComponent(term)}`);
                       }}
-                      className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300 transition hover:bg-white/10"
+                      className="rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
                     >
                       {tag}
                     </button>

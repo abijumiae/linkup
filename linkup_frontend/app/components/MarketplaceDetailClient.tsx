@@ -129,24 +129,24 @@ export default function MarketplaceDetailClient({
 
   if (!item) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-300">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-700 dark:bg-slate-950 dark:text-slate-300">
         {error ?? "Listing not found."}
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
         <Link
           href="/marketplace"
-          className="mb-6 inline-flex items-center gap-2 text-sm text-slate-400 transition hover:text-white"
+          className="mb-6 inline-flex items-center gap-2 text-sm text-slate-600 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to marketplace
         </Link>
 
-        <article className="overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900/80 shadow-xl backdrop-blur-xl">
+        <article className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80">
           {item.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -164,42 +164,42 @@ export default function MarketplaceDetailClient({
             <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
               {item.category}
             </p>
-            <h1 className="mt-2 text-3xl font-semibold text-white">
+            <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">
               {item.title}
             </h1>
             <p className="mt-4 text-2xl font-semibold text-violet-200">
               {formatPrice(item.price, item.currency)}
             </p>
 
-            <div className="mt-6 flex flex-wrap gap-3 text-sm text-slate-400">
+            <div className="mt-6 flex flex-wrap gap-3 text-sm text-slate-600 dark:text-slate-400">
               {item.condition && (
-                <span className="rounded-full border border-white/10 px-3 py-1">
+                <span className="rounded-full border border-slate-200 px-3 py-1 dark:border-white/10">
                   {item.condition}
                 </span>
               )}
               {item.location && (
-                <span className="rounded-full border border-white/10 px-3 py-1">
+                <span className="rounded-full border border-slate-200 px-3 py-1 dark:border-white/10">
                   {item.location}
                 </span>
               )}
             </div>
 
-            <p className="mt-6 whitespace-pre-wrap text-sm leading-7 text-slate-300">
+            <p className="mt-6 whitespace-pre-wrap text-sm leading-7 text-slate-700 dark:text-slate-300">
               {item.description}
             </p>
 
-            <div className="mt-8 rounded-2xl border border-white/10 bg-slate-950/60 p-5">
+            <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-white/10 dark:bg-slate-950/60">
               <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
                 Seller
               </p>
-              <p className="mt-2 text-lg font-semibold text-white">
+              <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">
                 {item.seller.name}
               </p>
-              <p className="text-sm text-slate-400">@{item.seller.username}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">@{item.seller.username}</p>
             </div>
 
             {error && (
-              <p className="mt-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+              <p className="mt-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">
                 {error}
               </p>
             )}
@@ -210,7 +210,7 @@ export default function MarketplaceDetailClient({
                   <button
                     type="button"
                     onClick={() => setShowEditModal(true)}
-                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
                   >
                     <Pencil className="h-4 w-4" />
                     Edit
@@ -241,13 +241,13 @@ export default function MarketplaceDetailClient({
 
       {showEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/80 p-4 backdrop-blur-sm">
-          <div className="my-8 w-full max-w-lg rounded-[2rem] border border-white/10 bg-slate-900 p-6 shadow-2xl">
+          <div className="my-8 w-full max-w-lg rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-slate-900">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">Edit listing</h2>
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Edit listing</h2>
               <button
                 type="button"
                 onClick={() => setShowEditModal(false)}
-                className="rounded-full p-2 text-slate-400 hover:bg-white/5 hover:text-white"
+                className="rounded-full p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -259,7 +259,7 @@ export default function MarketplaceDetailClient({
                 onChange={(e) =>
                   setEditForm({ ...editForm, title: e.target.value })
                 }
-                className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
               />
               <textarea
                 required
@@ -268,7 +268,7 @@ export default function MarketplaceDetailClient({
                   setEditForm({ ...editForm, description: e.target.value })
                 }
                 rows={3}
-                className="w-full resize-none rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none"
+                className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
               />
               <div className="grid gap-4 sm:grid-cols-2">
                 <input
@@ -280,14 +280,14 @@ export default function MarketplaceDetailClient({
                   onChange={(e) =>
                     setEditForm({ ...editForm, price: e.target.value })
                   }
-                  className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
                 />
                 <input
                   value={editForm.currency}
                   onChange={(e) =>
                     setEditForm({ ...editForm, currency: e.target.value })
                   }
-                  className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
                 />
               </div>
               <select
@@ -295,7 +295,7 @@ export default function MarketplaceDetailClient({
                 onChange={(e) =>
                   setEditForm({ ...editForm, category: e.target.value })
                 }
-                className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:focus:border-violet-400/50"
               >
                 {marketplaceCategories.map((category) => (
                   <option key={category} value={category}>
@@ -309,7 +309,7 @@ export default function MarketplaceDetailClient({
                   setEditForm({ ...editForm, condition: e.target.value })
                 }
                 placeholder="Condition"
-                className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
               />
               <input
                 value={editForm.location}
@@ -317,7 +317,7 @@ export default function MarketplaceDetailClient({
                   setEditForm({ ...editForm, location: e.target.value })
                 }
                 placeholder="Location"
-                className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
               />
               <input
                 value={editForm.imageUrl}
@@ -325,7 +325,7 @@ export default function MarketplaceDetailClient({
                   setEditForm({ ...editForm, imageUrl: e.target.value })
                 }
                 placeholder="Image URL"
-                className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none"
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
               />
               <button
                 type="submit"

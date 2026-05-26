@@ -30,8 +30,8 @@ export default function GroupCard({
   };
 
   return (
-    <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/85 shadow-lg shadow-slate-950/10 transition duration-300 hover:-translate-y-1 hover:border-violet-400/30 hover:shadow-violet-500/20 backdrop-blur-xl">
-      <div className="bg-gradient-to-r from-violet-500/20 via-sky-500/10 to-cyan-400/10 p-5 text-sm font-semibold uppercase tracking-[0.25em] text-slate-100">
+    <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-lg shadow-slate-950/10 transition duration-300 hover:-translate-y-1 hover:border-violet-400/30 hover:shadow-violet-500/20 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/85">
+      <div className="bg-gradient-to-r from-violet-500/20 via-sky-500/10 to-cyan-400/10 p-5 text-sm font-semibold uppercase tracking-[0.25em] text-slate-900 dark:text-slate-100">
         {group.coverImage ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -45,8 +45,8 @@ export default function GroupCard({
       </div>
       <div className="space-y-4 p-5">
         <div>
-          <p className="text-lg font-semibold text-white">{group.name}</p>
-          <p className="mt-2 line-clamp-2 text-sm text-slate-400">
+          <p className="text-lg font-semibold text-slate-900 dark:text-white">{group.name}</p>
+          <p className="mt-2 line-clamp-2 text-sm text-slate-600 dark:text-slate-400">
             {group.description}
           </p>
         </div>
@@ -73,7 +73,7 @@ export default function GroupCard({
             )}
             <Link
               href={`/groups/${group.id}`}
-              className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-200 transition hover:border-violet-400/40 hover:text-white"
+              className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700 transition hover:border-violet-400/40 hover:text-slate-900 dark:border-white/10 dark:text-slate-200 dark:hover:text-white"
             >
               View group
             </Link>

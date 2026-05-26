@@ -97,7 +97,7 @@ export default function ProfilePageClient() {
   if (!profileUser) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center px-4">
-      <div className="rounded-[2rem] border border-rose-500/30 bg-rose-500/10 px-6 py-5 text-sm text-rose-200">
+      <div className="rounded-[2rem] border border-rose-500/30 bg-rose-500/10 px-6 py-5 text-sm text-rose-700 dark:text-rose-200">
           {error ?? "Profile unavailable."}
         </div>
       </div>
@@ -105,7 +105,7 @@ export default function ProfilePageClient() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         {success ? (
           <div className="mb-6 rounded-[2rem] border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 text-sm text-emerald-200">
@@ -118,11 +118,11 @@ export default function ProfilePageClient() {
           </div>
         ) : null}
 
-        <section className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-6 shadow-2xl shadow-slate-950/20 backdrop-blur-xl">
+        <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
           <div className="h-52 rounded-[2rem] bg-gradient-to-br from-violet-500/20 via-sky-500/10 to-cyan-400/10 p-6">
             <div className="flex h-full flex-col justify-end">
               <p className="text-sm font-semibold uppercase tracking-[0.35em] text-violet-200/80">LinkUp profile</p>
-              <h1 className="mt-3 text-4xl font-semibold text-white">{profileUser.name}</h1>
+              <h1 className="mt-3 text-4xl font-semibold text-slate-900 dark:text-white">{profileUser.name}</h1>
             </div>
           </div>
           <div className="-mt-16">
@@ -140,8 +140,8 @@ export default function ProfilePageClient() {
           <ProfileTabs />
           <section className="space-y-4">
             {userPosts.length === 0 ? (
-              <div className="rounded-[1.75rem] border border-white/10 bg-slate-950/85 p-8 text-center shadow-lg shadow-slate-950/10">
-                <p className="text-sm text-slate-400">You have not posted anything yet.</p>
+              <div className="rounded-[1.75rem] border border-slate-200 bg-white p-8 text-center shadow-lg shadow-slate-950/10 dark:border-white/10 dark:bg-slate-950/85">
+                <p className="text-sm text-slate-600 dark:text-slate-400">You have not posted anything yet.</p>
                 <Link
                   href="/home"
                   className="mt-4 inline-flex text-sm font-semibold text-violet-300 transition hover:text-violet-200"
@@ -153,17 +153,17 @@ export default function ProfilePageClient() {
               userPosts.map((post) => (
                 <article
                   key={post.id}
-                  className="rounded-[1.75rem] border border-white/10 bg-slate-950/85 p-5 shadow-lg shadow-slate-950/10"
+                  className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-lg shadow-slate-950/10 dark:border-white/10 dark:bg-slate-950/85"
                 >
                   <p className="text-sm uppercase tracking-[0.28em] text-violet-300/80">Post</p>
                   <p className="mt-3 text-xs text-slate-500">{formatTimeAgo(post.createdAt)}</p>
-                  <p className="mt-4 text-sm leading-7 text-slate-300">{post.content}</p>
-                  <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-slate-400">
-                    <span className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-2">
+                  <p className="mt-4 text-sm leading-7 text-slate-700 dark:text-slate-300">{post.content}</p>
+                  <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
+                    <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2 dark:bg-white/5">
                       <Heart className="h-4 w-4 text-pink-400" />
                       {post.likeCount}
                     </span>
-                    <span className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-2">
+                    <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2 dark:bg-white/5">
                       <MessageCircle className="h-4 w-4 text-sky-300" />
                       {post.commentCount}
                     </span>

@@ -106,32 +106,32 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
 
   if (!group) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-300">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-700 dark:bg-slate-950 dark:text-slate-300">
         {error ?? "Group not found."}
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
         <Link
           href="/groups"
-          className="mb-6 inline-flex items-center gap-2 text-sm text-slate-400 transition hover:text-white"
+          className="mb-6 inline-flex items-center gap-2 text-sm text-slate-600 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to groups
         </Link>
 
-        <header className="mb-8 rounded-[2rem] border border-white/10 bg-slate-900/80 p-6 shadow-xl backdrop-blur-xl">
+        <header className="mb-8 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80">
           <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
             Group
           </p>
-          <h1 className="mt-2 text-3xl font-semibold text-white">{group.name}</h1>
-          <p className="mt-3 text-sm leading-6 text-slate-400">
+          <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">{group.name}</h1>
+          <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-400">
             {group.description}
           </p>
-          <div className="mt-5 flex flex-wrap items-center gap-4 text-sm text-slate-400">
+          <div className="mt-5 flex flex-wrap items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
             <span>
               {group.membersCount}{" "}
               {group.membersCount === 1 ? "member" : "members"}
@@ -164,7 +164,7 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
         </header>
 
         {error && (
-          <p className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          <p className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">
             {error}
           </p>
         )}
@@ -172,9 +172,9 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
         {group.isMember && (
           <form
             onSubmit={handleCreatePost}
-            className="mb-8 rounded-[2rem] border border-white/10 bg-slate-900/80 p-5 shadow-lg backdrop-blur-xl"
+            className="mb-8 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80"
           >
-            <label className="mb-2 block text-sm text-slate-400">
+            <label className="mb-2 block text-sm text-slate-600 dark:text-slate-400">
               Post to this group
             </label>
             <textarea
@@ -182,7 +182,7 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
               onChange={(e) => setPostContent(e.target.value)}
               rows={3}
               placeholder="Share something with the group…"
-              className="w-full resize-none rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-violet-400/50"
+              className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
             />
             <button
               type="submit"
@@ -195,9 +195,9 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
         )}
 
         <section className="space-y-4">
-          <h2 className="text-lg font-semibold text-white">Group posts</h2>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Group posts</h2>
           {posts.length === 0 ? (
-            <p className="rounded-2xl border border-white/10 bg-slate-900/60 p-6 text-sm text-slate-400">
+            <p className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600 dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-400">
               No posts in this group yet.
               {group.isMember ? " Be the first to share something." : ""}
             </p>
