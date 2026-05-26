@@ -17,7 +17,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Only run on client
     const stored = (typeof window !== "undefined"
-      ? (localStorage.getItem("theme") as Theme | null)
+      ? (localStorage.getItem("linkup-theme") as Theme | null)
       : null) as Theme | null;
     const initial = stored || "dark";
     setTheme(initial);
@@ -34,7 +34,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === "undefined") return;
 
     const html = document.documentElement;
-    localStorage.setItem("theme", theme);
+    localStorage.setItem("linkup-theme", theme);
 
     if (theme === "dark") {
       html.classList.add("dark");

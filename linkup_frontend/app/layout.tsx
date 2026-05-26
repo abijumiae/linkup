@@ -36,15 +36,16 @@ export default function RootLayout({
         strategy="beforeInteractive"
         dangerouslySetInnerHTML={{
           __html: `
-            (function () {
-              try {
-                var t = localStorage.getItem('theme');
-                var d = document.documentElement.classList;
-                if (t === 'light') d.remove('dark');
-                else d.add('dark');
-              } catch (e) {}
-            })();
-          `,
+      try {
+        const storedTheme = localStorage.getItem('linkup-theme');
+        const theme = storedTheme || 'dark';
+        if (theme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      } catch (e) {}
+    `,
         }}
       />
       <body className="min-h-full overflow-x-hidden bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
