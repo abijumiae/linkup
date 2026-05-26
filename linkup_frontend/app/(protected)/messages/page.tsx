@@ -209,7 +209,7 @@ export default function MessagesPage() {
         ) : null}
 
         <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)]">
-          <aside className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
+          <aside className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-2xl shadow-slate-950/20 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
@@ -241,7 +241,7 @@ export default function MessagesPage() {
             </div>
           </aside>
 
-          <main className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
+          <main className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-2xl shadow-slate-950/20 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80">
             {activeUser ? (
               <div className="flex h-[min(70vh,720px)] flex-col gap-5">
                 <div className="flex flex-wrap items-center justify-between gap-4 rounded-[1.75rem] bg-slate-50 p-4 dark:bg-slate-950/85">

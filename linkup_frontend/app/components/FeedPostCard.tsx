@@ -188,7 +188,7 @@ export default function FeedPostCard({ post, currentUserId }: FeedPostCardProps)
   }
 
   return (
-    <article className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl shadow-slate-950/10 transition hover:border-violet-500/20 dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/10 dark:hover:shadow-violet-500/10">
+    <article className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-2xl shadow-slate-950/10 transition hover:border-violet-500/20 hover:shadow-violet-500/10 dark:border-white/10 dark:bg-slate-900/80">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-violet-500/15 text-violet-600 dark:text-violet-300">

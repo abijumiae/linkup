@@ -108,7 +108,7 @@ export default function ExplorePageClient() {
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="space-y-8">
-          <header className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
+          <header className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-950/20 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80">
             <div className="flex flex-col gap-4">
               <div>
                 <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
@@ -138,7 +138,7 @@ export default function ExplorePageClient() {
             <section className="space-y-6">
               {isSearchMode ? (
                 <>
-                  <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
+                  <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl shadow-slate-950/20 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80">
                     <div className="flex items-center gap-3">
                       <Users className="h-5 w-5 text-violet-300" />
                       <h2 className="text-xl font-semibold text-slate-900 dark:text-white">People</h2>
@@ -201,7 +201,7 @@ export default function ExplorePageClient() {
             </section>
 
             <aside className="space-y-6">
-              <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
+              <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-xl shadow-slate-950/20 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80">
                 <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
                   Trending
                 </p>
