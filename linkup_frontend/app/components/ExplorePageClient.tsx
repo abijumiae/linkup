@@ -5,6 +5,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Briefcase,
+  Bell,
   CalendarDays,
   Search,
   ShoppingBag,
@@ -67,6 +68,19 @@ function DiscoveryHub({
       >
         {cta}
       </Link>
+    </div>
+  );
+}
+
+function EmptyPanel({ message }: { message: string }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center dark:border-white/15 dark:bg-slate-900/60">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-300">
+        <Bell className="h-5 w-5" />
+      </div>
+      <p className="mx-auto mt-4 max-w-md text-sm text-slate-600 dark:text-slate-400">
+        {message}
+      </p>
     </div>
   );
 }
@@ -166,11 +180,13 @@ export default function ExplorePageClient() {
 
       if (posts.length === 0) {
         return (
-          <p className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600 dark:border-white/10 dark:bg-slate-900/80 dark:text-slate-400">
-            {isSearchMode
-              ? "No posts found for this search."
-              : "No public posts yet. Be the first to share something on the home feed."}
-          </p>
+          <EmptyPanel
+            message={
+              isSearchMode
+                ? "No posts found for this search."
+                : "No posts yet. Be the first to share something on the home feed."
+            }
+          />
         );
       }
 
@@ -201,11 +217,7 @@ export default function ExplorePageClient() {
       }
 
       if (searchUsers.length === 0) {
-        return (
-          <p className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600 dark:border-white/10 dark:bg-slate-900/80 dark:text-slate-400">
-            No users found.
-          </p>
-        );
+        return <EmptyPanel message="No users found." />;
       }
 
       return (

@@ -23,6 +23,17 @@ const categoryOptions = eventFilterOptions.filter(
 const inputClass =
   "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50";
 
+function EventSkeleton() {
+  return (
+    <div className="animate-pulse rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-slate-900/80">
+      <div className="h-36 rounded-xl bg-slate-200 dark:bg-white/10" />
+      <div className="mt-4 h-4 w-3/4 rounded bg-slate-200 dark:bg-white/10" />
+      <div className="mt-2 h-3 w-1/2 rounded bg-slate-200 dark:bg-white/10" />
+      <div className="mt-4 h-9 w-full rounded-full bg-slate-200 dark:bg-white/10" />
+    </div>
+  );
+}
+
 export default function EventsPageClient() {
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
@@ -188,7 +199,7 @@ export default function EventsPageClient() {
             <button
               type="button"
               onClick={() => setShowCreateModal(true)}
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
             >
               <Plus className="h-4 w-4" />
               Create event
@@ -218,7 +229,7 @@ export default function EventsPageClient() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="rounded-full border border-slate-200 bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-200 disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+                className="h-11 rounded-full border border-slate-200 bg-slate-100 px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-200 disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
               >
                 {isLoading ? "Searching…" : "Search"}
               </button>
@@ -260,10 +271,16 @@ export default function EventsPageClient() {
           </p>
         ) : null}
 
-        {events.length === 0 ? (
+        {isLoading && events.length > 0 ? (
+          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <EventSkeleton key={index} />
+            ))}
+          </div>
+        ) : events.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center dark:border-white/15 dark:bg-slate-900/60">
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              No upcoming events. Try adjusting your filters or create the
+              No events yet. Try adjusting your filters or create the
               first one.
             </p>
             <button

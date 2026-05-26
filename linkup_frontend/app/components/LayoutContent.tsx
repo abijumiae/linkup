@@ -35,15 +35,17 @@ export default function LayoutContent({
   return (
     <>
       {showNavigation && <LinkupNavigation />}
-      <div className={`flex ${showNavigation ? "min-h-[calc(100vh-72px)]" : "min-h-screen"}`}>
+      <div
+        className={`flex ${showNavigation ? "min-h-[calc(100vh-72px)]" : "min-h-screen"}`}
+      >
         {showNavigation && (
-          <aside className="hidden w-[280px] shrink-0 border-r border-slate-200 bg-white/80 p-4 md:block md:py-6 lg:w-72 dark:border-white/10 dark:bg-slate-950/80">
+          <aside className="hidden w-[280px] shrink-0 border-r border-slate-200 bg-white/80 p-4 lg:block lg:py-6 dark:border-white/10 dark:bg-slate-950/80">
             <div className="sticky top-28 space-y-4">
               <SidebarNav items={sidebarNavItems} title="Navigation" />
             </div>
           </aside>
         )}
-        <main className="flex-1 min-w-0 pb-28 md:pb-16">{children}</main>
+        <main className="min-w-0 flex-1 pb-28 lg:pb-16">{children}</main>
       </div>
     </>
   );

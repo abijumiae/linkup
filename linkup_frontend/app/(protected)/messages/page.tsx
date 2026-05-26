@@ -213,22 +213,24 @@ export default function MessagesPage() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <header className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
               Messages
             </p>
-            <h1 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
+            <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">
               Inbox
             </h1>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
               Keep up with your conversations across LinkUp.
             </p>
           </div>
         </header>
 
         {error ? (
-          <p className="mb-4 text-sm text-red-500 dark:text-red-400">{error}</p>
+          <p className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">
+            {error}
+          </p>
         ) : null}
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
@@ -284,7 +286,7 @@ export default function MessagesPage() {
 
           <main className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-2xl shadow-slate-950/20 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80">
             {activeUser ? (
-              <div className="flex h-[min(70vh,720px)] flex-col gap-5">
+              <div className="flex h-[min(74vh,720px)] flex-col gap-5">
                 <div className="flex flex-wrap items-center justify-between gap-4 rounded-[1.75rem] bg-slate-50 p-4 dark:bg-slate-950/85">
                   <div className="flex items-center gap-3">
                     <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-violet-500/15 text-lg font-semibold text-violet-600 dark:text-violet-300">
@@ -310,9 +312,11 @@ export default function MessagesPage() {
 
                 <div className="flex-1 space-y-4 overflow-y-auto pr-1">
                   {messages.length === 0 ? (
-                    <p className="text-center text-sm text-slate-500">
-                      No messages yet. Say hello!
-                    </p>
+                    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center dark:border-white/15 dark:bg-slate-900/60">
+                      <p className="text-sm text-slate-600 dark:text-slate-400">
+                        No messages yet. Say hello!
+                      </p>
+                    </div>
                   ) : (
                     messages.map((message) => (
                       <MessageBubble
@@ -353,10 +357,12 @@ export default function MessagesPage() {
                 </div>
               </div>
             ) : (
-              <div className="flex h-[min(70vh,720px)] items-center justify-center">
-                <p className="text-sm text-slate-400">
-                  Select a conversation or start a new chat from the feed.
-                </p>
+              <div className="flex h-[min(74vh,720px)] items-center justify-center">
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center dark:border-white/15 dark:bg-slate-900/60">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    No messages yet. Select a conversation or start a new chat from the feed.
+                  </p>
+                </div>
               </div>
             )}
           </main>

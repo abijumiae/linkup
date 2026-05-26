@@ -14,6 +14,14 @@ import {
 import AuthLoadingScreen from "./AuthLoadingScreen";
 import GroupCard from "./GroupCard";
 
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center dark:border-white/15 dark:bg-slate-900/60">
+      <p className="text-sm text-slate-600 dark:text-slate-400">{message}</p>
+    </div>
+  );
+}
+
 export default function GroupsPageClient() {
   const router = useRouter();
   const [groups, setGroups] = useState<Group[]>([]);
@@ -126,8 +134,16 @@ export default function GroupsPageClient() {
     }
   };
 
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const matchesGroup = (group: Group) =>
+    !normalizedQuery ||
+    group.name.toLowerCase().includes(normalizedQuery) ||
+    group.description.toLowerCase().includes(normalizedQuery);
+
   const myGroups = groups.filter((group) => group.isMember);
   const discoverGroups = groups.filter((group) => !group.isMember);
+  const filteredMyGroups = myGroups.filter(matchesGroup);
+  const filteredDiscoverGroups = discoverGroups.filter(matchesGroup);
 
   if (isLoading) {
     return <AuthLoadingScreen />;
@@ -197,28 +213,19 @@ export default function GroupsPageClient() {
               </div>
               <div className="mt-6 grid gap-4">
                 {myGroups.length === 0 ? (
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    You have not joined any groups yet.
-                  </p>
+                  <EmptyState message="No groups yet. Join your first community to see it here." />
+                ) : filteredMyGroups.length === 0 ? (
+                  <EmptyState message="No groups match your search." />
                 ) : (
-                  myGroups
-                    .filter((group) => {
-                      if (!searchQuery.trim()) return true;
-                      const q = searchQuery.toLowerCase();
-                      return (
-                        group.name.toLowerCase().includes(q) ||
-                        group.description.toLowerCase().includes(q)
-                      );
-                    })
-                    .map((group) => (
-                      <GroupCard
-                        key={group.id}
-                        group={group}
-                        onJoin={handleJoin}
-                        onLeave={handleLeave}
-                        isLoading={actionGroupId === group.id}
-                      />
-                    ))
+                  filteredMyGroups.map((group) => (
+                    <GroupCard
+                      key={group.id}
+                      group={group}
+                      onJoin={handleJoin}
+                      onLeave={handleLeave}
+                      isLoading={actionGroupId === group.id}
+                    />
+                  ))
                 )}
               </div>
             </div>
@@ -241,28 +248,19 @@ export default function GroupsPageClient() {
               </div>
               <div className="mt-6 grid gap-4">
                 {discoverGroups.length === 0 ? (
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    No other groups to discover right now.
-                  </p>
+                  <EmptyState message="No groups yet to discover right now." />
+                ) : filteredDiscoverGroups.length === 0 ? (
+                  <EmptyState message="No groups match your search." />
                 ) : (
-                  discoverGroups
-                    .filter((group) => {
-                      if (!searchQuery.trim()) return true;
-                      const q = searchQuery.toLowerCase();
-                      return (
-                        group.name.toLowerCase().includes(q) ||
-                        group.description.toLowerCase().includes(q)
-                      );
-                    })
-                    .map((group) => (
-                      <GroupCard
-                        key={group.id}
-                        group={group}
-                        onJoin={handleJoin}
-                        onLeave={handleLeave}
-                        isLoading={actionGroupId === group.id}
-                      />
-                    ))
+                  filteredDiscoverGroups.map((group) => (
+                    <GroupCard
+                      key={group.id}
+                      group={group}
+                      onJoin={handleJoin}
+                      onLeave={handleLeave}
+                      isLoading={actionGroupId === group.id}
+                    />
+                  ))
                 )}
               </div>
             </div>
