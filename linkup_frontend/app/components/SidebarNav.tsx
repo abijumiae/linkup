@@ -60,7 +60,7 @@ export function SidebarNav({ items, title = "Navigation" }: SidebarNavProps) {
   const { unreadCount } = useNotifications();
 
   return (
-    <nav className="rounded-[2rem] border border-white/10 bg-slate-950/80 p-4 shadow-2xl shadow-slate-950/20 backdrop-blur-xl">
+    <nav className="rounded-[2rem] border border-slate-200 bg-white/85 p-4 shadow-2xl shadow-slate-950/10 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/80 dark:shadow-slate-950/20">
       <div className="mb-4">
         <p className="text-xs uppercase tracking-[0.35em] text-slate-500">{title}</p>
       </div>
@@ -74,11 +74,13 @@ export function SidebarNav({ items, title = "Navigation" }: SidebarNavProps) {
                 href={item.href}
                 className={`inline-flex w-full items-center gap-3 rounded-3xl px-4 py-3 text-sm font-medium transition ${
                   isActive
-                    ? "bg-gradient-to-r from-violet-500/20 via-purple-500/15 to-sky-500/20 text-white shadow-lg shadow-violet-500/10"
-                    : "text-slate-200 hover:bg-white/5 hover:text-white"
+                    ? "bg-gradient-to-r from-violet-500/20 via-purple-500/15 to-sky-500/20 text-slate-900 shadow-lg shadow-violet-500/10 dark:text-white"
+                    : "text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-200 dark:hover:bg-white/5 dark:hover:text-white"
                 }`}
               >
-                <Icon className={`h-5 w-5 ${isActive ? "text-violet-300" : "text-slate-400"}`} />
+                <Icon
+                  className={`h-5 w-5 ${isActive ? "text-violet-500 dark:text-violet-300" : "text-slate-400"}`}
+                />
                 <span className="flex-1">{item.label}</span>
                 {item.icon === "notifications" && unreadCount > 0 ? (
                   <span className="rounded-full bg-violet-500 px-2 py-0.5 text-[10px] font-bold text-slate-950">

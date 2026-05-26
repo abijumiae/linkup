@@ -1,8 +1,37 @@
 @import "tailwindcss";
 
 :root {
+  /* Light theme (default) */
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --app-bg: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  --selection-bg: rgba(99, 102, 241, 0.22);
+
+  --panel-bg: rgba(255, 255, 255, 0.92);
+  --panel-border: rgba(15, 23, 42, 0.12);
+  --panel-shadow: 0 30px 90px rgba(2, 6, 23, 0.08);
+
+  --float-shadow: 0 22px 70px rgba(2, 6, 23, 0.10);
+  --float-shadow-hover: 0 28px 90px rgba(79, 70, 229, 0.14);
+  --float-border-hover: rgba(99, 102, 241, 0.28);
+}
+
+.dark {
+  /* Dark theme */
   --background: #050816;
   --foreground: #e2e8f0;
+  --app-bg: radial-gradient(circle at top left, rgba(139, 92, 246, 0.22), transparent 22%),
+    radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.18), transparent 20%),
+    linear-gradient(180deg, #02040d 0%, #090c1d 100%);
+  --selection-bg: rgba(139, 92, 246, 0.35);
+
+  --panel-bg: rgba(15, 23, 42, 0.92);
+  --panel-border: rgba(255, 255, 255, 0.10);
+  --panel-shadow: 0 40px 120px rgba(79, 70, 229, 0.10);
+
+  --float-shadow: 0 30px 120px rgba(79, 70, 229, 0.12);
+  --float-shadow-hover: 0 30px 120px rgba(79, 70, 229, 0.18);
+  --float-border-hover: rgba(139, 92, 246, 0.30);
 }
 
 @theme inline {
@@ -20,16 +49,14 @@ body {
 body {
   min-height: 100vh;
   margin: 0;
-  background: radial-gradient(circle at top left, rgba(139, 92, 246, 0.22), transparent 22%),
-    radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.18), transparent 20%),
-    linear-gradient(180deg, #02040d 0%, #090c1d 100%);
+  background: var(--app-bg);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
 ::selection {
-  background: rgba(139, 92, 246, 0.35);
-  color: white;
+  background: var(--selection-bg);
+  color: var(--foreground);
 }
 
 button,
@@ -41,9 +68,9 @@ select {
 
 .page-panel {
   border-radius: 2rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(15, 23, 42, 0.92);
-  box-shadow: 0 40px 120px rgba(79, 70, 229, 0.1);
+  border: 1px solid var(--panel-border);
+  background: var(--panel-bg);
+  box-shadow: var(--panel-shadow);
   backdrop-filter: blur(18px);
 }
 
@@ -53,6 +80,6 @@ select {
 
 .card-float:hover {
   transform: translateY(-0.25rem);
-  box-shadow: 0 30px 120px rgba(79, 70, 229, 0.18);
-  border-color: rgba(139, 92, 246, 0.3);
+  box-shadow: var(--float-shadow-hover);
+  border-color: var(--float-border-hover);
 }

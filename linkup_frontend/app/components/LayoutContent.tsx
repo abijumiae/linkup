@@ -37,7 +37,7 @@ export default function LayoutContent({
       {showNavigation && <LinkupNavigation />}
       <div className={`flex ${showNavigation ? "min-h-[calc(100vh-72px)]" : "min-h-screen"}`}>
         {showNavigation && (
-          <aside className="hidden w-[280px] shrink-0 border-r border-white/10 bg-slate-950/80 p-4 md:block md:py-6 lg:w-72">
+          <aside className="hidden w-[280px] shrink-0 border-r border-slate-200 bg-white/80 p-4 md:block md:py-6 lg:w-72 dark:border-white/10 dark:bg-slate-950/80">
             <div className="sticky top-28 space-y-4">
               <SidebarNav items={sidebarNavItems} title="Navigation" />
             </div>

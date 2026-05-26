@@ -13,16 +13,15 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>("dark");
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Get theme from localStorage or system preference
-    const stored = localStorage.getItem("theme") as Theme | null;
+    // Only run on client
+    const stored = (typeof window !== "undefined"
+      ? (localStorage.getItem("theme") as Theme | null)
+      : null) as Theme | null;
     const initial = stored || "dark";
     setTheme(initial);
-    setMounted(true);
 
-    // Apply theme to document
     const html = document.documentElement;
     if (initial === "dark") {
       html.classList.add("dark");
@@ -32,7 +31,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!mounted) return;
+    if (typeof window === "undefined") return;
 
     const html = document.documentElement;
     localStorage.setItem("theme", theme);
@@ -42,16 +41,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     } else {
       html.classList.remove("dark");
     }
-  }, [theme, mounted]);
+  }, [theme]);
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));
   };
-
-  // Prevent rendering until mounted to avoid hydration mismatch
-  if (!mounted) {
-    return <>{children}</>;
-  }
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
