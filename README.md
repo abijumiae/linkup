@@ -38,6 +38,22 @@ LinkUp is a full social platform with a NestJS backend and a Next.js frontend. I
    npm run start:dev
    ```
 
+## Backend Deployment
+
+For production deploys, build then start the compiled server:
+
+```bash
+cd linkup_backend
+npm run build
+npm run start:prod
+```
+
+Set `FRONTEND_URL` to the deployed frontend origin so CORS only allows your app domain, for example:
+
+```bash
+FRONTEND_URL="https://app.example.com"
+```
+
 ## Frontend Setup
 
 1. Change into the frontend folder:
@@ -71,7 +87,7 @@ LinkUp is a full social platform with a NestJS backend and a Next.js frontend. I
 
 ## Environment Variables
 
-- Backend: copy `linkup_backend/.env.example` to `linkup_backend/.env` and set your `DATABASE_URL`, `JWT_SECRET`, and `PORT`.
+- Backend: copy `linkup_backend/.env.example` to `linkup_backend/.env` and set your `DATABASE_URL`, `JWT_SECRET`, `PORT`, and `FRONTEND_URL`.
 - Frontend: copy `linkup_frontend/.env.example` to `linkup_frontend/.env.local` and set `NEXT_PUBLIC_API_URL`.
 
 > Never commit real `.env` or `.env.local` files. Keep secrets out of Git.

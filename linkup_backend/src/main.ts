@@ -14,6 +14,9 @@ async function bootstrap() {
     }),
   );
 
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  app.enableCors({ origin: frontendUrl, credentials: true });
+
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
