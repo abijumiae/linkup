@@ -268,7 +268,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                   type="button"
                   disabled={membershipLoading}
                   onClick={handleMembership}
-                  className="rounded-full bg-violet-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-violet-400 disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500 disabled:opacity-50"
                 >
                   {membershipLoading
                     ? "Updating…"
@@ -280,9 +280,11 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
             </div>
 
             <section className="mt-10">
-              <h2 className="text-lg font-semibold text-white">Attendees</h2>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+                Attendees
+              </h2>
               {attendees.length === 0 ? (
-                <p className="mt-4 text-sm text-slate-400">
+                <p className="mt-4 text-sm text-slate-600 dark:text-slate-400">
                   No attendees yet. Be the first to join.
                 </p>
               ) : (
@@ -290,17 +292,17 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                   {attendees.map((attendee) => (
                     <li
                       key={attendee.id}
-                      className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3"
+                      className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-slate-950/60"
                     >
                       <div>
-                        <p className="font-medium text-white">
+                        <p className="font-medium text-slate-900 dark:text-white">
                           {attendee.user.name}
                         </p>
-                        <p className="text-sm text-slate-400">
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
                           @{attendee.user.username}
                         </p>
                       </div>
-                      <span className="text-xs uppercase tracking-[0.2em] text-violet-200">
+                      <span className="rounded-full bg-violet-500/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-200">
                         {attendee.status}
                       </span>
                     </li>
