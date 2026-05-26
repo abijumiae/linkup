@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Send } from "lucide-react";
+import { Search, Send } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import { getCurrentUser } from "@/src/lib/auth";
 import {
@@ -35,6 +35,7 @@ export default function MessagesPage() {
   const [activeUser, setActiveUser] = useState<Conversation["user"] | null>(
     null,
   );
+  const [searchQuery, setSearchQuery] = useState("");
   const [messageInput, setMessageInput] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
@@ -201,30 +202,70 @@ export default function MessagesPage() {
     return <AuthLoadingScreen message="Loading messages..." />;
   }
 
+  const filteredConversations = conversations.filter((conversation) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    const name = conversation.user.name.toLowerCase();
+    const last = conversation.lastMessage.content.toLowerCase();
+    return name.includes(q) || last.includes(q);
+  });
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
+              Messages
+            </p>
+            <h1 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
+              Inbox
+            </h1>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+              Keep up with your conversations across LinkUp.
+            </p>
+          </div>
+        </header>
+
         {error ? (
           <p className="mb-4 text-sm text-red-500 dark:text-red-400">{error}</p>
         ) : null}
 
-        <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)]">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
           <aside className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-2xl shadow-slate-950/20 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
-                  Messages
+                <h2 className="text-sm font-semibold uppercase tracking-[0.28em] text-violet-500 dark:text-violet-300">
+                  Conversations
+                </h2>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Select a chat to view messages.
                 </p>
-                <h2 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">Chats</h2>
               </div>
             </div>
-            <div className="mt-5 space-y-3">
-              {conversations.length === 0 ? (
+
+            <div className="mt-4 rounded-full border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-600 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-300">
+              <div className="flex items-center gap-2">
+                <Search className="h-4 w-4 text-slate-400" />
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search conversations"
+                  className="w-full bg-transparent outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {filteredConversations.length === 0 ? (
                 <p className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-slate-950/85 dark:text-slate-400">
-                  No conversations yet. Message someone from your feed.
+                  {conversations.length === 0
+                    ? "No conversations yet. Message someone from your feed."
+                    : "No conversations match your search."}
                 </p>
               ) : (
-                conversations.map((conversation) => (
+                filteredConversations.map((conversation) => (
                   <ChatListItem
                     key={conversation.user.id}
                     name={conversation.user.name}
@@ -250,16 +291,20 @@ export default function MessagesPage() {
                       {activeUser.name[0]}
                     </div>
                     <div>
-                      <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
+                      <p className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-400">
                         Chat
                       </p>
                       <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
                         {activeUser.name}
                       </h2>
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
                         @{activeUser.username}
                       </p>
                     </div>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-200">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    Active now
                   </div>
                 </div>
 
