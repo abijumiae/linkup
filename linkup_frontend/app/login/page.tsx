@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/src/lib/AuthProvider";
-import { Lock, Mail } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import { login } from "@/src/lib/auth";
 import AuthLoadingScreen from "../components/AuthLoadingScreen";
@@ -22,6 +22,7 @@ function LoginForm() {
   }, [isAuthenticated, router]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -54,19 +55,36 @@ function LoginForm() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-slate-50 px-4 py-8 text-slate-900 dark:bg-slate-950 dark:text-white">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-slate-50 via-white to-violet-50 px-4 py-10 text-slate-900 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-white">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-[-14rem] h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-gradient-to-tr from-violet-500/20 via-fuchsia-500/10 to-sky-500/20 blur-3xl dark:from-violet-400/20 dark:via-fuchsia-400/10 dark:to-sky-400/15"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute bottom-[-18rem] right-[-10rem] h-[30rem] w-[30rem] rounded-full bg-gradient-to-tr from-sky-500/10 via-violet-500/10 to-transparent blur-3xl dark:from-sky-400/10 dark:via-violet-400/10"
+      />
       <div className="absolute right-4 top-4">
         <ThemeToggle />
       </div>
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-slate-900 shadow-xl shadow-slate-950/10 backdrop-blur-sm dark:border-white/10 dark:bg-white/5 dark:text-white dark:shadow-slate-950/50">
-        {/* Logo */}
-        <div className="mb-8 text-center">
-          <p className="text-sm font-semibold uppercase tracking-widest text-violet-400">LinkUp</p>
+      <div className="relative w-full max-w-md rounded-2xl border border-slate-200/80 bg-white/85 p-7 text-slate-900 shadow-xl shadow-slate-950/10 backdrop-blur-sm dark:border-white/10 dark:bg-white/5 dark:text-white dark:shadow-slate-950/50 sm:p-8">
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-violet-400/50 to-transparent dark:via-violet-400/40"
+        />
+        {/* Logo badge */}
+        <div className="mb-6 flex justify-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-slate-700 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+            <span className="h-2 w-2 rounded-full bg-gradient-to-r from-violet-500 to-sky-500" />
+            LinkUp
+          </div>
         </div>
 
         {/* Heading */}
-        <h1 className="mb-2 text-center text-2xl font-semibold text-slate-950 dark:text-white">Login to LinkUp</h1>
-        <p className="mb-8 text-center text-sm text-slate-600 dark:text-slate-300">Welcome back. Sign in to continue.</p>
+        <h1 className="text-center text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">Login to LinkUp</h1>
+        <p className="mb-7 text-center text-sm text-slate-600 dark:text-slate-300">
+          Welcome back. Continue to your social workspace.
+        </p>
 
         {/* Messages */}
         {success && (
@@ -101,25 +119,34 @@ function LoginForm() {
 
           <label className="block space-y-2">
             <span className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-300">Password</span>
-            <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 transition focus-within:border-violet-400/60 dark:border-white/10 dark:bg-slate-950/70 dark:focus-within:border-violet-400/50">
+            <div className="relative flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 transition focus-within:border-violet-400/60 dark:border-white/10 dark:bg-slate-950/70 dark:focus-within:border-violet-400/50">
               <Lock className="h-4 w-4 text-slate-500" />
               <input
-                className="w-full bg-transparent text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
+                className="w-full bg-transparent pr-10 text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
                 placeholder="Enter your password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 required
                 autoComplete="current-password"
                 disabled={isLoading}
               />
+              <button
+                type="button"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                onClick={() => setShowPassword((v) => !v)}
+                disabled={isLoading}
+                className="absolute right-2 inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-white/10 dark:hover:text-slate-200"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
           </label>
 
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-lg bg-gradient-to-r from-violet-600 to-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isLoading ? "Signing in..." : "Login"}
           </button>
@@ -128,7 +155,7 @@ function LoginForm() {
         {/* Link */}
         <p className="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
           New to LinkUp?{" "}
-          <Link href="/signup" className="font-semibold text-violet-400 hover:text-violet-300 transition">
+          <Link href="/signup" className="font-semibold text-violet-600 transition hover:text-violet-500 dark:text-violet-400 dark:hover:text-violet-300">
             Create an account
           </Link>
         </p>
