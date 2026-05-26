@@ -59,24 +59,37 @@ export default function JobApplyModal({
           </button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <textarea
-            value={coverLetter}
-            onChange={(e) => setCoverLetter(e.target.value)}
-            rows={5}
-            placeholder="Cover letter (optional)"
-            className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
-          />
-          <input
-            value={resumeUrl}
-            onChange={(e) => setResumeUrl(e.target.value)}
-            placeholder="Resume URL (optional)"
-            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
-          />
-          {error && <p className="text-sm text-red-600 dark:text-red-300">{error}</p>}
+          <label className="block space-y-1.5">
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Cover letter (optional)
+            </span>
+            <textarea
+              value={coverLetter}
+              onChange={(e) => setCoverLetter(e.target.value)}
+              rows={5}
+              placeholder="Tell the employer why you're a great fit"
+              className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
+            />
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Resume URL (optional)
+            </span>
+            <input
+              value={resumeUrl}
+              onChange={(e) => setResumeUrl(e.target.value)}
+              type="url"
+              placeholder="https://example.com/resume.pdf"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
+            />
+          </label>
+          {error ? (
+            <p className="text-sm text-red-600 dark:text-red-300">{error}</p>
+          ) : null}
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded-full bg-violet-500 py-3 text-sm font-semibold text-slate-950 disabled:opacity-50"
+            className="w-full rounded-full bg-gradient-to-r from-violet-600 to-sky-600 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500 disabled:opacity-50"
           >
             {isSubmitting ? "Submitting…" : "Submit application"}
           </button>

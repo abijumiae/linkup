@@ -224,7 +224,7 @@ export default function JobDetailClient({ jobId }: JobDetailClientProps) {
               <>
                 <Link
                   href={`/jobs/${job.id}/applications`}
-                  className="inline-flex items-center gap-2 rounded-full bg-violet-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-violet-400"
+                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
                 >
                   <Users className="h-4 w-4" />
                   View applications ({job.applicationsCount})
@@ -252,7 +252,7 @@ export default function JobDetailClient({ jobId }: JobDetailClientProps) {
                 type="button"
                 disabled={job.hasApplied}
                 onClick={() => setShowApplyModal(true)}
-                className="inline-flex items-center gap-2 rounded-full bg-violet-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-violet-400 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500 disabled:opacity-50"
               >
                 {job.hasApplied ? "Applied" : "Apply now"}
                 {!job.hasApplied && <Sparkles className="h-4 w-4" />}
