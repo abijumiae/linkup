@@ -1,0 +1,32 @@
+import {
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { SafeUser } from '../users/users.service';
+import { NotificationsService } from './notifications.service';
+
+@Controller('notifications')
+@UseGuards(JwtAuthGuard)
+export class NotificationsController {
+  constructor(private readonly notificationsService: NotificationsService) {}
+
+  @Get()
+  getNotifications(@Req() req: { user: SafeUser }) {
+    return this.notificationsService.getForUser(req.user.id);
+  }
+
+  @Patch('read-all')
+  markAllAsRead(@Req() req: { user: SafeUser }) {
+    return this.notificationsService.markAllAsRead(req.user.id);
+  }
+
+  @Patch(':id/read')
+  markAsRead(@Param('id') id: string, @Req() req: { user: SafeUser }) {
+    return this.notificationsService.markAsRead(id, req.user.id);
+  }
+}

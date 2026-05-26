@@ -1,0 +1,60 @@
+import { Type } from 'class-transformer';
+import {
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
+
+export class UpdateMarketplaceItemDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  title?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(2000)
+  description?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  price?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  currency?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  category?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  condition?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  location?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  imageUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  status?: string;
+}
