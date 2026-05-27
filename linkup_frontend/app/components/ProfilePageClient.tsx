@@ -230,16 +230,12 @@ export default function ProfilePageClient() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
-        <header className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
-          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
-            Profile
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">
-            Profile
-          </h1>
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+    <div className="linkup-page">
+      <div className="linkup-container max-w-4xl">
+        <header className="linkup-panel mb-6 p-6 sm:p-7">
+          <p className="linkup-eyebrow">LinkUp</p>
+          <h1 className="linkup-title mt-3">Profile</h1>
+          <p className="linkup-subtitle">
             Your LinkUp Card, network, and sparks in one place.
           </p>
         </header>

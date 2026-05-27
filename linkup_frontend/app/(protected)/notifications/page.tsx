@@ -149,9 +149,9 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
+    <div className="linkup-page">
+      <div className="linkup-container max-w-3xl">
+        <header className="mb-6 linkup-panel p-6 sm:p-7">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
@@ -175,7 +175,7 @@ export default function NotificationsPage() {
               type="button"
               onClick={() => void handleMarkAllRead()}
               disabled={isMarkingAll || !hasUnread}
-              className="inline-flex shrink-0 items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="linkup-btn-primary shrink-0 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <CheckCircle2 className="h-4 w-4" />
               {isMarkingAll ? "Updating…" : "Mark all as read"}

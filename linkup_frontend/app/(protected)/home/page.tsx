@@ -251,11 +251,11 @@ export default function HomeDashboardPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div className="mx-auto max-w-[1760px] px-4 py-6 sm:px-6 lg:px-8">
+    <div className="linkup-page">
+      <div className="linkup-container-wide max-w-[1760px]">
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
           <main className="space-y-6">
-            <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
+            <header className="linkup-panel p-6 sm:p-7">
               <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
                 LinkUp Pulse
               </p>

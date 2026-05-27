@@ -40,11 +40,11 @@ export default function LayoutContent({
         className={`flex ${showNavigation ? "min-h-[calc(100vh-72px)]" : "min-h-screen"}`}
       >
         {showNavigation && (
-          <aside className="hidden w-[280px] shrink-0 border-r border-slate-200 bg-white/80 p-4 lg:block lg:py-6 dark:border-white/10 dark:bg-slate-950/80">
+          <aside className="hidden w-[280px] shrink-0 border-r border-slate-200/90 bg-gradient-to-b from-white via-white to-slate-50/90 p-4 lg:block lg:py-6 dark:border-white/10 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900/80">
             <div className="sticky top-28 space-y-4">
               <Link
                 href="/home"
-                className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/90 px-3 py-2.5 shadow-sm dark:border-white/10 dark:bg-slate-900/80"
+                className="linkup-panel flex items-center gap-3 px-3 py-2.5 shadow-md"
               >
                 <img
                   src="/brand/app-icon.png"
@@ -59,7 +59,9 @@ export default function LayoutContent({
             </div>
           </aside>
         )}
-        <main className="min-w-0 flex-1 pb-28 lg:pb-16">{children}</main>
+        <main className="linkup-main min-w-0 flex-1 overflow-x-hidden pb-28 lg:pb-16">
+          {children}
+        </main>
       </div>
     </>
   );

@@ -8,7 +8,7 @@ type SettingsSectionProps = {
 
 export default function SettingsSection({ title, description, children }: SettingsSectionProps) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/5 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
+    <section className="linkup-panel p-6 sm:p-7">
       <div className="mb-5">
         <p className="text-xs font-semibold uppercase tracking-[0.25em] text-violet-600 dark:text-violet-300/80">
           {title}

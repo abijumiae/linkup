@@ -70,7 +70,7 @@ export default function SignupPage() {
       <div className="absolute right-4 top-4">
         <ThemeToggle />
       </div>
-      <div className="relative w-full max-w-md rounded-2xl border border-slate-200/80 bg-white/85 p-7 text-slate-900 shadow-xl shadow-slate-950/10 backdrop-blur-sm dark:border-white/10 dark:bg-white/5 dark:text-white dark:shadow-slate-950/50 sm:max-w-lg sm:p-8">
+      <div className="linkup-panel relative w-full max-w-md p-7 text-slate-900 dark:text-white sm:max-w-lg sm:p-8">
         <div
           aria-hidden="true"
           className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-violet-400/50 to-transparent dark:via-violet-400/40"

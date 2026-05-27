@@ -261,9 +261,9 @@ export default function MessagesPage() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
+    <div className="linkup-page">
+      <div className="linkup-container-wide">
+        <header className="mb-6 linkup-panel p-6 sm:p-7">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
               LinkUp Chats

@@ -59,7 +59,7 @@ export default function LinkupNavigation() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/95">
+      <header className="linkup-topbar">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
           <Link
             href="/home"
@@ -74,13 +74,13 @@ export default function LinkupNavigation() {
           </Link>
 
           <div className="hidden flex-1 md:flex">
-            <form onSubmit={handleSearchSubmit} className="relative flex-1">
+            <form onSubmit={handleSearchSubmit} className="linkup-input-shell relative flex-1 rounded-full py-2.5 pl-12">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
               <input
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                className="w-full rounded-full border border-slate-300 bg-white px-4 py-3 pl-12 text-sm text-slate-900 outline-none placeholder:text-slate-500 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100"
-                placeholder="Discover people, sparks, hubs..."
+                className="linkup-input"
+                placeholder="Discover people, sparks, hubs, market, work..."
               />
             </form>
           </div>

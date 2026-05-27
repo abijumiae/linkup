@@ -184,38 +184,32 @@ export default function GroupsPageClient() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="mb-8 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
+    <div className="linkup-page">
+      <div className="linkup-container-wide">
+        <header className="linkup-panel mb-8 p-6 sm:p-7">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-sm uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
-                LinkUp Hubs
-              </p>
-              <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">
-                Hubs
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400">
+              <p className="linkup-eyebrow">LinkUp Hubs</p>
+              <h1 className="linkup-title mt-3">Hubs</h1>
+              <p className="linkup-subtitle">
                 Build communities around people, ideas, and opportunities.
               </p>
             </div>
             <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-              <div className="w-full rounded-full border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-600 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-300 sm:w-64">
-                <div className="flex items-center gap-2">
-                  <Search className="h-4 w-4 text-slate-400" />
-                  <input
-                    type="search"
-                    value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                    placeholder="Search hubs..."
-                    className="w-full bg-transparent outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
-                  />
-                </div>
+              <div className="linkup-input-shell w-full sm:w-64">
+                <Search className="h-4 w-4 shrink-0 text-slate-400" />
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search hubs..."
+                  className="linkup-input"
+                />
               </div>
               <button
                 type="button"
                 onClick={() => setShowCreateModal(true)}
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
+                className="linkup-btn-primary"
               >
                 <Plus className="h-4 w-4" />
                 Create Hub

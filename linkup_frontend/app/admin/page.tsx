@@ -38,7 +38,7 @@ const sidebarLinks = [
 export default function AdminPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="linkup-container-wide">
         <div className="grid gap-6 xl:grid-cols-[240px_minmax(0,1fr)]">
           <aside className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-6 shadow-2xl shadow-slate-950/20 backdrop-blur-xl">
             <div className="mb-8">

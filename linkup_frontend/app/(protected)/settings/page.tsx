@@ -295,16 +295,12 @@ export default function SettingsPage() {
     "text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-300";
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
-          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
-            LinkUp
-          </p>
-          <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">
-            Settings
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400">
+    <div className="linkup-page">
+      <div className="linkup-container">
+        <header className="linkup-panel mb-8 p-6 sm:p-7">
+          <p className="linkup-eyebrow">LinkUp</p>
+          <h1 className="linkup-title mt-3">Settings</h1>
+          <p className="linkup-subtitle">
             Tune your account, LinkUp Card, privacy, alerts, and appearance — all in one place.
           </p>
         </header>

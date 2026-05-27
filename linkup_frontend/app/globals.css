@@ -83,3 +83,104 @@ select {
   box-shadow: var(--float-shadow-hover);
   border-color: var(--float-border-hover);
 }
+
+@layer components {
+  .linkup-page {
+    @apply min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100;
+    background-image: radial-gradient(
+        ellipse 80% 50% at 0% -10%,
+        rgba(139, 92, 246, 0.08),
+        transparent 55%
+      ),
+      radial-gradient(
+        ellipse 60% 40% at 100% 0%,
+        rgba(56, 189, 248, 0.06),
+        transparent 50%
+      );
+  }
+
+  .dark .linkup-page {
+    background-image: radial-gradient(
+        ellipse 70% 45% at 0% -5%,
+        rgba(139, 92, 246, 0.14),
+        transparent 50%
+      ),
+      radial-gradient(
+        ellipse 55% 35% at 100% 0%,
+        rgba(59, 130, 246, 0.1),
+        transparent 45%
+      );
+  }
+
+  .linkup-container {
+    @apply mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:py-8;
+  }
+
+  .linkup-container-wide {
+    @apply mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:py-8;
+  }
+
+  .linkup-panel {
+    @apply rounded-3xl border border-slate-200/90 bg-white/95 shadow-xl shadow-slate-900/[0.04] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/75 dark:shadow-black/25;
+  }
+
+  .linkup-panel-soft {
+    @apply rounded-3xl border border-slate-200/80 bg-slate-50/95 dark:border-white/10 dark:bg-slate-950/55;
+  }
+
+  .linkup-card {
+    @apply rounded-3xl border border-slate-200/90 bg-white shadow-lg shadow-slate-900/[0.04] dark:border-white/10 dark:bg-slate-900/80 dark:shadow-black/20;
+  }
+
+  .linkup-eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/90;
+  }
+
+  .linkup-title {
+    @apply text-3xl font-semibold tracking-tight text-slate-900 dark:text-white;
+  }
+
+  .linkup-subtitle {
+    @apply mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400;
+  }
+
+  .linkup-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/25 transition hover:from-violet-500 hover:to-sky-500 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .linkup-btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-violet-400/40 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:bg-white/10;
+  }
+
+  .linkup-btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-slate-200/80 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10;
+  }
+
+  .linkup-input-shell {
+    @apply flex items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/95 px-4 py-3 shadow-sm transition focus-within:border-violet-400/50 focus-within:ring-2 focus-within:ring-violet-500/15 dark:border-white/10 dark:bg-slate-950/80 dark:focus-within:border-violet-400/40;
+  }
+
+  .linkup-input {
+    @apply w-full min-w-0 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500;
+  }
+
+  .linkup-empty {
+    @apply rounded-3xl border border-dashed border-slate-300/90 bg-white/80 dark:border-white/15 dark:bg-slate-900/50;
+  }
+
+  .linkup-chip {
+    @apply rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10;
+  }
+
+  .linkup-chip-active {
+    @apply rounded-full border border-violet-500/40 bg-gradient-to-r from-violet-600 to-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-violet-600/20;
+  }
+
+  .linkup-main {
+    @apply min-h-0;
+  }
+
+  .linkup-topbar {
+    @apply sticky top-0 z-40 border-b border-slate-200/90 bg-white/90 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/90;
+  }
+}
