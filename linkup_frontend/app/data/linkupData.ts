@@ -66,6 +66,14 @@ export const homeSuggestions = ["Nina Holmes", "Eli Reyes", "Rae Walker"];
 export const homeOnlineFriends = ["Jules", "Tess", "Mia", "Omar"];
 
 export const exploreTrendingTags = ["#LinkUpLaunch", "#CreatorEconomy", "#DesignSystem", "#DarkMode", "#CommunityGrowth"];
+export const pulseTrendChips = [
+  "Tech",
+  "Business",
+  "Design",
+  "Learning",
+  "Local Pulse",
+  "Opportunities",
+];
 export const exploreCreators = ["Avery Lane", "Noah Green", "Harper Quinn", "Milo Chen"];
 export const exploreCommunities = ["Product Builders", "Design Leaders", "Launch Teams", "Growth Marketers"];
 export const explorePopularPosts = [

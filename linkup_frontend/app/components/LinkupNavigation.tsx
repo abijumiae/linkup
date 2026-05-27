@@ -19,7 +19,7 @@ import { ThemeToggle } from "./ThemeToggle";
 
 const mobileNavItems = [
   { label: "Home", href: "/home", icon: Home },
-  { label: "Explore", href: "/explore", icon: Compass },
+  { label: "Discover", href: "/explore", icon: Compass },
   { label: "Messages", href: "/messages", icon: MessageCircle },
   { label: "Hubs", href: "/groups", icon: Users },
   { label: "Profile", href: "/profile", icon: UserCircle },
@@ -80,7 +80,7 @@ export default function LinkupNavigation() {
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 className="w-full rounded-full border border-slate-300 bg-white px-4 py-3 pl-12 text-sm text-slate-900 outline-none placeholder:text-slate-500 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100"
-                placeholder="Search people and posts"
+                placeholder="Discover people, sparks, hubs..."
               />
             </form>
           </div>

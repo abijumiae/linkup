@@ -8,7 +8,7 @@ import { SidebarNav } from "./SidebarNav";
 
 const sidebarNavItems = [
   { label: "Home", href: "/home", icon: "home" },
-  { label: "Explore", href: "/explore", icon: "explore" },
+  { label: "Discover", href: "/explore", icon: "explore" },
   { label: "Messages", href: "/messages", icon: "messages" },
   { label: "Hubs", href: "/groups", icon: "groups" },
   { label: "Market", href: "/marketplace", icon: "marketplace" },

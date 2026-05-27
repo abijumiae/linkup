@@ -77,7 +77,7 @@ export default function SearchUserCard({
               className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
             >
               <Mail className="h-4 w-4 text-sky-500" />
-              Message
+              Start Chat
             </Link>
             <button
               type="button"
@@ -90,7 +90,7 @@ export default function SearchUserCard({
               }`}
             >
               <UserPlus className="h-4 w-4" />
-              {isUpdating ? "Updating…" : isFollowing ? "Following" : "Follow"}
+              {isUpdating ? "Updating…" : isFollowing ? "Connected" : "Connect"}
             </button>
           </div>
         ) : null}
