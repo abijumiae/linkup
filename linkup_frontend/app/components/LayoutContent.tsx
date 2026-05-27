@@ -13,7 +13,7 @@ const sidebarNavItems = [
   { label: "Hubs", href: "/groups", icon: "groups" },
   { label: "Market", href: "/marketplace", icon: "marketplace" },
   { label: "Work", href: "/jobs", icon: "jobs" },
-  { label: "Events", href: "/events", icon: "events" },
+  { label: "Happenings", href: "/events", icon: "events" },
   { label: "Notifications", href: "/notifications", icon: "notifications" },
   { label: "Profile", href: "/profile", icon: "profile" },
   { label: "Settings", href: "/settings", icon: "settings" },

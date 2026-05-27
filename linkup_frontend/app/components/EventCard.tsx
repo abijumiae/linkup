@@ -46,7 +46,7 @@ export default function EventCard({
         <div className="flex h-44 items-end bg-gradient-to-br from-violet-500/15 via-slate-100 to-sky-500/10 p-5 dark:from-violet-500/20 dark:via-slate-900 dark:to-slate-950">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-violet-600 dark:text-violet-300">
-              {event.category ?? "Event"}
+              {event.category ?? "Happening"}
             </p>
             <h3 className="mt-1 line-clamp-2 text-lg font-semibold text-slate-900 dark:text-white">
               {event.title}
@@ -60,7 +60,7 @@ export default function EventCard({
           <>
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-violet-500/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-200">
-                {event.category ?? "Event"}
+                {event.category ?? "Happening"}
               </span>
             </div>
             <h3 className="mt-2 line-clamp-2 text-lg font-semibold text-slate-900 dark:text-white">
@@ -93,12 +93,15 @@ export default function EventCard({
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm">
           <p className="inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
             <User className="h-3.5 w-3.5" />
-            {event.organizer.name}
+            Organizer:{" "}
+            <span className="font-medium text-slate-700 dark:text-slate-200">
+              {event.organizer.name}
+            </span>
           </p>
           <p className="inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
             <Users className="h-3.5 w-3.5 text-violet-500 dark:text-violet-300" />
             {event.attendeesCount}{" "}
-            {event.attendeesCount === 1 ? "going" : "going"}
+            {event.attendeesCount === 1 ? "person" : "people"} going
           </p>
         </div>
 
@@ -107,11 +110,11 @@ export default function EventCard({
             href={`/events/${event.id}`}
             className="inline-flex flex-1 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-slate-700 transition hover:border-violet-400/40 hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
           >
-            View details
+            View Details
           </Link>
           {event.isOrganizer ? (
             <span className="inline-flex flex-1 items-center justify-center rounded-full border border-violet-400/30 bg-violet-500/10 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-violet-700 dark:text-violet-200">
-              Your event
+              Your happening
             </span>
           ) : event.isGoing ? (
             <button
@@ -130,7 +133,7 @@ export default function EventCard({
               onClick={handleAttendance}
               className="inline-flex flex-1 items-center justify-center rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-white shadow-md shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500 disabled:opacity-50"
             >
-              {isUpdating ? "Joining…" : "Join"}
+              {isUpdating ? "Joining…" : "I'm Going"}
             </button>
           )}
         </div>

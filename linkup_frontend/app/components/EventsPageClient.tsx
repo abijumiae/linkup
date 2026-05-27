@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Image, MapPin, Plus, Search, X } from "lucide-react";
+import { CalendarDays, Image, MapPin, Plus, Search, X } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import {
   createEvent,
@@ -22,6 +22,42 @@ const categoryOptions = eventFilterOptions.filter(
 
 const inputClass =
   "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50";
+
+function HappeningsEmptyState({
+  title,
+  description,
+  showCreateButton,
+  onCreate,
+}: {
+  title: string;
+  description: string;
+  showCreateButton?: boolean;
+  onCreate?: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center dark:border-white/15 dark:bg-slate-900/60">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-300">
+        <CalendarDays className="h-5 w-5" />
+      </div>
+      <h3 className="mt-4 text-base font-semibold text-slate-900 dark:text-white">
+        {title}
+      </h3>
+      <p className="mx-auto mt-2 max-w-md text-sm text-slate-600 dark:text-slate-400">
+        {description}
+      </p>
+      {showCreateButton && onCreate ? (
+        <button
+          type="button"
+          onClick={onCreate}
+          className="mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
+        >
+          <Plus className="h-4 w-4" />
+          Create Happening
+        </button>
+      ) : null}
+    </div>
+  );
+}
 
 function EventSkeleton() {
   return (
@@ -75,7 +111,7 @@ export default function EventsPageClient() {
         router.replace("/login");
         return;
       }
-      setError("Unable to load events. Please try again.");
+      setError("Unable to load happenings. Please try again.");
     }
   }, [router]);
 
@@ -115,7 +151,7 @@ export default function EventsPageClient() {
       updateEventInList(updated);
     } catch (err) {
       setError(
-        err instanceof ApiError ? err.message : "Unable to join event.",
+        err instanceof ApiError ? err.message : "Unable to join happening.",
       );
     } finally {
       setUpdatingEventId(null);
@@ -129,7 +165,7 @@ export default function EventsPageClient() {
       updateEventInList(updated);
     } catch (err) {
       setError(
-        err instanceof ApiError ? err.message : "Unable to leave event.",
+        err instanceof ApiError ? err.message : "Unable to leave happening.",
       );
     } finally {
       setUpdatingEventId(null);
@@ -169,7 +205,7 @@ export default function EventsPageClient() {
       });
     } catch (err) {
       setCreateError(
-        err instanceof ApiError ? err.message : "Unable to create event.",
+        err instanceof ApiError ? err.message : "Unable to create happening.",
       );
     } finally {
       setIsCreating(false);
@@ -177,7 +213,7 @@ export default function EventsPageClient() {
   };
 
   if (isLoading && events.length === 0) {
-    return <AuthLoadingScreen message="Loading events..." />;
+    return <AuthLoadingScreen message="Loading happenings..." />;
   }
 
   return (
@@ -187,13 +223,13 @@ export default function EventsPageClient() {
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
-                Events
+                LinkUp Happenings
               </p>
               <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">
-                Find events and share your next experience
+                Happenings
               </h1>
               <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-                Discover community gatherings or host your own event on LinkUp.
+                Discover what&apos;s happening around your network.
               </p>
             </div>
             <button
@@ -202,7 +238,7 @@ export default function EventsPageClient() {
               className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
             >
               <Plus className="h-4 w-4" />
-              Create event
+              Create Happening
             </button>
           </div>
 
@@ -214,7 +250,7 @@ export default function EventsPageClient() {
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   className="w-full bg-transparent pl-10 text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
-                  placeholder="Search events"
+                  placeholder="Search happenings..."
                 />
               </div>
               <div className="relative flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-slate-950/80">
@@ -278,20 +314,12 @@ export default function EventsPageClient() {
             ))}
           </div>
         ) : events.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center dark:border-white/15 dark:bg-slate-900/60">
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              No events yet. Try adjusting your filters or create the
-              first one.
-            </p>
-            <button
-              type="button"
-              onClick={() => setShowCreateModal(true)}
-              className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
-            >
-              <Plus className="h-4 w-4" />
-              Create event
-            </button>
-          </div>
+          <HappeningsEmptyState
+            title="No happenings yet"
+            description="Create the first happening and bring people together."
+            showCreateButton
+            onCreate={() => setShowCreateModal(true)}
+          />
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {events.map((event) => (
@@ -313,10 +341,10 @@ export default function EventsPageClient() {
             <div className="mb-6 flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
-                  Create event
+                  Create Happening
                 </h2>
                 <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                  Share a new event with the community.
+                  Bring people together with a new gathering on LinkUp.
                 </p>
               </div>
               <button
@@ -336,7 +364,7 @@ export default function EventsPageClient() {
                   required
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  placeholder="Event title"
+                  placeholder="Happening title"
                   className={inputClass}
                 />
               </label>
@@ -351,7 +379,7 @@ export default function EventsPageClient() {
                     setForm({ ...form, description: e.target.value })
                   }
                   rows={4}
-                  placeholder="What is this event about?"
+                  placeholder="What is this happening about?"
                   className={`${inputClass} resize-none`}
                 />
               </label>
@@ -443,7 +471,7 @@ export default function EventsPageClient() {
                 disabled={isCreating}
                 className="w-full rounded-full bg-gradient-to-r from-violet-600 to-sky-600 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500 disabled:opacity-50"
               >
-                {isCreating ? "Creating…" : "Publish event"}
+                {isCreating ? "Creating…" : "Create Happening"}
               </button>
             </form>
           </div>

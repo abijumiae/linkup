@@ -35,7 +35,7 @@ const tabs: { id: ExploreTab; label: string; icon: typeof TrendingUp }[] = [
   { id: "groups", label: "Hubs", icon: Users },
   { id: "marketplace", label: "Market", icon: ShoppingBag },
   { id: "jobs", label: "Work", icon: Briefcase },
-  { id: "events", label: "Events", icon: CalendarDays },
+  { id: "events", label: "Happenings", icon: CalendarDays },
 ];
 
 function DiscoveryHub({
@@ -288,14 +288,14 @@ export default function ExplorePageClient() {
       : "/events";
     return (
       <DiscoveryHub
-        title="Find events"
+        title="Find happenings"
         description={
           isSearchMode
-            ? `Continue searching "${activeQuery}" in upcoming events.`
-            : "See what's happening in the community and join events near you."
+            ? `Continue searching "${activeQuery}" in upcoming happenings.`
+            : "See what's happening in the community and connect with people near you."
         }
         href={href}
-        cta={isSearchMode ? "Search events" : "Open events"}
+        cta={isSearchMode ? "Search happenings" : "Open happenings"}
         icon={CalendarDays}
       />
     );

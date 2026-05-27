@@ -36,7 +36,7 @@ const typeLabelMap: Record<NotificationType, string> = {
   GROUP_JOIN: "Hub",
   MARKETPLACE_INQUIRY: "Message",
   JOB_APPLICATION: "Work",
-  EVENT_JOIN: "Event",
+  EVENT_JOIN: "Happening",
 };
 
 const iconColorMap: Record<NotificationType, string> = {

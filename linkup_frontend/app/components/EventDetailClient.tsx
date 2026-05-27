@@ -81,7 +81,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
         router.replace("/login");
         return;
       }
-      setError("Unable to load event. Please try again.");
+      setError("Unable to load happening. Please try again.");
     }
   }, [eventId, router]);
 
@@ -135,7 +135,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
       setShowEditModal(false);
     } catch (err) {
       setError(
-        err instanceof ApiError ? err.message : "Unable to update event.",
+        err instanceof ApiError ? err.message : "Unable to update happening.",
       );
     } finally {
       setIsSaving(false);
@@ -143,7 +143,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
   };
 
   const handleDelete = async () => {
-    if (!event || !confirm("Delete this event permanently?")) return;
+    if (!event || !confirm("Delete this happening permanently?")) return;
 
     setIsDeleting(true);
     try {
@@ -151,7 +151,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
       router.push("/events");
     } catch (err) {
       setError(
-        err instanceof ApiError ? err.message : "Unable to delete event.",
+        err instanceof ApiError ? err.message : "Unable to delete happening.",
       );
       setIsDeleting(false);
     }
@@ -164,7 +164,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
   if (!event) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-700 dark:bg-slate-950 dark:text-slate-300">
-        {error ?? "Event not found."}
+        {error ?? "Happening not found."}
       </div>
     );
   }
@@ -177,7 +177,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
           className="mb-6 inline-flex items-center gap-2 text-sm text-slate-600 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to events
+          Back to happenings
         </Link>
 
         <article className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80">
@@ -194,7 +194,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
 
           <div className="p-6 sm:p-8">
             <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
-              {event.category ?? "Event"}
+              {event.category ?? "Happening"}
             </p>
             <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">
               {event.title}
@@ -216,7 +216,8 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
               </span>
               <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 dark:border-white/10">
                 <Users className="h-4 w-4 text-violet-300" />
-                {event.attendeesCount} going
+                {event.attendeesCount}{" "}
+                {event.attendeesCount === 1 ? "person" : "people"} going
               </span>
             </div>
 
@@ -273,19 +274,19 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                   {membershipLoading
                     ? "Updating…"
                     : event.isGoing
-                      ? "Leave event"
-                      : "Join event"}
+                      ? "Leave"
+                      : "I'm Going"}
                 </button>
               )}
             </div>
 
             <section className="mt-10">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-                Attendees
+                People going
               </h2>
               {attendees.length === 0 ? (
                 <p className="mt-4 text-sm text-slate-600 dark:text-slate-400">
-                  No attendees yet. Be the first to join.
+                  No one&apos;s going yet. Be the first to say you&apos;re going.
                 </p>
               ) : (
                 <ul className="mt-4 space-y-3">
@@ -318,7 +319,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/80 p-4 backdrop-blur-sm">
           <div className="my-8 w-full max-w-lg rounded-[2rem] border border-white/10 bg-slate-900 p-6 shadow-2xl">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">Edit event</h2>
+              <h2 className="text-xl font-semibold text-white">Edit happening</h2>
               <button
                 type="button"
                 onClick={() => setShowEditModal(false)}
