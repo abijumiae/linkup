@@ -30,11 +30,11 @@ const iconMap = {
 };
 
 const typeLabelMap: Record<NotificationType, string> = {
-  LIKE: "Like",
-  COMMENT: "Comment",
-  FOLLOW: "Follow",
+  LIKE: "Boost",
+  COMMENT: "Reply",
+  FOLLOW: "Connect",
   GROUP_JOIN: "Hub",
-  MARKETPLACE_INQUIRY: "Message",
+  MARKETPLACE_INQUIRY: "Chat",
   JOB_APPLICATION: "Work",
   EVENT_JOIN: "Happening",
 };
@@ -76,7 +76,7 @@ export default function NotificationItem({
   onMarkRead,
 }: NotificationItemProps) {
   const Icon = iconMap[type] ?? Bell;
-  const typeLabel = typeLabelMap[type] ?? "Update";
+  const typeLabel = typeLabelMap[type] ?? "Alert";
 
   return (
     <article
@@ -116,7 +116,10 @@ export default function NotificationItem({
               {typeLabel}
             </span>
             {unread ? (
-              <span className="inline-flex h-2 w-2 rounded-full bg-violet-500" aria-label="Unread" />
+              <span
+                className="inline-flex h-2 w-2 rounded-full bg-violet-500"
+                aria-label="Unread alert"
+              />
             ) : null}
           </div>
           <p className="mt-1 text-sm leading-6 text-slate-700 dark:text-slate-300">

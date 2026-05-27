@@ -14,7 +14,7 @@ const sidebarNavItems = [
   { label: "Market", href: "/marketplace", icon: "marketplace" },
   { label: "Work", href: "/jobs", icon: "jobs" },
   { label: "Happenings", href: "/events", icon: "events" },
-  { label: "Notifications", href: "/notifications", icon: "notifications" },
+  { label: "Alerts", href: "/notifications", icon: "notifications" },
   { label: "Profile", href: "/profile", icon: "profile" },
   { label: "Settings", href: "/settings", icon: "settings" },
 ] as const;
