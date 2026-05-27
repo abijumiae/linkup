@@ -32,7 +32,7 @@ type ExploreTab =
 const tabs: { id: ExploreTab; label: string; icon: typeof TrendingUp }[] = [
   { id: "posts", label: "Top Posts", icon: TrendingUp },
   { id: "people", label: "People", icon: Users },
-  { id: "groups", label: "Groups", icon: Users },
+  { id: "groups", label: "Hubs", icon: Users },
   { id: "marketplace", label: "Marketplace", icon: ShoppingBag },
   { id: "jobs", label: "Jobs", icon: Briefcase },
   { id: "events", label: "Events", icon: CalendarDays },
@@ -236,10 +236,10 @@ export default function ExplorePageClient() {
     if (activeTab === "groups") {
       return (
         <DiscoveryHub
-          title="Explore groups"
-          description="Join communities, collaborate with others, and discover groups that match your interests."
+          title="Explore hubs"
+          description="Join communities, collaborate with others, and discover hubs that match your interests."
           href="/groups"
-          cta="Browse groups"
+          cta="Browse hubs"
           icon={Users}
         />
       );

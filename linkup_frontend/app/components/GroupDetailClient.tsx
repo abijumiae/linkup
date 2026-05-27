@@ -47,7 +47,7 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
         router.replace("/login");
         return;
       }
-      setError("Unable to load group. Please try again.");
+      setError("Unable to load hub. Please try again.");
     }
   }, [groupId, router]);
 
@@ -93,7 +93,7 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
       setPostContent("");
     } catch (err) {
       setError(
-        err instanceof ApiError ? err.message : "Unable to create post.",
+        err instanceof ApiError ? err.message : "Unable to share a spark.",
       );
     } finally {
       setIsSubmitting(false);
@@ -101,13 +101,13 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
   };
 
   if (isLoading) {
-    return <AuthLoadingScreen />;
+    return <AuthLoadingScreen message="Loading hub..." />;
   }
 
   if (!group) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-700 dark:bg-slate-950 dark:text-slate-300">
-        {error ?? "Group not found."}
+        {error ?? "Hub not found."}
       </div>
     );
   }
@@ -120,44 +120,46 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
           className="mb-6 inline-flex items-center gap-2 text-sm text-slate-600 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to groups
+          Back to hubs
         </Link>
 
         <header className="mb-8 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80">
-          <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
-            Group
+          <p className="text-sm uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
+            Hub
           </p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">{group.name}</h1>
+          <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">
+            {group.name}
+          </h1>
           <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-400">
             {group.description}
           </p>
           <div className="mt-5 flex flex-wrap items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
             <span>
               {group.membersCount}{" "}
-              {group.membersCount === 1 ? "member" : "members"}
+              {group.membersCount === 1 ? "hub member" : "hub members"}
             </span>
             <span>·</span>
             <span>
-              Owner: {group.owner.name} (@{group.owner.username})
+              Host: {group.owner.name} (@{group.owner.username})
             </span>
           </div>
           <div className="mt-6">
             {group.isOwner ? (
-              <span className="inline-flex rounded-full bg-violet-500/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-violet-200">
-                You own this group
+              <span className="inline-flex rounded-full bg-violet-500/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-violet-700 dark:text-violet-200">
+                You host this hub
               </span>
             ) : (
               <button
                 type="button"
                 disabled={membershipLoading}
                 onClick={handleMembership}
-                className="rounded-full bg-violet-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-violet-400 disabled:opacity-50"
+                className="rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500 disabled:opacity-50"
               >
                 {membershipLoading
                   ? "Updating…"
                   : group.isMember
-                    ? "Leave group"
-                    : "Join group"}
+                    ? "Leave Hub"
+                    : "Join Hub"}
               </button>
             )}
           </div>
@@ -175,32 +177,36 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
             className="mb-8 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80"
           >
             <label className="mb-2 block text-sm text-slate-600 dark:text-slate-400">
-              Post to this group
+              Share a spark in this hub
             </label>
             <textarea
               value={postContent}
               onChange={(e) => setPostContent(e.target.value)}
               rows={3}
-              placeholder="Share something with the group…"
+              placeholder="Share an idea, update, or opportunity with the hub…"
               className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
             />
             <button
               type="submit"
               disabled={isSubmitting || !postContent.trim()}
-              className="mt-4 rounded-full bg-violet-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-violet-400 disabled:opacity-50"
+              className="mt-4 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500 disabled:opacity-50"
             >
-              {isSubmitting ? "Posting…" : "Post"}
+              {isSubmitting ? "Sharing…" : "Share spark"}
             </button>
           </form>
         )}
 
         <section className="space-y-4">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Group posts</h2>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+            Hub sparks
+          </h2>
           {posts.length === 0 ? (
-            <p className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600 dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-400">
-              No posts in this group yet.
-              {group.isMember ? " Be the first to share something." : ""}
-            </p>
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center dark:border-white/15 dark:bg-slate-900/60">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                No sparks in this hub yet.
+                {group.isMember ? " Be the first to share something." : ""}
+              </p>
+            </div>
           ) : (
             posts.map((post) => (
               <FeedPostCard

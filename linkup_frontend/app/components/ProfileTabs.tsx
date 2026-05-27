@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-const tabs = ["Posts", "Reels", "Groups", "Saved"] as const;
+const tabs = ["Posts", "Reels", "Hubs", "Saved"] as const;
 export type ProfileTab = (typeof tabs)[number];
 
 type ProfileTabsProps = {

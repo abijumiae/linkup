@@ -33,7 +33,7 @@ const typeLabelMap: Record<NotificationType, string> = {
   LIKE: "Like",
   COMMENT: "Comment",
   FOLLOW: "Follow",
-  GROUP_JOIN: "Group",
+  GROUP_JOIN: "Hub",
   MARKETPLACE_INQUIRY: "Message",
   JOB_APPLICATION: "Job",
   EVENT_JOIN: "Event",

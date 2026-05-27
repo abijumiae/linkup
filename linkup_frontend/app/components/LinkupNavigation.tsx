@@ -21,7 +21,7 @@ const mobileNavItems = [
   { label: "Home", href: "/home", icon: Home },
   { label: "Explore", href: "/explore", icon: Compass },
   { label: "Messages", href: "/messages", icon: MessageCircle },
-  { label: "Groups", href: "/groups", icon: Users },
+  { label: "Hubs", href: "/groups", icon: Users },
   { label: "Profile", href: "/profile", icon: UserCircle },
 ];
 

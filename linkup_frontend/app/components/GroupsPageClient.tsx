@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Image, Plus, Search, Sparkles, X } from "lucide-react";
+import { Image, Plus, Search, Sparkles, Users, X } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import {
   createGroup,
@@ -14,10 +14,38 @@ import {
 import AuthLoadingScreen from "./AuthLoadingScreen";
 import GroupCard from "./GroupCard";
 
-function EmptyState({ message }: { message: string }) {
+function HubsEmptyState({
+  title,
+  description,
+  showCreateButton,
+  onCreate,
+}: {
+  title: string;
+  description: string;
+  showCreateButton?: boolean;
+  onCreate?: () => void;
+}) {
   return (
-    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center dark:border-white/15 dark:bg-slate-900/60">
-      <p className="text-sm text-slate-600 dark:text-slate-400">{message}</p>
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center dark:border-white/15 dark:bg-slate-900/60 sm:p-10">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-300">
+        <Users className="h-5 w-5" />
+      </div>
+      <h3 className="mt-4 text-base font-semibold text-slate-900 dark:text-white">
+        {title}
+      </h3>
+      <p className="mx-auto mt-2 max-w-md text-sm text-slate-600 dark:text-slate-400">
+        {description}
+      </p>
+      {showCreateButton && onCreate ? (
+        <button
+          type="button"
+          onClick={onCreate}
+          className="mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
+        >
+          <Plus className="h-4 w-4" />
+          Create Hub
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -50,7 +78,7 @@ export default function GroupsPageClient() {
         router.replace("/login");
         return;
       }
-      setError("Unable to load groups. Please try again.");
+      setError("Unable to load hubs. Please try again.");
     }
   }, [router]);
 
@@ -75,9 +103,7 @@ export default function GroupsPageClient() {
       const updated = await joinGroup(groupId);
       updateGroupInList(updated);
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Unable to join group.",
-      );
+      setError(err instanceof ApiError ? err.message : "Unable to join hub.");
     } finally {
       setActionGroupId(null);
     }
@@ -89,9 +115,7 @@ export default function GroupsPageClient() {
       const updated = await leaveGroup(groupId);
       updateGroupInList(updated);
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Unable to leave group.",
-      );
+      setError(err instanceof ApiError ? err.message : "Unable to leave hub.");
     } finally {
       setActionGroupId(null);
     }
@@ -132,7 +156,7 @@ export default function GroupsPageClient() {
       setCreateCoverImage("");
     } catch (err) {
       setCreateError(
-        err instanceof ApiError ? err.message : "Unable to create group.",
+        err instanceof ApiError ? err.message : "Unable to create hub.",
       );
     } finally {
       setIsCreating(false);
@@ -156,7 +180,7 @@ export default function GroupsPageClient() {
         : searchedGroups;
 
   if (isLoading) {
-    return <AuthLoadingScreen />;
+    return <AuthLoadingScreen message="Loading hubs..." />;
   }
 
   return (
@@ -166,13 +190,13 @@ export default function GroupsPageClient() {
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-sm uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
-                Groups
+                LinkUp Hubs
               </p>
               <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">
-                Groups
+                Hubs
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400">
-                Discover communities and build conversations.
+                Build communities around people, ideas, and opportunities.
               </p>
             </div>
             <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
@@ -183,7 +207,7 @@ export default function GroupsPageClient() {
                     type="search"
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
-                    placeholder="Search groups"
+                    placeholder="Search hubs..."
                     className="w-full bg-transparent outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
                 </div>
@@ -194,7 +218,7 @@ export default function GroupsPageClient() {
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
               >
                 <Plus className="h-4 w-4" />
-                Create group
+                Create Hub
               </button>
             </div>
           </div>
@@ -213,7 +237,7 @@ export default function GroupsPageClient() {
                 Communities
               </p>
               <h2 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
-                Find your next group
+                Find your next hub
               </h2>
             </div>
             <div className="flex items-center gap-2">
@@ -226,7 +250,7 @@ export default function GroupsPageClient() {
 
           <div className="mb-6 flex flex-wrap gap-2">
             {[
-              { id: "all", label: "All groups" },
+              { id: "all", label: "All hubs" },
               { id: "joined", label: "Joined" },
               { id: "discover", label: "Discover" },
             ].map((chip) => (
@@ -245,14 +269,22 @@ export default function GroupsPageClient() {
             ))}
           </div>
 
-          {filteredGroups.length === 0 ? (
-            <EmptyState
-              message={
+          {groups.length === 0 ? (
+            <HubsEmptyState
+              title="No hubs yet"
+              description="Create the first hub and start building your community."
+              showCreateButton
+              onCreate={() => setShowCreateModal(true)}
+            />
+          ) : filteredGroups.length === 0 ? (
+            <HubsEmptyState
+              title="No hubs found"
+              description={
                 activeFilter === "joined"
-                  ? "No groups yet. Join your first community to see it here."
+                  ? "You have not joined any hubs yet. Discover one or create your own."
                   : activeFilter === "discover"
-                    ? "No groups available to discover right now."
-                    : "No groups match your search."
+                    ? "No hubs available to discover right now."
+                    : "No hubs match your search."
               }
             />
           ) : (
@@ -275,7 +307,9 @@ export default function GroupsPageClient() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-slate-900">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Create group</h2>
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
+                Create Hub
+              </h2>
               <button
                 type="button"
                 onClick={() => setShowCreateModal(false)}
@@ -287,7 +321,7 @@ export default function GroupsPageClient() {
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
                 <label className="mb-2 block text-sm text-slate-600 dark:text-slate-400">
-                  Group name
+                  Hub name
                 </label>
                 <input
                   value={createName}
@@ -296,7 +330,7 @@ export default function GroupsPageClient() {
                   minLength={2}
                   maxLength={80}
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
-                  placeholder="e.g. Design Creators"
+                  placeholder="e.g. Design Creators Hub"
                 />
               </div>
               <div>
@@ -314,7 +348,7 @@ export default function GroupsPageClient() {
                   />
                 </div>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  Used as the banner image on your group card.
+                  Used as the banner image on your hub card.
                 </p>
               </div>
               <div>
@@ -341,7 +375,7 @@ export default function GroupsPageClient() {
                   maxLength={500}
                   rows={4}
                   className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
-                  placeholder="What is this group about?"
+                  placeholder="What is this hub about?"
                 />
               </div>
               {createError && (
@@ -350,9 +384,9 @@ export default function GroupsPageClient() {
               <button
                 type="submit"
                 disabled={isCreating}
-                className="w-full rounded-full bg-violet-500 py-3 text-sm font-semibold text-slate-950 transition hover:bg-violet-400 disabled:opacity-50"
+                className="w-full rounded-full bg-gradient-to-r from-violet-600 to-sky-600 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500 disabled:opacity-50"
               >
-                {isCreating ? "Creating…" : "Create group"}
+                {isCreating ? "Creating…" : "Create Hub"}
               </button>
             </form>
           </div>

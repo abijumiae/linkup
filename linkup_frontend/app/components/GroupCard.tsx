@@ -70,11 +70,12 @@ export default function GroupCard({
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
           <span className="rounded-full bg-slate-100 px-3 py-1 dark:bg-white/5">
-            {group.membersCount} {group.membersCount === 1 ? "member" : "members"}
+            {group.membersCount}{" "}
+            {group.membersCount === 1 ? "hub member" : "hub members"}
           </span>
           {typeof postCount === "number" ? (
             <span className="rounded-full bg-slate-100 px-3 py-1 dark:bg-white/5">
-              {postCount} {postCount === 1 ? "post" : "posts"}
+              {postCount} {postCount === 1 ? "spark" : "sparks"}
             </span>
           ) : null}
         </div>
@@ -91,14 +92,14 @@ export default function GroupCard({
                     : "bg-violet-500/15 text-violet-700 hover:bg-violet-500/25 dark:text-violet-200"
                 }`}
               >
-                {group.isMember ? "Joined" : "Join"}
+                {group.isMember ? "Joined" : "Join Hub"}
               </button>
             )}
             <Link
               href={`/groups/${group.id}`}
               className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700 transition hover:border-violet-400/40 hover:text-slate-900 dark:border-white/10 dark:text-slate-200 dark:hover:text-white"
             >
-              View group
+              Open Hub
             </Link>
           </div>
         </div>

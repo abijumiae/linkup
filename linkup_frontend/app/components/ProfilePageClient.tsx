@@ -192,13 +192,13 @@ export default function ProfilePageClient() {
       );
     }
 
-    if (activeTab === "Groups") {
+    if (activeTab === "Hubs") {
       return (
         <ProfileEmptyState
           icon={Users}
-          title="No groups yet"
-          description="Groups you join or create will appear here so you can quickly access your communities."
-          actionLabel="Explore groups"
+          title="No hubs yet"
+          description="Hubs you join or create will appear here so you can quickly access your communities."
+          actionLabel="Explore hubs"
           actionHref="/groups"
         />
       );
