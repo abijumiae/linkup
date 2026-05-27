@@ -20,7 +20,7 @@ import { ThemeToggle } from "./ThemeToggle";
 const mobileNavItems = [
   { label: "Home", href: "/home", icon: Home },
   { label: "Discover", href: "/explore", icon: Compass },
-  { label: "Messages", href: "/messages", icon: MessageCircle },
+  { label: "Chats", href: "/messages", icon: MessageCircle },
   { label: "Hubs", href: "/groups", icon: Users },
   { label: "Profile", href: "/profile", icon: UserCircle },
 ];

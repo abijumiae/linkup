@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Search, Send } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, MessageCircle, Search, Send } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import { getCurrentUser } from "@/src/lib/auth";
 import {
@@ -59,7 +60,7 @@ export default function MessagesPage() {
         router.replace("/login");
         return [];
       }
-      setError("Unable to load conversations. Please try again.");
+      setError("Unable to load chats. Please try again.");
       return [];
     }
   }, [router]);
@@ -89,7 +90,7 @@ export default function MessagesPage() {
         setError(
           err instanceof ApiError
             ? err.message
-            : "Unable to load conversation. Please try again.",
+            : "Unable to load chat. Please try again.",
         );
       }
     },
@@ -241,14 +242,14 @@ export default function MessagesPage() {
       }
       // Keep chat usable when the send endpoint is unavailable.
       appendLocalMessage(trimmed);
-      setNotice("Message sent locally. It will sync when API is available.");
+      setNotice("Chat sent locally. It will sync when API is available.");
     } finally {
       setIsSending(false);
     }
   }
 
   if (isLoading) {
-    return <AuthLoadingScreen message="Loading messages..." />;
+    return <AuthLoadingScreen message="Loading chats..." />;
   }
 
   const filteredConversations = conversations.filter((conversation) => {
@@ -265,13 +266,13 @@ export default function MessagesPage() {
         <header className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
-              Messages
+              LinkUp Chats
             </p>
             <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">
-              Inbox
+              Chats
             </h1>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-              Keep up with your conversations across LinkUp.
+              Keep your conversations flowing.
             </p>
           </div>
         </header>
@@ -296,12 +297,18 @@ export default function MessagesPage() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-sm font-semibold uppercase tracking-[0.28em] text-violet-500 dark:text-violet-300">
-                  Conversations
+                  Chats
                 </h2>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  Select a chat to view messages.
+                  Pick a chat to continue the flow.
                 </p>
               </div>
+              <Link
+                href="/explore"
+                className="shrink-0 rounded-full border border-violet-400/30 bg-violet-500/10 px-3 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-500/15 dark:text-violet-200"
+              >
+                New Chat
+              </Link>
             </div>
 
             <div className="mt-4 rounded-full border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-600 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-300">
@@ -311,7 +318,7 @@ export default function MessagesPage() {
                   type="search"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Search conversations"
+                  placeholder="Search chats..."
                   className="w-full bg-transparent outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 />
               </div>
@@ -321,14 +328,15 @@ export default function MessagesPage() {
               {filteredConversations.length === 0 ? (
                 <p className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-slate-950/85 dark:text-slate-400">
                   {conversations.length === 0
-                    ? "No conversations yet. Message someone from your feed."
-                    : "No conversations match your search."}
+                    ? "No chats yet. Start a new connection from Discover."
+                    : "No chats match your search."}
                 </p>
               ) : (
                 filteredConversations.map((conversation) => (
                   <ChatListItem
                     key={conversation.user.id}
                     name={conversation.user.name}
+                    avatarUrl={conversation.user.avatarUrl}
                     lastMessage={conversation.lastMessage.content}
                     time={formatTimeAgo(conversation.lastMessage.createdAt)}
                     unread={conversation.unreadCount}
@@ -355,13 +363,28 @@ export default function MessagesPage() {
                       type="button"
                       onClick={() => setMobileView("list")}
                       className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 lg:hidden dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-white/10"
-                      aria-label="Back to conversations"
+                      aria-label="Back to chats"
                     >
                       <ArrowLeft className="h-4 w-4" />
                     </button>
-                    <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-violet-500/15 text-lg font-semibold text-violet-600 dark:text-violet-300">
-                      {activeUser.name[0]}
-                    </div>
+                    {activeUser.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={activeUser.avatarUrl}
+                        alt=""
+                        className="h-12 w-12 rounded-3xl object-cover ring-2 ring-violet-500/20"
+                      />
+                    ) : (
+                      <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-gradient-to-br from-violet-500 to-sky-500 text-lg font-semibold text-white">
+                        {activeUser.name
+                          .trim()
+                          .split(/\s+/)
+                          .map((part) => part[0])
+                          .join("")
+                          .slice(0, 2)
+                          .toUpperCase() || "U"}
+                      </div>
+                    )}
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-400">
                         Chat
@@ -384,7 +407,7 @@ export default function MessagesPage() {
                   {messages.length === 0 ? (
                     <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center dark:border-white/15 dark:bg-slate-900/60">
                       <p className="text-sm text-slate-600 dark:text-slate-400">
-                        No messages yet. Say hello!
+                        No chats in this thread yet. Say hello!
                       </p>
                     </div>
                   ) : (
@@ -412,7 +435,7 @@ export default function MessagesPage() {
                         }
                       }}
                       className="flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
-                      placeholder="Write a message..."
+                      placeholder="Type a chat..."
                     />
                     <button
                       type="button"
@@ -427,11 +450,23 @@ export default function MessagesPage() {
                 </div>
               </div>
             ) : (
-              <div className="flex h-[min(74vh,720px)] items-center justify-center">
-                <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center dark:border-white/15 dark:bg-slate-900/60">
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    No messages yet. Select a conversation or start a new chat from the feed.
+              <div className="flex h-[min(74vh,720px)] items-center justify-center p-6">
+                <div className="max-w-sm rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center dark:border-white/15 dark:bg-slate-900/60">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-300">
+                    <MessageCircle className="h-5 w-5" />
+                  </div>
+                  <h2 className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">
+                    No chat selected
+                  </h2>
+                  <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                    Pick a chat or start a new connection.
                   </p>
+                  <Link
+                    href="/explore"
+                    className="mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
+                  >
+                    Start Chat
+                  </Link>
                 </div>
               </div>
             )}
