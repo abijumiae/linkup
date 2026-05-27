@@ -72,12 +72,12 @@ function LoginForm() {
           aria-hidden="true"
           className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-violet-400/50 to-transparent dark:via-violet-400/40"
         />
-        {/* Logo badge */}
         <div className="mb-6 flex justify-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-slate-700 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
-            <span className="h-2 w-2 rounded-full bg-gradient-to-r from-violet-500 to-sky-500" />
-            LinkUp
-          </div>
+          <img
+            src="/brand/logo-lockup.png"
+            alt="LinkUp"
+            className="h-auto w-full max-w-[180px] object-contain sm:max-w-[220px]"
+          />
         </div>
 
         {/* Heading */}

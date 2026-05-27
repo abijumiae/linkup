@@ -65,9 +65,11 @@ export default function LinkupNavigation() {
             href="/home"
             className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.35em] text-slate-900 dark:text-white"
           >
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-r from-violet-500 to-sky-500 text-base text-slate-950 shadow-lg shadow-violet-500/20">
-              LU
-            </span>
+            <img
+              src="/brand/app-icon.png"
+              alt="LinkUp"
+              className="h-9 w-9 rounded-2xl object-cover shadow-lg shadow-violet-500/20"
+            />
             <span className="hidden sm:inline">LinkUp</span>
           </Link>
 
