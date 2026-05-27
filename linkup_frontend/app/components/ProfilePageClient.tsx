@@ -71,7 +71,7 @@ export default function ProfilePageClient() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState<ProfileTab>("Posts");
+  const [activeTab, setActiveTab] = useState<ProfileTab>("Sparks");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -135,14 +135,14 @@ export default function ProfilePageClient() {
   }
 
   function renderTabContent() {
-    if (activeTab === "Posts") {
+    if (activeTab === "Sparks") {
       if (userPosts.length === 0) {
         return (
           <ProfileEmptyState
             icon={PenLine}
-            title="No posts yet"
-            description="Share your first update with your network. Posts you create will appear here on your profile."
-            actionLabel="Create your first post"
+            title="No sparks yet"
+            description="Drop your first spark on Pulse and it will show up here on your profile."
+            actionLabel="Drop Spark"
             actionHref="/home"
           />
         );
@@ -157,7 +157,7 @@ export default function ProfilePageClient() {
             >
               <div className="flex items-center justify-between gap-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-600 dark:text-violet-300">
-                  Post
+                  Spark
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {formatTimeAgo(post.createdAt)}
@@ -169,11 +169,11 @@ export default function ProfilePageClient() {
               <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
                 <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2 dark:bg-white/5">
                   <Heart className="h-4 w-4 text-pink-500" />
-                  {post.likeCount}
+                  Boost {post.likeCount}
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2 dark:bg-white/5">
                   <MessageCircle className="h-4 w-4 text-sky-500" />
-                  {post.commentCount}
+                  Reply {post.commentCount}
                 </span>
               </div>
             </article>
@@ -208,8 +208,8 @@ export default function ProfilePageClient() {
       <ProfileEmptyState
         icon={Bookmark}
         title="No saved items yet"
-        description="Posts and content you save for later will be collected here for easy access."
-        actionLabel="Explore content"
+        description="Sparks and content you save for later will be collected here for easy access."
+        actionLabel="Discover"
         actionHref="/explore"
       />
     );
@@ -237,10 +237,10 @@ export default function ProfilePageClient() {
             Profile
           </p>
           <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">
-            Your public profile
+            Profile
           </h1>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-            Manage your details and review the posts you&apos;ve shared.
+            Your LinkUp Card, network, and sparks in one place.
           </p>
         </header>
 
@@ -282,15 +282,15 @@ export default function ProfilePageClient() {
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.25em] text-violet-600 dark:text-violet-300/80">
-                Activity
+                My Sparks
               </p>
               <h2 className="mt-1 text-xl font-semibold text-slate-900 dark:text-white">
-                Your posts
+                What you&apos;ve dropped
               </h2>
               <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                 {userPosts.length === 0
-                  ? "You haven't shared any posts yet."
-                  : `${userPosts.length} post${userPosts.length === 1 ? "" : "s"} on your profile.`}
+                  ? "You haven't dropped any sparks yet."
+                  : `${userPosts.length} spark${userPosts.length === 1 ? "" : "s"} on your profile.`}
               </p>
             </div>
           </div>

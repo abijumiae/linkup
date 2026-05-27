@@ -74,10 +74,10 @@ export default function ProfileEditForm({
             Edit profile
           </p>
           <h2 className="mt-1 text-xl font-semibold text-slate-900 dark:text-white">
-            Update your public details
+            Update your LinkUp Card
           </h2>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            Email, role, and verification are managed separately.
+            Refresh who you are, what you do, and how people connect with you.
           </p>
         </div>
         <button
@@ -129,14 +129,14 @@ export default function ProfileEditForm({
         </div>
 
         <label className="block space-y-2">
-          <span className={labelClass}>Bio / About</span>
+          <span className={labelClass}>Who I am</span>
           <div className={`${inputShell} items-start py-3`}>
             <FileText className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
             <textarea
               className={`${inputClass} min-h-24 resize-y`}
               value={bio}
               onChange={(event) => setBio(event.target.value)}
-              placeholder="Tell people about yourself, your interests, or what you do."
+              placeholder="Who you are, what you're building, and what you're open to connect for..."
               disabled={isSaving}
               rows={4}
             />

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-const tabs = ["Posts", "Reels", "Hubs", "Saved"] as const;
+const tabs = ["Sparks", "Reels", "Hubs", "Saved"] as const;
 export type ProfileTab = (typeof tabs)[number];
 
 type ProfileTabsProps = {
@@ -14,7 +14,7 @@ export default function ProfileTabs({
   activeTab: controlledTab,
   onTabChange,
 }: ProfileTabsProps) {
-  const [internalTab, setInternalTab] = useState<ProfileTab>("Posts");
+  const [internalTab, setInternalTab] = useState<ProfileTab>("Sparks");
   const activeTab = controlledTab ?? internalTab;
 
   function handleTabClick(tab: ProfileTab) {
