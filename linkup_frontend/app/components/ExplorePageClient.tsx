@@ -33,7 +33,7 @@ const tabs: { id: ExploreTab; label: string; icon: typeof TrendingUp }[] = [
   { id: "posts", label: "Top Posts", icon: TrendingUp },
   { id: "people", label: "People", icon: Users },
   { id: "groups", label: "Hubs", icon: Users },
-  { id: "marketplace", label: "Marketplace", icon: ShoppingBag },
+  { id: "marketplace", label: "Market", icon: ShoppingBag },
   { id: "jobs", label: "Jobs", icon: Briefcase },
   { id: "events", label: "Events", icon: CalendarDays },
 ];
@@ -251,14 +251,14 @@ export default function ExplorePageClient() {
         : "/marketplace";
       return (
         <DiscoveryHub
-          title="Browse marketplace"
+          title="Browse market"
           description={
             isSearchMode
-              ? `Continue searching "${activeQuery}" in marketplace listings.`
+              ? `Continue searching "${activeQuery}" in market listings.`
               : "Find services, templates, and products shared by the community."
           }
           href={href}
-          cta={isSearchMode ? "Search marketplace" : "Open marketplace"}
+          cta={isSearchMode ? "Search market" : "Open market"}
           icon={ShoppingBag}
         />
       );

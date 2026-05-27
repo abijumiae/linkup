@@ -68,7 +68,7 @@ export default function MarketplaceCard({ item }: MarketplaceCardProps) {
             href={`/marketplace/${item.id}`}
             className="inline-flex flex-1 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-slate-700 transition hover:border-violet-400/40 hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
           >
-            View details
+            View Details
           </Link>
           {!item.isOwner ? (
             <Link
@@ -76,11 +76,11 @@ export default function MarketplaceCard({ item }: MarketplaceCardProps) {
               className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-white shadow-md shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
             >
               <Mail className="h-3.5 w-3.5" />
-              Message seller
+              Message Seller
             </Link>
           ) : (
             <span className="inline-flex flex-1 items-center justify-center rounded-full border border-violet-400/30 bg-violet-500/10 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-violet-700 dark:text-violet-200">
-              Your listing
+              Your drop
             </span>
           )}
         </div>

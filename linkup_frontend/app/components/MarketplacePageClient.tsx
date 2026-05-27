@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Image, Plus, Search, X } from "lucide-react";
+import { Image, Plus, Search, ShoppingBag, X } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import {
   createListing,
@@ -16,6 +16,42 @@ import MarketplaceCard from "./MarketplaceCard";
 
 const inputClass =
   "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50";
+
+function MarketEmptyState({
+  title,
+  description,
+  showDropButton,
+  onDrop,
+}: {
+  title: string;
+  description: string;
+  showDropButton?: boolean;
+  onDrop?: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center dark:border-white/15 dark:bg-slate-900/60">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-300">
+        <ShoppingBag className="h-5 w-5" />
+      </div>
+      <h3 className="mt-4 text-base font-semibold text-slate-900 dark:text-white">
+        {title}
+      </h3>
+      <p className="mx-auto mt-2 max-w-md text-sm text-slate-600 dark:text-slate-400">
+        {description}
+      </p>
+      {showDropButton && onDrop ? (
+        <button
+          type="button"
+          onClick={onDrop}
+          className="mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
+        >
+          <Plus className="h-4 w-4" />
+          Drop Listing
+        </button>
+      ) : null}
+    </div>
+  );
+}
 
 function ListingSkeleton() {
   return (
@@ -82,7 +118,7 @@ export default function MarketplacePageClient() {
           router.replace("/login");
           return;
         }
-        setError("Unable to load marketplace listings. Please try again.");
+        setError("Unable to load market listings. Please try again.");
       }
     },
     [router],
@@ -153,7 +189,7 @@ export default function MarketplacePageClient() {
       });
     } catch (err) {
       setCreateError(
-        err instanceof ApiError ? err.message : "Unable to create listing.",
+        err instanceof ApiError ? err.message : "Unable to drop listing.",
       );
     } finally {
       setIsCreating(false);
@@ -161,7 +197,7 @@ export default function MarketplacePageClient() {
   };
 
   if (isLoading && items.length === 0) {
-    return <AuthLoadingScreen message="Loading marketplace..." />;
+    return <AuthLoadingScreen message="Loading market..." />;
   }
 
   return (
@@ -171,13 +207,13 @@ export default function MarketplacePageClient() {
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
-                Marketplace
+                LinkUp Market
               </p>
               <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">
-                Find services, templates, and launch-ready products
+                Market
               </h1>
               <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-                Browse listings from the community or publish your own.
+                Discover items, services, and opportunities from your network.
               </p>
             </div>
             <button
@@ -186,7 +222,7 @@ export default function MarketplacePageClient() {
               className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
             >
               <Plus className="h-4 w-4" />
-              Create listing
+              Drop Listing
             </button>
           </div>
 
@@ -201,7 +237,7 @@ export default function MarketplacePageClient() {
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   className="w-full bg-transparent pl-10 text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
-                  placeholder="Search marketplace"
+                  placeholder="Search market..."
                 />
               </div>
               <button
@@ -287,20 +323,12 @@ export default function MarketplacePageClient() {
             ))}
           </div>
         ) : items.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center dark:border-white/15 dark:bg-slate-900/60">
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              No marketplace listings yet. Try adjusting your filters or create the first
-              one.
-            </p>
-            <button
-              type="button"
-              onClick={() => setShowCreateModal(true)}
-              className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
-            >
-              <Plus className="h-4 w-4" />
-              Create listing
-            </button>
-          </div>
+          <MarketEmptyState
+            title="No listings yet"
+            description="Drop the first listing and start the market."
+            showDropButton
+            onDrop={() => setShowCreateModal(true)}
+          />
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {items.map((item) => (
@@ -316,10 +344,10 @@ export default function MarketplacePageClient() {
             <div className="mb-6 flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
-                  Create listing
+                  Drop Listing
                 </h2>
                 <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                  Publish a new item to the marketplace.
+                  Share an item, service, or opportunity on the market.
                 </p>
               </div>
               <button
@@ -459,7 +487,7 @@ export default function MarketplacePageClient() {
                 disabled={isCreating}
                 className="w-full rounded-full bg-gradient-to-r from-violet-600 to-sky-600 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500 disabled:opacity-50"
               >
-                {isCreating ? "Creating…" : "Publish listing"}
+                {isCreating ? "Dropping…" : "Drop Listing"}
               </button>
             </form>
           </div>

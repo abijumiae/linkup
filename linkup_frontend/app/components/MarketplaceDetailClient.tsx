@@ -143,7 +143,7 @@ export default function MarketplaceDetailClient({
           className="mb-6 inline-flex items-center gap-2 text-sm text-slate-600 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to marketplace
+          Back to market
         </Link>
 
         <article className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80">
@@ -231,7 +231,7 @@ export default function MarketplaceDetailClient({
                   className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
                 >
                   <Mail className="h-4 w-4" />
-                  Message seller
+                  Message Seller
                 </Link>
               )}
             </div>
