@@ -37,6 +37,7 @@ const LOCAL_PREFS_KEY = "linkup_settings_ui_prefs_v1";
 type LocalUiPrefs = {
   profession: string;
   interests: string;
+  openToConnect: string;
   visibility: Visibility;
   allowMessages: MessagePolicy;
   showCountry: boolean;
@@ -110,6 +111,7 @@ export default function SettingsPage() {
   // UI-only preferences (no backend wiring requested / unknown support)
   const [profession, setProfession] = useState("");
   const [interests, setInterests] = useState("");
+  const [openToConnect, setOpenToConnect] = useState("");
   const [visibility, setVisibility] = useState<Visibility>("PUBLIC");
   const [allowMessages, setAllowMessages] = useState<MessagePolicy>("EVERYONE");
   const [showCountry, setShowCountry] = useState(true);
@@ -164,6 +166,9 @@ export default function SettingsPage() {
       const parsed = JSON.parse(stored) as Partial<LocalUiPrefs>;
       if (typeof parsed.profession === "string") setProfession(parsed.profession);
       if (typeof parsed.interests === "string") setInterests(parsed.interests);
+      if (typeof parsed.openToConnect === "string") {
+        setOpenToConnect(parsed.openToConnect);
+      }
       if (parsed.visibility === "PUBLIC" || parsed.visibility === "PRIVATE") {
         setVisibility(parsed.visibility);
       }
@@ -218,6 +223,7 @@ export default function SettingsPage() {
       const localPrefs: LocalUiPrefs = {
         profession,
         interests,
+        openToConnect,
         visibility,
         allowMessages,
         showCountry,
@@ -292,25 +298,15 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
-                Settings
-              </p>
-              <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">
-                Account preferences
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400">
-                Manage your account details, privacy controls, notifications, and appearance in one place.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="rounded-full border border-slate-200 bg-slate-50 p-1 dark:border-white/10 dark:bg-white/5">
-                <ThemeToggle />
-              </div>
-            </div>
-          </div>
+          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
+            LinkUp
+          </p>
+          <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">
+            Settings
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400">
+            Tune your account, LinkUp Card, privacy, alerts, and appearance — all in one place.
+          </p>
         </header>
 
         {success ? (
@@ -326,8 +322,8 @@ export default function SettingsPage() {
 
         <form className="space-y-6" onSubmit={handleSave}>
           <SettingsSection
-            title="Account Settings"
-            description="Update your core account information. Email and account type are read-only for now."
+            title="Account"
+            description="Your core LinkUp identity. Email and account type are read-only."
           >
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block space-y-2">
@@ -423,18 +419,18 @@ export default function SettingsPage() {
           </SettingsSection>
 
           <SettingsSection
-            title="Profile Preferences"
-            description="Customize how your profile appears. Only bio is saved right now."
+            title="My LinkUp Card"
+            description="Shape how you show up on LinkUp. Bio syncs to your profile; other fields save on this device."
           >
             <label className="block space-y-2">
-              <span className={labelClass}>Bio / About</span>
+              <span className={labelClass}>Bio / about</span>
               <div className={`${inputShell} items-start py-3`}>
                 <User className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
                 <textarea
                   className={`${inputClass} min-h-24 resize-y`}
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
-                  placeholder="Tell people about yourself."
+                  placeholder="Who you are and what you're about on LinkUp."
                   disabled={isSaving}
                   rows={4}
                 />
@@ -443,7 +439,7 @@ export default function SettingsPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block space-y-2">
-                <span className={labelClass}>Profession / Title</span>
+                <span className={labelClass}>Profession / title</span>
                 <div className={inputShell}>
                   <User className="h-4 w-4 shrink-0 text-slate-500" />
                   <input
@@ -454,13 +450,10 @@ export default function SettingsPage() {
                     disabled={isSaving}
                   />
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  UI-ready (not saved yet).
-                </p>
               </label>
 
               <label className="block space-y-2">
-                <span className={labelClass}>Interests / Tags</span>
+                <span className={labelClass}>Interests / tags</span>
                 <div className={inputShell}>
                   <Tag className="h-4 w-4 shrink-0 text-slate-500" />
                   <input
@@ -476,23 +469,35 @@ export default function SettingsPage() {
                     {interestsList.map((t) => (
                       <span
                         key={t}
-                        className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 dark:bg-white/5 dark:text-slate-300"
+                        className="rounded-full bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-700 dark:text-violet-200"
                       >
                         {t}
                       </span>
                     ))}
                   </div>
                 ) : null}
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  UI-ready (not saved yet).
-                </p>
               </label>
             </div>
+
+            <label className="block space-y-2">
+              <span className={labelClass}>Open to connect for</span>
+              <div className={`${inputShell} items-start py-3`}>
+                <User className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
+                <textarea
+                  className={`${inputClass} min-h-20 resize-y`}
+                  value={openToConnect}
+                  onChange={(e) => setOpenToConnect(e.target.value)}
+                  placeholder="Collaborations, mentorship, co-building, projects..."
+                  disabled={isSaving}
+                  rows={3}
+                />
+              </div>
+            </label>
           </SettingsSection>
 
           <SettingsSection
-            title="Privacy Settings"
-            description="These controls are UI-only for now until the backend exposes privacy preferences."
+            title="Privacy"
+            description="Control who sees your profile and how people can reach you. Saved on this device until backend support is added."
           >
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block space-y-2">
@@ -512,7 +517,7 @@ export default function SettingsPage() {
               </label>
 
               <label className="block space-y-2">
-                <span className={labelClass}>Allow messages</span>
+                <span className={labelClass}>Allow chats</span>
                 <div className={inputShell}>
                   <Shield className="h-4 w-4 shrink-0 text-slate-500" />
                   <select
@@ -524,7 +529,7 @@ export default function SettingsPage() {
                     disabled={isSaving}
                   >
                     <option value="EVERYONE">Everyone</option>
-                    <option value="FOLLOWERS">Followers only</option>
+                    <option value="FOLLOWERS">Connections only</option>
                     <option value="NO_ONE">No one</option>
                   </select>
                 </div>
@@ -541,34 +546,34 @@ export default function SettingsPage() {
           </SettingsSection>
 
           <SettingsSection
-            title="Notification Settings"
-            description="UI-only toggles (not connected yet)."
+            title="Alerts"
+            description="Choose what shows up in your LinkUp Alerts. Saved on this device until server sync is available."
           >
             <div className="grid gap-4 md:grid-cols-2">
               <ToggleRow
-                label="New message notifications"
-                description="Get notified when someone sends you a message."
+                label="Chat alerts"
+                description="When someone starts or continues a chat with you."
                 checked={notifyMessages}
                 onChange={setNotifyMessages}
                 disabled={isSaving}
               />
               <ToggleRow
-                label="Like/comment notifications"
-                description="Alerts when someone likes or comments on your content."
+                label="Boost & reply alerts"
+                description="When someone boosts or replies to your sparks."
                 checked={notifyLikesComments}
                 onChange={setNotifyLikesComments}
                 disabled={isSaving}
               />
               <ToggleRow
-                label="Follow notifications"
-                description="Updates when someone follows you."
+                label="Connect alerts"
+                description="When someone connects with you on LinkUp."
                 checked={notifyFollows}
                 onChange={setNotifyFollows}
                 disabled={isSaving}
               />
               <ToggleRow
-                label="Event/job updates"
-                description="Occasional updates about relevant events and job posts."
+                label="Work & happening updates"
+                description="Opportunities from Work and Happenings across your network."
                 checked={notifyUpdates}
                 onChange={setNotifyUpdates}
                 disabled={isSaving}
@@ -578,7 +583,7 @@ export default function SettingsPage() {
 
           <SettingsSection
             title="Appearance"
-            description="Theme preferences for LinkUp."
+            description="How LinkUp looks on your device."
           >
             <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-900/70">
               <div className="flex items-center justify-between gap-4">
@@ -602,7 +607,7 @@ export default function SettingsPage() {
 
           <SettingsSection
             title="Danger Zone"
-            description="Logout or manage account removal. Destructive actions require backend support."
+            description="Sign out or remove your account. Deletion requires backend support."
           >
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-900/70">
@@ -646,8 +651,8 @@ export default function SettingsPage() {
 
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-lg shadow-slate-950/5 dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
             <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-              <Bell className="h-4 w-4" />
-              Privacy, notification, profession, and interest preferences are saved locally.
+              <Bell className="h-4 w-4 text-violet-500" />
+              Account bio saves to your profile. Privacy, alerts, and LinkUp Card extras save on this device.
             </div>
             <button
               type="submit"
