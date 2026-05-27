@@ -68,7 +68,7 @@ export default function LinkupNavigation() {
             <img
               src="/brand/app-icon.png"
               alt="LinkUp"
-              className="h-9 w-9 rounded-2xl object-cover shadow-lg shadow-violet-500/20"
+              className="h-9 w-9 rounded-xl object-cover shadow-lg shadow-violet-500/20"
             />
             <span className="hidden sm:inline">LinkUp</span>
           </Link>

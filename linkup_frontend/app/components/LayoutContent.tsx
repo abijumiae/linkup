@@ -49,7 +49,7 @@ export default function LayoutContent({
                 <img
                   src="/brand/app-icon.png"
                   alt="LinkUp"
-                  className="h-9 w-9 rounded-2xl object-cover"
+                  className="h-9 w-9 rounded-xl object-cover"
                 />
                 <span className="text-sm font-semibold text-slate-900 dark:text-white">
                   LinkUp

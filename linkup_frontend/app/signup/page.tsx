@@ -77,9 +77,9 @@ export default function SignupPage() {
         />
         <div className="mb-6 flex justify-center">
           <img
-            src="/brand/logo-lockup.png"
+            src="/brand/logo-transparent.png"
             alt="LinkUp"
-            className="h-auto w-full max-w-[180px] object-contain sm:max-w-[220px]"
+            className="h-auto max-w-[180px] object-contain"
           />
         </div>
 
