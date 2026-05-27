@@ -75,7 +75,7 @@ export default function JobApplicationsClient({
           className="mb-6 inline-flex items-center gap-2 text-sm text-slate-600 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to job
+          Back to work
         </Link>
 
         <header className="mb-8 rounded-[2rem] border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-slate-900/80">
@@ -83,7 +83,7 @@ export default function JobApplicationsClient({
             Applications
           </p>
           <h1 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
-            {job?.title ?? "Job"}
+            {job?.title ?? "Work"}
           </h1>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
             {applications.length}{" "}

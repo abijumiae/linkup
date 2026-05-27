@@ -34,7 +34,7 @@ const tabs: { id: ExploreTab; label: string; icon: typeof TrendingUp }[] = [
   { id: "people", label: "People", icon: Users },
   { id: "groups", label: "Hubs", icon: Users },
   { id: "marketplace", label: "Market", icon: ShoppingBag },
-  { id: "jobs", label: "Jobs", icon: Briefcase },
+  { id: "jobs", label: "Work", icon: Briefcase },
   { id: "events", label: "Events", icon: CalendarDays },
 ];
 
@@ -270,14 +270,14 @@ export default function ExplorePageClient() {
         : "/jobs";
       return (
         <DiscoveryHub
-          title="Discover jobs"
+          title="Discover work"
           description={
             isSearchMode
-              ? `Continue searching "${activeQuery}" in job listings.`
+              ? `Continue searching "${activeQuery}" in work opportunities.`
               : "Explore open roles and opportunities posted by LinkUp members."
           }
           href={href}
-          cta={isSearchMode ? "Search jobs" : "Open jobs"}
+          cta={isSearchMode ? "Search work" : "Open work"}
           icon={Briefcase}
         />
       );

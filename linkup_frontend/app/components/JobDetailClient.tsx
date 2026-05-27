@@ -68,7 +68,7 @@ export default function JobDetailClient({ jobId }: JobDetailClientProps) {
         router.replace("/login");
         return;
       }
-      setError("Unable to load job. Please try again.");
+      setError("Unable to load work opportunity. Please try again.");
     }
   }, [jobId, router]);
 
@@ -101,7 +101,7 @@ export default function JobDetailClient({ jobId }: JobDetailClientProps) {
       setShowEditModal(false);
     } catch (err) {
       setError(
-        err instanceof ApiError ? err.message : "Unable to update job.",
+        err instanceof ApiError ? err.message : "Unable to update work post.",
       );
     } finally {
       setIsSaving(false);
@@ -109,7 +109,7 @@ export default function JobDetailClient({ jobId }: JobDetailClientProps) {
   };
 
   const handleDelete = async () => {
-    if (!job || !confirm("Delete this job permanently?")) {
+    if (!job || !confirm("Delete this work post permanently?")) {
       return;
     }
 
@@ -119,7 +119,7 @@ export default function JobDetailClient({ jobId }: JobDetailClientProps) {
       router.push("/jobs");
     } catch (err) {
       setError(
-        err instanceof ApiError ? err.message : "Unable to delete job.",
+        err instanceof ApiError ? err.message : "Unable to delete work post.",
       );
       setIsDeleting(false);
     }
@@ -132,7 +132,7 @@ export default function JobDetailClient({ jobId }: JobDetailClientProps) {
   if (!job) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-700 dark:bg-slate-950 dark:text-slate-300">
-        {error ?? "Job not found."}
+        {error ?? "Work opportunity not found."}
       </div>
     );
   }
@@ -145,7 +145,7 @@ export default function JobDetailClient({ jobId }: JobDetailClientProps) {
           className="mb-6 inline-flex items-center gap-2 text-sm text-slate-600 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to jobs
+          Back to work
         </Link>
 
         <article className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl sm:p-8 dark:border-white/10 dark:bg-slate-900/80">
@@ -254,7 +254,7 @@ export default function JobDetailClient({ jobId }: JobDetailClientProps) {
                 onClick={() => setShowApplyModal(true)}
                 className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500 disabled:opacity-50"
               >
-                {job.hasApplied ? "Applied" : "Apply now"}
+                {job.hasApplied ? "Applied" : "Apply"}
                 {!job.hasApplied && <Sparkles className="h-4 w-4" />}
               </button>
             )}
@@ -277,7 +277,7 @@ export default function JobDetailClient({ jobId }: JobDetailClientProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/80 p-4 backdrop-blur-sm">
           <div className="my-8 w-full max-w-lg rounded-[2rem] border border-white/10 bg-slate-900 p-6 shadow-2xl">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">Edit job</h2>
+              <h2 className="text-xl font-semibold text-white">Edit work post</h2>
               <button
                 type="button"
                 onClick={() => setShowEditModal(false)}

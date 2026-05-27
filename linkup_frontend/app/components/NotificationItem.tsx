@@ -35,7 +35,7 @@ const typeLabelMap: Record<NotificationType, string> = {
   FOLLOW: "Follow",
   GROUP_JOIN: "Hub",
   MARKETPLACE_INQUIRY: "Message",
-  JOB_APPLICATION: "Job",
+  JOB_APPLICATION: "Work",
   EVENT_JOIN: "Event",
 };
 

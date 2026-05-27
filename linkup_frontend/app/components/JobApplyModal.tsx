@@ -49,7 +49,7 @@ export default function JobApplyModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-slate-900">
         <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Apply to job</h2>
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Apply</h2>
           <button
             type="button"
             onClick={onClose}
@@ -91,7 +91,7 @@ export default function JobApplyModal({
             disabled={isSubmitting}
             className="w-full rounded-full bg-gradient-to-r from-violet-600 to-sky-600 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500 disabled:opacity-50"
           >
-            {isSubmitting ? "Submitting…" : "Submit application"}
+            {isSubmitting ? "Applying…" : "Apply"}
           </button>
         </form>
       </div>

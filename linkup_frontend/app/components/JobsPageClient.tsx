@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { MapPin, Plus, Search, X } from "lucide-react";
+import { Briefcase, MapPin, Plus, Search, X } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import { createJob, fetchJobs, Job, JobsFilters } from "@/src/lib/jobs";
 import { jobTypes } from "../data/linkupData";
@@ -12,6 +12,42 @@ import JobApplyModal from "./JobApplyModal";
 
 const inputClass =
   "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50";
+
+function WorkEmptyState({
+  title,
+  description,
+  showPostButton,
+  onPost,
+}: {
+  title: string;
+  description: string;
+  showPostButton?: boolean;
+  onPost?: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center dark:border-white/15 dark:bg-slate-900/60">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-300">
+        <Briefcase className="h-5 w-5" />
+      </div>
+      <h3 className="mt-4 text-base font-semibold text-slate-900 dark:text-white">
+        {title}
+      </h3>
+      <p className="mx-auto mt-2 max-w-md text-sm text-slate-600 dark:text-slate-400">
+        {description}
+      </p>
+      {showPostButton && onPost ? (
+        <button
+          type="button"
+          onClick={onPost}
+          className="mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
+        >
+          <Plus className="h-4 w-4" />
+          Post Work
+        </button>
+      ) : null}
+    </div>
+  );
+}
 
 function JobSkeleton() {
   return (
@@ -68,7 +104,7 @@ export default function JobsPageClient() {
         router.replace("/login");
         return;
       }
-      setError("Unable to load jobs. Please try again.");
+      setError("Unable to load work opportunities. Please try again.");
     }
   }, [router]);
 
@@ -128,7 +164,7 @@ export default function JobsPageClient() {
       });
     } catch (err) {
       setCreateError(
-        err instanceof ApiError ? err.message : "Unable to create job.",
+        err instanceof ApiError ? err.message : "Unable to post work.",
       );
     } finally {
       setIsCreating(false);
@@ -146,7 +182,7 @@ export default function JobsPageClient() {
   };
 
   if (isLoading && jobs.length === 0) {
-    return <AuthLoadingScreen message="Loading jobs..." />;
+    return <AuthLoadingScreen message="Loading work..." />;
   }
 
   return (
@@ -156,14 +192,13 @@ export default function JobsPageClient() {
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
-                Jobs
+                LinkUp Work
               </p>
               <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">
-                Search roles and post new opportunities
+                Work
               </h1>
               <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-                Discover open roles or share your own job posting with the
-                community.
+                Find opportunities, projects, and roles from your network.
               </p>
             </div>
             <button
@@ -172,7 +207,7 @@ export default function JobsPageClient() {
               className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
             >
               <Plus className="h-4 w-4" />
-              Create job
+              Post Work
             </button>
           </div>
 
@@ -184,7 +219,7 @@ export default function JobsPageClient() {
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   className="w-full bg-transparent pl-10 text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
-                  placeholder="Search jobs"
+                  placeholder="Search work..."
                 />
               </div>
               <div className="relative flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-slate-950/80">
@@ -216,7 +251,7 @@ export default function JobsPageClient() {
                   : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
               }`}
             >
-              All types
+              All work types
             </button>
             {jobTypes.map((type) => (
               <button
@@ -248,20 +283,12 @@ export default function JobsPageClient() {
             ))}
           </div>
         ) : jobs.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center dark:border-white/15 dark:bg-slate-900/60">
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              No jobs yet. Try adjusting your filters or post the first
-              opportunity.
-            </p>
-            <button
-              type="button"
-              onClick={() => setShowCreateModal(true)}
-              className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
-            >
-              <Plus className="h-4 w-4" />
-              Create job
-            </button>
-          </div>
+          <WorkEmptyState
+            title="No work opportunities yet"
+            description="Post the first opportunity and help people grow."
+            showPostButton
+            onPost={() => setShowCreateModal(true)}
+          />
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {jobs.map((job) => (
@@ -282,10 +309,10 @@ export default function JobsPageClient() {
             <div className="mb-6 flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
-                  Create job
+                  Post Work
                 </h2>
                 <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                  Post a new opportunity to the jobs board.
+                  Share a role, project, or opportunity with your network.
                 </p>
               </div>
               <button
@@ -305,7 +332,7 @@ export default function JobsPageClient() {
                   required
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  placeholder="Job title"
+                  placeholder="Role or project title"
                   className={inputClass}
                 />
               </label>
@@ -354,7 +381,7 @@ export default function JobsPageClient() {
               </label>
               <label className="block space-y-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  Job type
+                  Work type
                 </span>
                 <select
                   value={form.jobType}
@@ -419,7 +446,7 @@ export default function JobsPageClient() {
                 disabled={isCreating}
                 className="w-full rounded-full bg-gradient-to-r from-violet-600 to-sky-600 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500 disabled:opacity-50"
               >
-                {isCreating ? "Creating…" : "Publish job"}
+                {isCreating ? "Posting…" : "Post Work"}
               </button>
             </form>
           </div>
