@@ -70,13 +70,16 @@ type FeedPostCardProps = {
   post: FeedPost;
   currentUserId: string | null;
   sparkLabels?: boolean;
+  pulseLabels?: boolean;
 };
 
 export default function FeedPostCard({
   post,
   currentUserId,
   sparkLabels = false,
+  pulseLabels = false,
 }: FeedPostCardProps) {
+  const useSparkWording = sparkLabels || pulseLabels;
   const [cardPost, setCardPost] = useState<CardPost>(() => mapApiPost(post));
 
   useEffect(() => {
@@ -213,7 +216,7 @@ export default function FeedPostCard({
               className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:border-sky-400/30 dark:hover:bg-white/10"
             >
               <Mail className="h-4 w-4 text-sky-500 dark:text-sky-300" />
-              Message
+              {pulseLabels ? "Start Chat" : "Message"}
             </Link>
             <button
               type="button"
@@ -224,7 +227,13 @@ export default function FeedPostCard({
                   : "border-slate-200 bg-slate-100 text-slate-700 hover:border-violet-400/30 hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
               }`}
             >
-              {cardPost.isFollowingAuthor ? "Following" : "Follow"}
+              {cardPost.isFollowingAuthor
+                ? pulseLabels
+                  ? "Connected"
+                  : "Following"
+                : pulseLabels
+                  ? "Connect"
+                  : "Follow"}
             </button>
           </div>
         ) : null}
@@ -243,7 +252,7 @@ export default function FeedPostCard({
           <Heart
             className={`h-4 w-4 ${cardPost.liked ? "fill-pink-400 text-pink-400" : "text-pink-400"}`}
           />
-          {sparkLabels ? (
+          {useSparkWording ? (
             <>
               Boost
               <span className="tabular-nums text-slate-500 dark:text-slate-400">
@@ -264,7 +273,7 @@ export default function FeedPostCard({
           }`}
         >
           <MessageCircle className="h-4 w-4 text-sky-500 dark:text-sky-300" />
-          {sparkLabels ? (
+          {useSparkWording ? (
             <>
               Reply
               <span className="tabular-nums text-slate-500 dark:text-slate-400">
@@ -306,7 +315,7 @@ export default function FeedPostCard({
                   commentInput: event.target.value,
                 }))
               }
-              placeholder="Write a comment..."
+              placeholder={pulseLabels ? "Write a reply..." : "Write a comment..."}
               className="flex-1 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100 dark:placeholder:text-slate-500"
             />
             <button
@@ -315,7 +324,7 @@ export default function FeedPostCard({
               disabled={!cardPost.commentInput.trim()}
               className="rounded-full bg-violet-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Comment
+              {pulseLabels ? "Reply" : "Comment"}
             </button>
           </div>
         </div>

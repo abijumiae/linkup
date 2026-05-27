@@ -7,7 +7,7 @@ import LinkupNavigation from "./LinkupNavigation";
 import { SidebarNav } from "./SidebarNav";
 
 const sidebarNavItems = [
-  { label: "Home", href: "/home", icon: "home" },
+  { label: "Pulse", href: "/home", icon: "home" },
   { label: "Discover", href: "/explore", icon: "explore" },
   { label: "Chats", href: "/messages", icon: "messages" },
   { label: "Hubs", href: "/groups", icon: "groups" },

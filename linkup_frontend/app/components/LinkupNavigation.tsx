@@ -18,7 +18,7 @@ import { useNotifications } from "@/src/lib/NotificationsContext";
 import { ThemeToggle } from "./ThemeToggle";
 
 const mobileNavItems = [
-  { label: "Home", href: "/home", icon: Home },
+  { label: "Pulse", href: "/home", icon: Home },
   { label: "Discover", href: "/explore", icon: Compass },
   { label: "Chats", href: "/messages", icon: MessageCircle },
   { label: "Hubs", href: "/groups", icon: Users },
