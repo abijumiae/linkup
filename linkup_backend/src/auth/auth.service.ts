@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -21,27 +22,42 @@ export class AuthService {
   async signup(dto: SignupDto) {
     const email = dto.email.toLowerCase();
 
-    if (await this.usersService.findByEmail(email)) {
-      throw new ConflictException('Email already registered');
+    console.log('Processing signup:', { email, username: dto.username });
+
+    try {
+      if (await this.usersService.findByEmail(email)) {
+        throw new ConflictException('Email already exists');
+      }
+
+      if (await this.usersService.findByUsername(dto.username)) {
+        throw new ConflictException('Username already exists');
+      }
+
+      const passwordHash = await bcrypt.hash(dto.password, this.saltRounds);
+
+      const user = await this.usersService.create({
+        name: dto.name,
+        username: dto.username,
+        email,
+        passwordHash,
+        accountType: dto.accountType,
+        country: dto.country,
+        language: dto.language ?? 'en',
+      });
+
+      console.log('Signup successful:', { email, username: dto.username });
+
+      return { user: this.usersService.sanitize(user) };
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        throw error;
+      }
+
+      console.error('Signup failed:', error);
+      throw new InternalServerErrorException(
+        'Unable to create account. Please try again.',
+      );
     }
-
-    if (await this.usersService.findByUsername(dto.username)) {
-      throw new ConflictException('Username already taken');
-    }
-
-    const passwordHash = await bcrypt.hash(dto.password, this.saltRounds);
-
-    const user = await this.usersService.create({
-      name: dto.name,
-      username: dto.username,
-      email,
-      passwordHash,
-      accountType: dto.accountType,
-      country: dto.country,
-      language: dto.language ?? 'en',
-    });
-
-    return { user: this.usersService.sanitize(user) };
   }
 
   async login(dto: LoginDto) {

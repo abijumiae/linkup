@@ -18,6 +18,10 @@ export class AuthController {
 
   @Post('signup')
   signup(@Body() dto: SignupDto) {
+    console.log('Signup request received:', {
+      email: dto.email,
+      username: dto.username,
+    });
     return this.authService.signup(dto);
   }
 
