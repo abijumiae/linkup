@@ -10,9 +10,22 @@ import {
 import { Inject, Logger, forwardRef } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { MessagesService } from '../messages/messages.service';
+import {
+  GroupCallManager,
+  GroupCallRoomType,
+  groupCallRoomKey,
+} from './group-call.manager';
 import { WsAuthService } from './ws-auth.service';
 
-type AuthedSocket = Socket & { data: { userId: string } };
+type AuthedSocket = Socket & {
+  data: {
+    userId: string;
+    userName?: string;
+    userAvatarUrl?: string | null;
+    groupCallRoomKey?: string;
+    groupCallRoomId?: string;
+  };
+};
 
 type ChatType = 'direct' | 'group';
 
@@ -46,6 +59,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server!: Server;
 
   private readonly onlineUsers = new Map<string, Set<string>>();
+  private readonly groupCallManager = new GroupCallManager();
 
   constructor(
     private readonly wsAuthService: WsAuthService,
@@ -61,6 +75,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const user = await this.wsAuthService.authenticateToken(token);
       client.data.userId = user.id;
+      client.data.userName = user.name;
+      client.data.userAvatarUrl = user.avatarUrl ?? null;
 
       if (!this.onlineUsers.has(user.id)) {
         this.onlineUsers.set(user.id, new Set());
@@ -80,6 +96,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   handleDisconnect(client: AuthedSocket) {
+    this.leaveActiveGroupCall(client);
+
     const userId = client.data?.userId;
     if (!userId) {
       return;
@@ -428,6 +446,196 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() payload: { peerId: string },
   ) {
     this.handleCallEnd(client, payload);
+  }
+
+  @SubscribeMessage('group_call_join')
+  handleGroupCallJoin(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: {
+      roomType: GroupCallRoomType;
+      roomId: string;
+      callType: 'audio' | 'video';
+    },
+  ) {
+    const userId = client.data?.userId;
+    if (!userId || !payload?.roomId || !payload?.roomType) {
+      client.emit('group_call_error', {
+        message: 'Invalid group call join payload',
+      });
+      return;
+    }
+
+    // TODO: enforce hub/group membership when permission helpers are wired here.
+    this.leaveActiveGroupCall(client);
+
+    const roomKey = groupCallRoomKey(payload.roomType, payload.roomId);
+    const participant = {
+      userId,
+      name: client.data.userName ?? 'LinkUp user',
+      avatarUrl: client.data.userAvatarUrl ?? null,
+      callType: payload.callType ?? 'video',
+    };
+
+    client.join(roomKey);
+    client.data.groupCallRoomKey = roomKey;
+    client.data.groupCallRoomId = payload.roomId;
+    this.groupCallManager.join(roomKey, participant);
+
+    const participants = this.groupCallManager.getParticipants(roomKey);
+    client.emit('group_call_participants', {
+      roomId: payload.roomId,
+      roomType: payload.roomType,
+      callType: payload.callType,
+      participants,
+    });
+
+    client.to(roomKey).emit('group_call_user_joined', {
+      roomId: payload.roomId,
+      roomType: payload.roomType,
+      user: participant,
+      callType: payload.callType,
+    });
+  }
+
+  @SubscribeMessage('group_call_leave')
+  handleGroupCallLeave(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: { roomType: GroupCallRoomType; roomId: string },
+  ) {
+    if (!payload?.roomId || !payload?.roomType) {
+      return;
+    }
+    const roomKey = groupCallRoomKey(payload.roomType, payload.roomId);
+    if (client.data.groupCallRoomKey === roomKey) {
+      this.leaveActiveGroupCall(client, payload.roomId);
+    }
+  }
+
+  @SubscribeMessage('group_call_offer')
+  handleGroupCallOffer(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: {
+      roomId: string;
+      targetUserId: string;
+      offer: unknown;
+    },
+  ) {
+    this.relayGroupCallSignal(client, payload?.targetUserId, 'group_call_offer', {
+      roomId: payload.roomId,
+      offer: payload.offer,
+    });
+  }
+
+  @SubscribeMessage('group_call_answer')
+  handleGroupCallAnswer(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: {
+      roomId: string;
+      targetUserId: string;
+      answer: unknown;
+    },
+  ) {
+    this.relayGroupCallSignal(client, payload?.targetUserId, 'group_call_answer', {
+      roomId: payload.roomId,
+      answer: payload.answer,
+    });
+  }
+
+  @SubscribeMessage('group_ice_candidate')
+  handleGroupIceCandidate(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: {
+      roomId: string;
+      targetUserId: string;
+      candidate: unknown;
+    },
+  ) {
+    this.relayGroupCallSignal(
+      client,
+      payload?.targetUserId,
+      'group_ice_candidate',
+      {
+        roomId: payload.roomId,
+        candidate: payload.candidate,
+      },
+    );
+  }
+
+  @SubscribeMessage('group_call_end')
+  handleGroupCallEnd(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody() payload: { roomId: string; roomType?: GroupCallRoomType },
+  ) {
+    if (!payload?.roomId) {
+      return;
+    }
+
+    const roomKey =
+      client.data.groupCallRoomKey ??
+      (payload.roomType
+        ? groupCallRoomKey(payload.roomType, payload.roomId)
+        : null);
+
+    if (roomKey && client.data.groupCallRoomKey === roomKey) {
+      this.leaveActiveGroupCall(client, payload.roomId);
+    }
+  }
+
+  private relayGroupCallSignal(
+    client: AuthedSocket,
+    targetUserId: string | undefined,
+    event: string,
+    data: Record<string, unknown>,
+  ) {
+    const fromUserId = client.data?.userId;
+    if (!fromUserId || !targetUserId) {
+      return;
+    }
+
+    this.server.to(this.userRoom(targetUserId)).emit(event, {
+      ...data,
+      fromUserId,
+    });
+  }
+
+  private leaveActiveGroupCall(client: AuthedSocket, roomId?: string) {
+    const roomKey =
+      client.data.groupCallRoomKey ??
+      this.groupCallManager.findRoomKeyForUser(client.data?.userId ?? '');
+
+    const userId = client.data?.userId;
+    if (!roomKey || !userId) {
+      return;
+    }
+
+    const resolvedRoomId =
+      roomId ?? client.data.groupCallRoomId ?? roomKey.split(':').slice(1).join(':');
+
+    const removed = this.groupCallManager.leave(roomKey, userId);
+    client.leave(roomKey);
+    delete client.data.groupCallRoomKey;
+    delete client.data.groupCallRoomId;
+
+    if (!removed) {
+      return;
+    }
+
+    if (this.groupCallManager.isRoomActive(roomKey)) {
+      this.server.to(roomKey).emit('group_call_user_left', {
+        roomId: resolvedRoomId,
+        userId,
+      });
+      return;
+    }
+
+    this.server.to(roomKey).emit('group_call_ended', {
+      roomId: resolvedRoomId,
+    });
   }
 
   private relayToPeer(

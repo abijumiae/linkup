@@ -144,7 +144,7 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
               Host: {group.owner.name} (@{group.owner.username})
             </span>
           </div>
-          <div className="mt-6">
+          <div className="mt-6 flex flex-wrap gap-3">
             {group.isOwner ? (
               <span className="inline-flex rounded-full bg-brand-primary/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary dark:text-brand-secondary">
                 You host this hub
@@ -163,6 +163,14 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
                     : "Join Hub"}
               </button>
             )}
+            {group.isMember ? (
+              <Link
+                href={`/messages?groupId=${groupId}`}
+                className="inline-flex items-center rounded-full border border-brand-primary/25 bg-brand-primary/10 px-5 py-2.5 text-sm font-semibold text-brand-primary transition hover:bg-brand-primary/15 dark:text-brand-secondary"
+              >
+                Open Hub Chat & Calls
+              </Link>
+            ) : null}
           </div>
         </header>
 

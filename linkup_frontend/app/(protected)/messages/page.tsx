@@ -48,8 +48,13 @@ import {
   IncomingCallPayload,
   isWebRTCSupported,
 } from "@/src/lib/webrtc";
+import {
+  GroupCallParticipant,
+  GroupCallSession,
+} from "@/src/lib/groupWebrtc";
 import AuthLoadingScreen from "../../components/AuthLoadingScreen";
 import CallOverlay from "../../components/CallOverlay";
+import GroupCallOverlay from "../../components/GroupCallOverlay";
 import ChatListItem from "../../components/ChatListItem";
 import EmojiPicker from "../../components/EmojiPicker";
 import LiveRoomCard from "../../components/LiveRoomCard";
@@ -133,6 +138,25 @@ export default function MessagesPage() {
   const [callVideoEnabled, setCallVideoEnabled] = useState(true);
   const callSessionRef = useRef<CallSession | null>(null);
   const incomingCallRef = useRef<IncomingCallPayload | null>(null);
+  const groupCallSessionRef = useRef<GroupCallSession | null>(null);
+  const [groupCallType, setGroupCallType] = useState<CallType | null>(null);
+  const [groupCallStatus, setGroupCallStatus] = useState<
+    "connecting" | "active" | null
+  >(null);
+  const [groupCallParticipants, setGroupCallParticipants] = useState<
+    GroupCallParticipant[]
+  >([]);
+  const [groupRemoteStreams, setGroupRemoteStreams] = useState<
+    Record<string, MediaStream>
+  >({});
+  const [groupLocalStream, setGroupLocalStream] = useState<MediaStream | null>(
+    null,
+  );
+  const [groupCallAudioEnabled, setGroupCallAudioEnabled] = useState(true);
+  const [groupCallVideoEnabled, setGroupCallVideoEnabled] = useState(true);
+  const [activeGroupCallLive, setActiveGroupCallLive] = useState(false);
+  const [activeGroupCallType, setActiveGroupCallType] = useState<CallType>("audio");
+  const [isInGroupCall, setIsInGroupCall] = useState(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -160,6 +184,18 @@ export default function MessagesPage() {
     [activeUser, conversations],
   );
 
+  const resetGroupCallState = useCallback(() => {
+    groupCallSessionRef.current = null;
+    setIsInGroupCall(false);
+    setGroupCallType(null);
+    setGroupCallStatus(null);
+    setGroupCallParticipants([]);
+    setGroupRemoteStreams({});
+    setGroupLocalStream(null);
+    setGroupCallAudioEnabled(true);
+    setGroupCallVideoEnabled(true);
+  }, []);
+
   const resetCallState = useCallback(() => {
     callSessionRef.current = null;
     incomingCallRef.current = null;
@@ -172,6 +208,11 @@ export default function MessagesPage() {
     setCallAudioEnabled(true);
     setCallVideoEnabled(true);
   }, []);
+
+  const leaveGroupCall = useCallback(() => {
+    groupCallSessionRef.current?.leave(true);
+    resetGroupCallState();
+  }, [resetGroupCallState]);
 
   const endCall = useCallback(() => {
     callSessionRef.current?.end(true);
@@ -264,6 +305,7 @@ export default function MessagesPage() {
         setActiveUser(null);
         setGroupMessages(data.messages);
         setMessages([]);
+        setActiveGroupCallLive(false);
         setMobileView("chat");
         getSocket()?.emit("join_chat", {
           chatType: "group",
@@ -490,6 +532,35 @@ export default function MessagesPage() {
       }
     };
 
+    const onGroupCallUserJoined = (payload: {
+      roomId: string;
+      callType?: CallType;
+    }) => {
+      if (activeGroup?.id !== payload.roomId || groupCallSessionRef.current) {
+        return;
+      }
+      setActiveGroupCallLive(true);
+      if (payload.callType) {
+        setActiveGroupCallType(payload.callType);
+      }
+    };
+
+    const onGroupCallUserLeft = (payload: { roomId: string }) => {
+      if (activeGroup?.id !== payload.roomId || groupCallSessionRef.current) {
+        return;
+      }
+    };
+
+    const onGroupCallEnded = (payload: { roomId: string }) => {
+      if (activeGroup?.id === payload.roomId) {
+        setActiveGroupCallLive(false);
+      }
+      if (groupCallSessionRef.current) {
+        groupCallSessionRef.current.leave(false);
+        resetGroupCallState();
+      }
+    };
+
     setSocketConnected(socket.connected);
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
@@ -500,6 +571,9 @@ export default function MessagesPage() {
     socket.on("presence:update", onPresence);
     socket.on("call_offer", onCallOffer);
     socket.on("call_end", onCallEnd);
+    socket.on("group_call_user_joined", onGroupCallUserJoined);
+    socket.on("group_call_user_left", onGroupCallUserLeft);
+    socket.on("group_call_ended", onGroupCallEnded);
 
     return () => {
       socket.off("connect", onConnect);
@@ -511,6 +585,9 @@ export default function MessagesPage() {
       socket.off("presence:update", onPresence);
       socket.off("call_offer", onCallOffer);
       socket.off("call_end", onCallEnd);
+      socket.off("group_call_user_joined", onGroupCallUserJoined);
+      socket.off("group_call_user_left", onGroupCallUserLeft);
+      socket.off("group_call_ended", onGroupCallEnded);
     };
   }, [
     activeGroup?.id,
@@ -520,12 +597,14 @@ export default function MessagesPage() {
     loadConversations,
     loadGroupChats,
     resetCallState,
+    resetGroupCallState,
     resolvePeerName,
   ]);
 
   useEffect(() => {
     return () => {
       callSessionRef.current?.end(false);
+      groupCallSessionRef.current?.leave(false);
       disconnectSocket();
       if (noticeTimeoutRef.current) {
         clearTimeout(noticeTimeoutRef.current);
@@ -846,8 +925,100 @@ export default function MessagesPage() {
     }
   }
 
+  async function beginGroupCall(type: CallType) {
+    if (!currentUserId || !activeGroup) {
+      return;
+    }
+
+    if (!isWebRTCSupported()) {
+      showFeatureNotice("Calls are not supported on this browser.");
+      return;
+    }
+
+    const socket = getSocket();
+    if (!socket?.connected) {
+      showFeatureNotice("Live connection lost. Reconnecting...");
+      return;
+    }
+
+    if (callSessionRef.current || groupCallSessionRef.current) {
+      showFeatureNotice("You are already in a call.");
+      return;
+    }
+
+    setGroupCallType(type);
+    setGroupCallStatus("connecting");
+    setIsInGroupCall(true);
+    setGroupCallVideoEnabled(type === "video");
+    setActiveGroupCallLive(true);
+    setActiveGroupCallType(type);
+
+    const session = new GroupCallSession({
+      socket,
+      localUserId: currentUserId,
+      roomType: "chat",
+      roomId: activeGroup.id,
+      callType: type,
+      onLocalStream: setGroupLocalStream,
+      onRemoteStream: (userId, stream) => {
+        setGroupRemoteStreams((current) => ({ ...current, [userId]: stream }));
+      },
+      onRemoteRemoved: (userId) => {
+        setGroupRemoteStreams((current) => {
+          const next = { ...current };
+          delete next[userId];
+          return next;
+        });
+        setGroupCallParticipants((current) =>
+          current.filter((participant) => participant.userId !== userId),
+        );
+      },
+      onParticipants: setGroupCallParticipants,
+      onParticipantJoined: (participant) => {
+        setGroupCallParticipants((current) => {
+          if (current.some((item) => item.userId === participant.userId)) {
+            return current;
+          }
+          return [...current, participant];
+        });
+      },
+      onConnected: () => setGroupCallStatus("active"),
+      onEnded: () => {
+        resetGroupCallState();
+        setActiveGroupCallLive(false);
+      },
+      onError: (message) => {
+        showFeatureNotice(message);
+        resetGroupCallState();
+        setActiveGroupCallLive(false);
+      },
+    });
+
+    groupCallSessionRef.current = session;
+    await session.join();
+  }
+
+  async function joinActiveGroupCall() {
+    await beginGroupCall(activeGroupCallType);
+  }
+
+  function handleToggleGroupCallAudio() {
+    const enabled = groupCallSessionRef.current?.toggleAudio();
+    if (typeof enabled === "boolean") {
+      setGroupCallAudioEnabled(enabled);
+    }
+  }
+
+  function handleToggleGroupCallVideo() {
+    const enabled = groupCallSessionRef.current?.toggleVideo();
+    if (typeof enabled === "boolean") {
+      setGroupCallVideoEnabled(enabled);
+    }
+  }
+
   function renderCallActions() {
     const isDirectChat = chatTab === "direct" && Boolean(activeUser);
+    const isGroupChat = chatTab === "group" && Boolean(activeGroup);
 
     return (
       <>
@@ -858,9 +1029,11 @@ export default function MessagesPage() {
               void startDirectCall("audio");
               return;
             }
-            showFeatureNotice("Group calls are coming soon.");
+            if (isGroupChat) {
+              void beginGroupCall("audio");
+            }
           }}
-          disabled={!isDirectChat && chatTab !== "group"}
+          disabled={!isDirectChat && !isGroupChat}
           className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-700 transition hover:border-brand-primary/30 hover:bg-brand-primary/5 disabled:opacity-40 dark:border-white/10 dark:bg-brand-dark dark:text-slate-200 dark:hover:bg-white/10"
           aria-label="Audio call"
         >
@@ -873,9 +1046,11 @@ export default function MessagesPage() {
               void startDirectCall("video");
               return;
             }
-            showFeatureNotice("Group calls are coming soon.");
+            if (isGroupChat) {
+              void beginGroupCall("video");
+            }
           }}
-          disabled={!isDirectChat && chatTab !== "group"}
+          disabled={!isDirectChat && !isGroupChat}
           className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-700 transition hover:border-brand-primary/30 hover:bg-brand-primary/5 disabled:opacity-40 dark:border-white/10 dark:bg-brand-dark dark:text-slate-200 dark:hover:bg-white/10"
           aria-label="Video call"
         >
@@ -1173,6 +1348,31 @@ export default function MessagesPage() {
                   </div>
                 </div>
 
+                {chatTab === "group" &&
+                activeGroup &&
+                activeGroupCallLive &&
+                !isInGroupCall ? (
+                  <div className="mx-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 sm:mx-5">
+                    <div>
+                      <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+                        Live group call in progress
+                      </p>
+                      <p className="text-xs text-emerald-700/80 dark:text-emerald-200/80">
+                        {activeGroupCallType === "video"
+                          ? "Video call active"
+                          : "Audio call active"}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void joinActiveGroupCall()}
+                      className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white"
+                    >
+                      Join Call
+                    </button>
+                  </div>
+                ) : null}
+
                 {/* Messages */}
                 <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 sm:px-5">
                   {chatTab === "direct" ? (
@@ -1343,6 +1543,25 @@ export default function MessagesPage() {
           onEnd={endCall}
           onToggleAudio={handleToggleCallAudio}
           onToggleVideo={handleToggleCallVideo}
+        />
+      ) : null}
+
+      {groupCallType && groupCallStatus && activeGroup && currentUserId ? (
+        <GroupCallOverlay
+          callType={groupCallType}
+          roomLabel={activeGroup.name}
+          localUserId={currentUserId}
+          localName={currentUser?.name ?? "You"}
+          localStream={groupLocalStream}
+          participants={groupCallParticipants}
+          remoteStreams={groupRemoteStreams}
+          status={groupCallStatus}
+          audioEnabled={groupCallAudioEnabled}
+          videoEnabled={groupCallVideoEnabled}
+          socketConnected={socketConnected}
+          onLeave={leaveGroupCall}
+          onToggleAudio={handleToggleGroupCallAudio}
+          onToggleVideo={handleToggleGroupCallVideo}
         />
       ) : null}
     </div>
