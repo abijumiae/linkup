@@ -52,7 +52,7 @@ model User {
   avatarUrl    String?
   bio          String?
   isVerified   Boolean     @default(false)
-  isOnboarded  Boolean     @default(false)
+  isOnboarded  Boolean     @default(true)
   isEmailVerified Boolean  @default(false)
   emailVerificationToken String?
   emailVerificationCode String?

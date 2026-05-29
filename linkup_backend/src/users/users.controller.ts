@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { CompleteOnboardingDto } from '../auth/dto/onboarding.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { SafeUser, UsersService } from './users.service';
@@ -23,6 +24,23 @@ export class UsersController {
   async updateMe(@Req() req: { user: SafeUser }, @Body() dto: UpdateProfileDto) {
     const user = await this.usersService.updateProfile(req.user.id, dto);
     return { user };
+  }
+
+  @Patch('me/onboarding')
+  async completeOnboarding(
+    @Req() req: { user: SafeUser },
+    @Body() dto: CompleteOnboardingDto,
+  ) {
+    console.log('Onboarding request received for user:', req.user.id);
+
+    const user = await this.usersService.completeOnboarding(req.user.id, {
+      username: dto.username.trim(),
+      accountType: dto.accountType,
+      country: dto.country.trim(),
+      language: dto.language.trim(),
+    });
+
+    return { user: this.usersService.sanitize(user) };
   }
 
   @Post(':userId/follow')

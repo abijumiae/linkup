@@ -1,4 +1,4 @@
-import { apiRequest } from "./api";
+import { apiRequest, ApiError } from "./api";
 
 export type AccountType =
   | "PERSONAL"
@@ -141,6 +141,16 @@ export async function login(
   return data;
 }
 
+export function needsOnboarding(
+  user: Pick<User, "provider" | "isOnboarded">,
+): boolean {
+  return user.provider === "google" && user.isOnboarded === false;
+}
+
+export function getPostLoginPath(user: User): "/home" | "/onboarding" {
+  return needsOnboarding(user) ? "/onboarding" : "/home";
+}
+
 export async function completeOnboarding(
   payload: OnboardingPayload,
 ): Promise<User> {
@@ -150,16 +160,33 @@ export async function completeOnboarding(
     throw new Error("Not authenticated");
   }
 
-  const data = await apiRequest<{ user: User }>("/auth/onboarding", {
+  const requestInit: RequestInit = {
     method: "PATCH",
     body: JSON.stringify(payload),
     headers: {
       Authorization: `Bearer ${token}`,
     },
-  });
+  };
 
-  saveUser(data.user);
-  return data.user;
+  try {
+    const data = await apiRequest<{ user: User }>(
+      "/auth/onboarding",
+      requestInit,
+    );
+    saveUser(data.user);
+    return data.user;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      const data = await apiRequest<{ user: User }>(
+        "/users/me/onboarding",
+        requestInit,
+      );
+      saveUser(data.user);
+      return data.user;
+    }
+
+    throw error;
+  }
 }
 
 export async function fetchMe(): Promise<User | null> {

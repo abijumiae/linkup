@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/src/lib/AuthProvider";
-import { fetchMe, setAuth } from "@/src/lib/auth";
+import { fetchMe, getPostLoginPath, setAuth } from "@/src/lib/auth";
 import AuthLoadingScreen from "../../../components/AuthLoadingScreen";
 
 function GoogleCallbackHandler() {
@@ -38,7 +38,7 @@ function GoogleCallbackHandler() {
         setUser(user);
 
         if (!cancelled) {
-          router.replace(user.isOnboarded ? "/home" : "/onboarding");
+          router.replace(getPostLoginPath(user));
         }
       } catch {
         localStorage.removeItem("linkup_access_token");

@@ -10,7 +10,9 @@ import {
   completeOnboarding,
   fetchMe,
   getToken,
+  needsOnboarding,
 } from "@/src/lib/auth";
+import Link from "next/link";
 import {
   ACCOUNT_TYPES,
   COUNTRIES,
@@ -52,7 +54,7 @@ export default function OnboardingPage() {
         return;
       }
 
-      if (currentUser.isOnboarded) {
+      if (!needsOnboarding(currentUser)) {
         router.replace("/home");
         return;
       }
@@ -86,9 +88,9 @@ export default function OnboardingPage() {
       router.replace("/home");
     } catch (err) {
       if (err instanceof ApiError) {
-        if (err.status === 404) {
+        if (err.status === 404 || err.status === 501) {
           setError(
-            "Onboarding service is unavailable. Please try again after the backend finishes updating.",
+            "Onboarding is being prepared. Please login again or continue to your workspace.",
           );
         } else {
           setError(err.message);
@@ -141,6 +143,16 @@ export default function OnboardingPage() {
         {error ? (
           <div className="mt-6 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-200">
             {error}
+            {error.includes("Onboarding is being prepared") ? (
+              <div className="mt-3 flex flex-wrap gap-3">
+                <Link href="/login" className="font-semibold text-violet-600 underline dark:text-violet-300">
+                  Go to login
+                </Link>
+                <Link href="/home" className="font-semibold text-violet-600 underline dark:text-violet-300">
+                  Continue to workspace
+                </Link>
+              </div>
+            ) : null}
           </div>
         ) : null}
 

@@ -6,7 +6,7 @@ import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/src/lib/AuthProvider";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
-import { login } from "@/src/lib/auth";
+import { getPostLoginPath, login } from "@/src/lib/auth";
 import AuthLoadingScreen from "../components/AuthLoadingScreen";
 import GoogleSignInButton from "../components/GoogleSignInButton";
 import { ThemeToggle } from "../components/ThemeToggle";
@@ -46,7 +46,7 @@ function LoginForm() {
     try {
       const { user } = await login(email.trim(), password);
       setUser(user);
-      router.push(user.isOnboarded ? "/home" : "/onboarding");
+      router.push(getPostLoginPath(user));
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);

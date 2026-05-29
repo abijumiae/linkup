@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -274,6 +275,12 @@ export class AuthService {
       username: dto.username,
       accountType: dto.accountType,
     });
+
+    const existingUser = await this.usersService.findById(userId);
+
+    if (!existingUser) {
+      throw new NotFoundException('User not found');
+    }
 
     try {
       const user = await this.usersService.completeOnboarding(userId, {

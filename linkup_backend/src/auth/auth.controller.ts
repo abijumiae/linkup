@@ -62,6 +62,7 @@ export class AuthController {
     @Req() req: { user: SafeUser },
     @Body() dto: CompleteOnboardingDto,
   ) {
+    console.log('Onboarding request received for user:', req.user.id);
     return this.authService.completeOnboarding(req.user.id, dto);
   }
 

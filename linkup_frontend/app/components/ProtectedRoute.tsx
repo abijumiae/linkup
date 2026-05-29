@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchMe, getToken } from "@/src/lib/auth";
+import { fetchMe, getPostLoginPath, getToken, needsOnboarding } from "@/src/lib/auth";
 import { useAuth } from "@/src/lib/AuthProvider";
 import AuthLoadingScreen from "./AuthLoadingScreen";
 
@@ -40,7 +40,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
         return;
       }
 
-      if (!user.isOnboarded) {
+      if (needsOnboarding(user)) {
         setUser(user);
         setStatus("redirecting");
         router.replace("/onboarding");
