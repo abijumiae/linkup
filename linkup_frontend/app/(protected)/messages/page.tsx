@@ -19,10 +19,14 @@ import {
 import { ApiError } from "@/src/lib/api";
 import { getCurrentUser } from "@/src/lib/auth";
 import {
-  ChatSocketMessage,
-  disconnectChatSocket,
-  getChatSocket,
-} from "@/src/lib/chatSocket";
+  connectSocket,
+  disconnectSocket,
+  getSocket,
+  isSocketConnected,
+  MessageReceivedPayload,
+  normalizeReceivedMessage,
+  TypingPayload,
+} from "@/src/lib/socket";
 import {
   GroupChatMessage,
   GroupChatSummary,
@@ -109,6 +113,7 @@ export default function MessagesPage() {
   const [typingPeerId, setTypingPeerId] = useState<string | null>(null);
   const [typingGroupId, setTypingGroupId] = useState<string | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<Record<string, boolean>>({});
+  const [socketConnected, setSocketConnected] = useState(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -174,7 +179,10 @@ export default function MessagesPage() {
               : conversation,
           ),
         );
-        getChatSocket()?.emit("join:dm", { peerId: userId });
+        getSocket()?.emit("join_chat", {
+          chatType: "direct",
+          targetId: userId,
+        });
         setTimeout(scrollToBottom, 50);
       } catch (err) {
         if (err instanceof ApiError && err.status === 401) {
@@ -209,7 +217,10 @@ export default function MessagesPage() {
         setGroupMessages(data.messages);
         setMessages([]);
         setMobileView("chat");
-        getChatSocket()?.emit("join:group", { groupId });
+        getSocket()?.emit("join_chat", {
+          chatType: "group",
+          targetId: groupId,
+        });
         setTimeout(scrollToBottom, 50);
       } catch (err) {
         if (err instanceof ApiError && err.status === 401) {
@@ -265,14 +276,23 @@ export default function MessagesPage() {
   }, [selectedUserId, selectedGroupId]);
 
   useEffect(() => {
-    const socket = getChatSocket();
-    if (!socket || !currentUserId) {
+    if (!currentUserId) {
       return;
     }
 
-    const onMessage = (payload: ChatSocketMessage) => {
-      if (payload.type === "direct") {
-        const message = payload.message;
+    const socket = connectSocket();
+    if (!socket) {
+      return;
+    }
+
+    const onConnect = () => setSocketConnected(true);
+    const onDisconnect = () => setSocketConnected(false);
+
+    const onMessageReceived = (payload: MessageReceivedPayload) => {
+      const normalized = normalizeReceivedMessage(payload);
+
+      if (normalized.chatType === "direct") {
+        const message = normalized.message;
         const peerId =
           message.senderId === currentUserId
             ? message.receiverId
@@ -291,10 +311,7 @@ export default function MessagesPage() {
             lastMessage: {
               id: message.id,
               content: message.content,
-              createdAt:
-                typeof message.createdAt === "string"
-                  ? message.createdAt
-                  : new Date(message.createdAt).toISOString(),
+              createdAt: message.createdAt,
               senderId: message.senderId,
             },
             unreadCount:
@@ -314,26 +331,13 @@ export default function MessagesPage() {
             if (current.some((item) => item.id === message.id)) {
               return current;
             }
-            return [
-              ...current,
-              {
-                ...message,
-                createdAt:
-                  typeof message.createdAt === "string"
-                    ? message.createdAt
-                    : new Date(message.createdAt).toISOString(),
-                updatedAt:
-                  typeof message.updatedAt === "string"
-                    ? message.updatedAt
-                    : new Date(message.updatedAt).toISOString(),
-              },
-            ];
+            return [...current, message];
           });
         }
         return;
       }
 
-      const message = payload.message;
+      const message = normalized.message;
       setGroupChats((current) => {
         const existing = current.find((c) => c.group.id === message.groupId);
         if (!existing) {
@@ -343,17 +347,7 @@ export default function MessagesPage() {
 
         const updated: GroupChatSummary = {
           ...existing,
-          lastMessage: {
-            ...message,
-            createdAt:
-              typeof message.createdAt === "string"
-                ? message.createdAt
-                : new Date(message.createdAt).toISOString(),
-            updatedAt:
-              typeof message.updatedAt === "string"
-                ? message.updatedAt
-                : new Date(message.updatedAt).toISOString(),
-          },
+          lastMessage: message,
         };
 
         return [
@@ -367,22 +361,13 @@ export default function MessagesPage() {
           if (current.some((item) => item.id === message.id)) {
             return current;
           }
-          return [
-            ...current,
-            {
-              ...message,
-              createdAt:
-                typeof message.createdAt === "string"
-                  ? message.createdAt
-                  : new Date(message.createdAt).toISOString(),
-              updatedAt:
-                typeof message.updatedAt === "string"
-                  ? message.updatedAt
-                  : new Date(message.updatedAt).toISOString(),
-            },
-          ];
+          return [...current, message];
         });
       }
+    };
+
+    const onMessageError = (payload: { message?: string }) => {
+      setError(payload.message ?? "Could not send message. Please try again.");
     };
 
     const onRead = (payload: { readerId: string; peerId: string }) => {
@@ -398,32 +383,24 @@ export default function MessagesPage() {
       );
     };
 
-    const onTypingStart = (payload: {
-      userId: string;
-      peerId?: string;
-      groupId?: string;
-    }) => {
+    const onTyping = (payload: TypingPayload) => {
       if (payload.userId === currentUserId) {
         return;
       }
-      if (payload.groupId && activeGroup?.id === payload.groupId) {
-        setTypingGroupId(payload.userId);
-      }
-      if (payload.peerId && activeUser?.id === payload.userId) {
-        setTypingPeerId(payload.userId);
-      }
-    };
 
-    const onTypingStop = (payload: {
-      userId: string;
-      peerId?: string;
-      groupId?: string;
-    }) => {
-      if (payload.groupId && activeGroup?.id === payload.groupId) {
-        setTypingGroupId(null);
+      if (
+        payload.chatType === "group" &&
+        activeGroup?.id === payload.targetId
+      ) {
+        setTypingGroupId(payload.isTyping ? payload.userId : null);
+        return;
       }
-      if (payload.peerId && activeUser?.id === payload.userId) {
-        setTypingPeerId(null);
+
+      if (
+        payload.chatType === "direct" &&
+        activeUser?.id === payload.userId
+      ) {
+        setTypingPeerId(payload.isTyping ? payload.userId : null);
       }
     };
 
@@ -434,17 +411,22 @@ export default function MessagesPage() {
       }));
     };
 
-    socket.on("message:new", onMessage);
+    setSocketConnected(socket.connected);
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("message_received", onMessageReceived);
+    socket.on("message_error", onMessageError);
     socket.on("message:read", onRead);
-    socket.on("typing:start", onTypingStart);
-    socket.on("typing:stop", onTypingStop);
+    socket.on("typing", onTyping);
     socket.on("presence:update", onPresence);
 
     return () => {
-      socket.off("message:new", onMessage);
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("message_received", onMessageReceived);
+      socket.off("message_error", onMessageError);
       socket.off("message:read", onRead);
-      socket.off("typing:start", onTypingStart);
-      socket.off("typing:stop", onTypingStop);
+      socket.off("typing", onTyping);
       socket.off("presence:update", onPresence);
     };
   }, [
@@ -457,7 +439,7 @@ export default function MessagesPage() {
 
   useEffect(() => {
     return () => {
-      disconnectChatSocket();
+      disconnectSocket();
       if (noticeTimeoutRef.current) {
         clearTimeout(noticeTimeoutRef.current);
       }
@@ -489,32 +471,35 @@ export default function MessagesPage() {
     }
   }
 
-  function emitTypingStop() {
-    const socket = getChatSocket();
-    if (!socket) {
+  function emitTyping(isTyping: boolean) {
+    const socket = getSocket();
+    if (!socket?.connected) {
       return;
     }
+
     if (activeUser) {
-      socket.emit("typing:stop", { peerId: activeUser.id });
+      socket.emit("typing", {
+        chatType: "direct",
+        targetId: activeUser.id,
+        isTyping,
+      });
     }
     if (activeGroup) {
-      socket.emit("typing:stop", { groupId: activeGroup.id });
+      socket.emit("typing", {
+        chatType: "group",
+        targetId: activeGroup.id,
+        isTyping,
+      });
     }
+  }
+
+  function emitTypingStop() {
+    emitTyping(false);
   }
 
   function handleInputChange(value: string) {
     setMessageInput(value);
-    const socket = getChatSocket();
-    if (!socket) {
-      return;
-    }
-
-    if (activeUser) {
-      socket.emit("typing:start", { peerId: activeUser.id });
-    }
-    if (activeGroup) {
-      socket.emit("typing:start", { groupId: activeGroup.id });
-    }
+    emitTyping(true);
 
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
@@ -522,6 +507,71 @@ export default function MessagesPage() {
     typingTimeoutRef.current = setTimeout(() => {
       emitTypingStop();
     }, 1500);
+  }
+
+  async function sendViaRest(trimmed: string) {
+    if (chatTab === "direct" && activeUser) {
+      const marketplaceItemId =
+        listingId && !marketplaceInquirySentRef.current
+          ? listingId
+          : undefined;
+
+      const created = await sendMessage(activeUser.id, trimmed, {
+        marketplaceItemId,
+      });
+
+      if (marketplaceItemId) {
+        marketplaceInquirySentRef.current = true;
+      }
+
+      setMessages((current) => {
+        if (current.some((item) => item.id === created.id)) {
+          return current;
+        }
+        return [...current, created];
+      });
+      setConversations((current) => {
+        const updated: Conversation = {
+          user: activeUser,
+          lastMessage: {
+            id: created.id,
+            content: created.content,
+            createdAt: created.createdAt,
+            senderId: created.senderId,
+          },
+          unreadCount: 0,
+        };
+        return [
+          updated,
+          ...current.filter((c) => c.user.id !== activeUser.id),
+        ];
+      });
+      return;
+    }
+
+    if (chatTab === "group" && activeGroup) {
+      const created = await sendGroupMessage(activeGroup.id, trimmed);
+      setGroupMessages((current) => {
+        if (current.some((item) => item.id === created.id)) {
+          return current;
+        }
+        return [...current, created];
+      });
+      setGroupChats((current) => {
+        const existing = current.find((c) => c.group.id === activeGroup.id);
+        if (!existing) {
+          return current;
+        }
+        const updated: GroupChatSummary = {
+          ...existing,
+          lastMessage: created,
+        };
+        return [
+          updated,
+          ...current.filter((c) => c.group.id !== activeGroup.id),
+        ];
+      });
+    }
   }
 
   async function handleSendMessage() {
@@ -542,63 +592,51 @@ export default function MessagesPage() {
     setError(null);
     emitTypingStop();
 
+    const marketplaceItemId =
+      listingId && !marketplaceInquirySentRef.current ? listingId : undefined;
+    const socket = getSocket();
+    const canUseSocket =
+      isSocketConnected() &&
+      !marketplaceItemId &&
+      ((chatTab === "direct" && activeUser) ||
+        (chatTab === "group" && activeGroup));
+
     try {
-      if (chatTab === "direct" && activeUser) {
-        const marketplaceItemId =
-          listingId && !marketplaceInquirySentRef.current
-            ? listingId
-            : undefined;
-
-        const created = await sendMessage(activeUser.id, trimmed, {
-          marketplaceItemId,
+      if (canUseSocket && socket) {
+        socket.emit("send_message", {
+          chatType: chatTab === "direct" ? "direct" : "group",
+          receiverId: activeUser?.id,
+          groupId: activeGroup?.id,
+          content: trimmed,
         });
-
-        if (marketplaceItemId) {
-          marketplaceInquirySentRef.current = true;
-        }
         setMessageInput("");
-        setMessages((current) => [...current, created]);
-        setConversations((current) => {
-          const updated: Conversation = {
-            user: activeUser,
-            lastMessage: {
-              id: created.id,
-              content: created.content,
-              createdAt: created.createdAt,
-              senderId: created.senderId,
-            },
-            unreadCount: 0,
-          };
-          return [
-            updated,
-            ...current.filter((c) => c.user.id !== activeUser.id),
-          ];
-        });
-      } else if (chatTab === "group" && activeGroup) {
-        const created = await sendGroupMessage(activeGroup.id, trimmed);
-        setMessageInput("");
-        setGroupMessages((current) => [...current, created]);
-        setGroupChats((current) => {
-          const existing = current.find((c) => c.group.id === activeGroup.id);
-          if (!existing) {
-            return current;
-          }
-          const updated: GroupChatSummary = {
-            ...existing,
-            lastMessage: created,
-          };
-          return [
-            updated,
-            ...current.filter((c) => c.group.id !== activeGroup.id),
-          ];
-        });
+        setTimeout(scrollToBottom, 50);
+        return;
       }
+
+      await sendViaRest(trimmed);
+      setMessageInput("");
       setTimeout(scrollToBottom, 50);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         router.replace("/login");
         return;
       }
+
+      if (canUseSocket) {
+        try {
+          await sendViaRest(trimmed);
+          setMessageInput("");
+          setTimeout(scrollToBottom, 50);
+          return;
+        } catch (fallbackErr) {
+          if (fallbackErr instanceof ApiError && fallbackErr.status === 401) {
+            router.replace("/login");
+            return;
+          }
+        }
+      }
+
       setError("Could not send message. Please try again.");
     } finally {
       setIsSending(false);
@@ -686,10 +724,16 @@ export default function MessagesPage() {
             </div>
             <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-200">
               <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                {socketConnected ? (
+                  <>
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                  </>
+                ) : (
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-slate-400" />
+                )}
               </span>
-              Live-ready
+              {socketConnected ? "Live" : "Live-ready"}
             </div>
           </div>
         </header>

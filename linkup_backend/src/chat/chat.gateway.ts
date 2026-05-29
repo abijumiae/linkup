@@ -7,16 +7,35 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Logger } from '@nestjs/common';
+import { Inject, Logger, forwardRef } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
+import { MessagesService } from '../messages/messages.service';
 import { WsAuthService } from './ws-auth.service';
 
 type AuthedSocket = Socket & { data: { userId: string } };
 
+type ChatType = 'direct' | 'group';
+
+const SOCKET_CORS_ORIGINS = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://linkup-nu-ruby.vercel.app',
+];
+
 @WebSocketGateway({
   namespace: '/chat',
   cors: {
-    origin: true,
+    origin: (origin, callback) => {
+      if (
+        !origin ||
+        SOCKET_CORS_ORIGINS.includes(origin) ||
+        process.env.NODE_ENV !== 'production'
+      ) {
+        callback(null, true);
+        return;
+      }
+      callback(null, true);
+    },
     credentials: true,
   },
 })
@@ -28,7 +47,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private readonly onlineUsers = new Map<string, Set<string>>();
 
-  constructor(private readonly wsAuthService: WsAuthService) {}
+  constructor(
+    private readonly wsAuthService: WsAuthService,
+    @Inject(forwardRef(() => MessagesService))
+    private readonly messagesService: MessagesService,
+  ) {}
 
   async handleConnection(client: AuthedSocket) {
     try {
@@ -50,8 +73,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         online: true,
         lastActive: new Date().toISOString(),
       });
-    } catch (error) {
-      this.logger.warn(`Chat socket rejected: ${String(error)}`);
+    } catch {
+      this.logger.warn('Chat socket rejected: invalid auth');
       client.disconnect(true);
     }
   }
@@ -74,6 +97,25 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @SubscribeMessage('join_chat')
+  handleJoinChat(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: { chatType: ChatType; targetId: string },
+  ) {
+    if (!client.data?.userId || !payload?.targetId || !payload?.chatType) {
+      return;
+    }
+
+    if (payload.chatType === 'group') {
+      client.join(this.groupRoom(payload.targetId));
+      return;
+    }
+
+    client.join(this.directRoom(client.data.userId, payload.targetId));
+  }
+
+  /** @deprecated Use join_chat */
   @SubscribeMessage('join:dm')
   handleJoinDm(
     @ConnectedSocket() client: AuthedSocket,
@@ -82,20 +124,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!client.data?.userId || !payload?.peerId) {
       return;
     }
-    client.join(this.dmRoom(client.data.userId, payload.peerId));
+    client.join(this.directRoom(client.data.userId, payload.peerId));
   }
 
-  @SubscribeMessage('leave:dm')
-  handleLeaveDm(
-    @ConnectedSocket() client: AuthedSocket,
-    @MessageBody() payload: { peerId: string },
-  ) {
-    if (!client.data?.userId || !payload?.peerId) {
-      return;
-    }
-    client.leave(this.dmRoom(client.data.userId, payload.peerId));
-  }
-
+  /** @deprecated Use join_chat */
   @SubscribeMessage('join:group')
   handleJoinGroup(
     @ConnectedSocket() client: AuthedSocket,
@@ -107,17 +139,93 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.join(this.groupRoom(payload.groupId));
   }
 
-  @SubscribeMessage('leave:group')
-  handleLeaveGroup(
+  @SubscribeMessage('send_message')
+  async handleSendMessage(
     @ConnectedSocket() client: AuthedSocket,
-    @MessageBody() payload: { groupId: string },
+    @MessageBody()
+    payload: {
+      chatType: ChatType;
+      receiverId?: string;
+      groupId?: string;
+      content: string;
+    },
   ) {
-    if (!client.data?.userId || !payload?.groupId) {
+    const userId = client.data?.userId;
+    if (!userId) {
+      client.emit('message_error', { message: 'Not authenticated' });
       return;
     }
-    client.leave(this.groupRoom(payload.groupId));
+
+    const content = payload?.content?.trim();
+    if (!content) {
+      client.emit('message_error', { message: 'Message content is required' });
+      return;
+    }
+
+    try {
+      if (payload.chatType === 'group') {
+        if (!payload.groupId) {
+          client.emit('message_error', { message: 'Group id is required' });
+          return;
+        }
+        await this.messagesService.sendGroupMessage(
+          payload.groupId,
+          userId,
+          content,
+        );
+        return;
+      }
+
+      if (!payload.receiverId) {
+        client.emit('message_error', { message: 'Receiver id is required' });
+        return;
+      }
+
+      await this.messagesService.sendMessage(userId, payload.receiverId, {
+        content,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Could not send message';
+      client.emit('message_error', { message });
+    }
   }
 
+  @SubscribeMessage('typing')
+  handleTyping(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: {
+      chatType: ChatType;
+      targetId: string;
+      isTyping: boolean;
+    },
+  ) {
+    const userId = client.data?.userId;
+    if (!userId || !payload?.targetId || !payload?.chatType) {
+      return;
+    }
+
+    const eventPayload = {
+      chatType: payload.chatType,
+      targetId: payload.targetId,
+      isTyping: payload.isTyping,
+      userId,
+    };
+
+    if (payload.chatType === 'group') {
+      client
+        .to(this.groupRoom(payload.targetId))
+        .emit('typing', eventPayload);
+      return;
+    }
+
+    this.server
+      .to(this.directRoom(userId, payload.targetId))
+      .emit('typing', eventPayload);
+  }
+
+  /** @deprecated Use typing */
   @SubscribeMessage('typing:start')
   handleTypingStart(
     @ConnectedSocket() client: AuthedSocket,
@@ -130,21 +238,28 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     if (payload.groupId) {
-      client.to(this.groupRoom(payload.groupId)).emit('typing:start', {
+      client.to(this.groupRoom(payload.groupId)).emit('typing', {
+        chatType: 'group' as const,
+        targetId: payload.groupId,
+        isTyping: true,
         userId,
-        groupId: payload.groupId,
       });
       return;
     }
 
     if (payload.peerId) {
-      this.server.to(this.dmRoom(userId, payload.peerId)).emit('typing:start', {
-        userId,
-        peerId: payload.peerId,
-      });
+      this.server
+        .to(this.directRoom(userId, payload.peerId))
+        .emit('typing', {
+          chatType: 'direct' as const,
+          targetId: payload.peerId,
+          isTyping: true,
+          userId,
+        });
     }
   }
 
+  /** @deprecated Use typing */
   @SubscribeMessage('typing:stop')
   handleTypingStop(
     @ConnectedSocket() client: AuthedSocket,
@@ -157,93 +272,25 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     if (payload.groupId) {
-      client.to(this.groupRoom(payload.groupId)).emit('typing:stop', {
+      client.to(this.groupRoom(payload.groupId)).emit('typing', {
+        chatType: 'group' as const,
+        targetId: payload.groupId,
+        isTyping: false,
         userId,
-        groupId: payload.groupId,
       });
       return;
     }
 
     if (payload.peerId) {
-      this.server.to(this.dmRoom(userId, payload.peerId)).emit('typing:stop', {
-        userId,
-        peerId: payload.peerId,
-      });
+      this.server
+        .to(this.directRoom(userId, payload.peerId))
+        .emit('typing', {
+          chatType: 'direct' as const,
+          targetId: payload.peerId,
+          isTyping: false,
+          userId,
+        });
     }
-  }
-
-  @SubscribeMessage('call:offer')
-  handleCallOffer(
-    @ConnectedSocket() client: AuthedSocket,
-    @MessageBody()
-    payload: {
-      peerId: string;
-      sdp: unknown;
-      callType: 'audio' | 'video';
-    },
-  ) {
-    if (!client.data?.userId || !payload?.peerId) {
-      return;
-    }
-    this.server.to(this.userRoom(payload.peerId)).emit('call:offer', {
-      fromUserId: client.data.userId,
-      sdp: payload.sdp,
-      callType: payload.callType ?? 'video',
-    });
-  }
-
-  @SubscribeMessage('call:answer')
-  handleCallAnswer(
-    @ConnectedSocket() client: AuthedSocket,
-    @MessageBody() payload: { peerId: string; sdp: unknown },
-  ) {
-    if (!client.data?.userId || !payload?.peerId) {
-      return;
-    }
-    this.server.to(this.userRoom(payload.peerId)).emit('call:answer', {
-      fromUserId: client.data.userId,
-      sdp: payload.sdp,
-    });
-  }
-
-  @SubscribeMessage('call:ice-candidate')
-  handleIceCandidate(
-    @ConnectedSocket() client: AuthedSocket,
-    @MessageBody() payload: { peerId: string; candidate: unknown },
-  ) {
-    if (!client.data?.userId || !payload?.peerId) {
-      return;
-    }
-    this.server.to(this.userRoom(payload.peerId)).emit('call:ice-candidate', {
-      fromUserId: client.data.userId,
-      candidate: payload.candidate,
-    });
-  }
-
-  @SubscribeMessage('call:end')
-  handleCallEnd(
-    @ConnectedSocket() client: AuthedSocket,
-    @MessageBody() payload: { peerId: string },
-  ) {
-    if (!client.data?.userId || !payload?.peerId) {
-      return;
-    }
-    this.server.to(this.userRoom(payload.peerId)).emit('call:end', {
-      fromUserId: client.data.userId,
-    });
-  }
-
-  @SubscribeMessage('call:decline')
-  handleCallDecline(
-    @ConnectedSocket() client: AuthedSocket,
-    @MessageBody() payload: { peerId: string },
-  ) {
-    if (!client.data?.userId || !payload?.peerId) {
-      return;
-    }
-    this.server.to(this.userRoom(payload.peerId)).emit('call:decline', {
-      fromUserId: client.data.userId,
-    });
   }
 
   emitDirectMessage(message: {
@@ -256,11 +303,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     updatedAt: Date;
     sender: unknown;
   }) {
-    const room = this.dmRoom(message.senderId, message.receiverId);
-    this.server.to(room).emit('message:new', {
-      type: 'direct',
-      message,
-    });
+    const room = this.directRoom(message.senderId, message.receiverId);
+    const payload = { chatType: 'direct' as const, message };
+
+    this.server.to(room).emit('message_received', payload);
+    this.server.to(room).emit('message:new', { type: 'direct', message });
+
     this.server
       .to(this.userRoom(message.receiverId))
       .emit('conversation:update', { peerId: message.senderId });
@@ -278,14 +326,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     updatedAt: Date;
     sender: unknown;
   }) {
-    this.server.to(this.groupRoom(message.groupId)).emit('message:new', {
-      type: 'group',
-      message,
-    });
+    const payload = { chatType: 'group' as const, message };
+
+    this.server.to(this.groupRoom(message.groupId)).emit('message_received', payload);
+    this.server
+      .to(this.groupRoom(message.groupId))
+      .emit('message:new', { type: 'group', message });
   }
 
   emitMessagesRead(readerId: string, peerId: string) {
-    this.server.to(this.dmRoom(readerId, peerId)).emit('message:read', {
+    this.server.to(this.directRoom(readerId, peerId)).emit('message:read', {
       readerId,
       peerId,
     });
@@ -303,8 +353,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return `group:${groupId}`;
   }
 
-  private dmRoom(userA: string, userB: string) {
+  private directRoom(userA: string, userB: string) {
     const [first, second] = [userA, userB].sort();
-    return `dm:${first}:${second}`;
+    return `direct:${first}:${second}`;
   }
 }
