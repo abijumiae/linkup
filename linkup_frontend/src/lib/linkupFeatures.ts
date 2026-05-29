@@ -5,7 +5,12 @@ export const DAILY_SPARK_PROMPTS = [
   "Drop one useful thing you learned.",
   "Share a quick win.",
   "Ask your network something.",
+  "What opportunity are you looking for?",
+  "What helped you grow today?",
+  "Share one idea worth spreading.",
 ] as const;
+
+export const DAILY_SPARK_LAST_KEY = "linkup_daily_spark_last_v1";
 
 export const BOOST_REACTION_LABELS = ["Useful", "Inspired", "Support"] as const;
 
@@ -43,6 +48,33 @@ export function getDailySparkPrompt(date = new Date()): string {
   const start = new Date(date.getFullYear(), 0, 0).getTime();
   const dayIndex = Math.floor((date.getTime() - start) / 86400000);
   return DAILY_SPARK_PROMPTS[dayIndex % DAILY_SPARK_PROMPTS.length];
+}
+
+function getTodayKey(date = new Date()): string {
+  return date.toISOString().slice(0, 10);
+}
+
+/** Client-only: track whether user dropped a spark today (no backend streak yet). */
+export function hasDailySparkToday(date = new Date()): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  try {
+    return localStorage.getItem(DAILY_SPARK_LAST_KEY) === getTodayKey(date);
+  } catch {
+    return false;
+  }
+}
+
+export function markDailySparkComplete(date = new Date()): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    localStorage.setItem(DAILY_SPARK_LAST_KEY, getTodayKey(date));
+  } catch {
+    // Ignore storage errors.
+  }
 }
 
 export function getHubChallenge(date = new Date()): (typeof HUB_CHALLENGES)[number] {

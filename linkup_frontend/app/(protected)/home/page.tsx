@@ -14,8 +14,7 @@ import {
   Users,
 } from "lucide-react";
 import { homePosts, homeSuggestions } from "../../data/linkupData";
-import { ApiError } from "../../../src/lib/api";
-import { getLocalProfilePrefs } from "../../../src/lib/linkupFeatures";
+import { getLocalProfilePrefs, markDailySparkComplete } from "../../../src/lib/linkupFeatures";
 import { getCurrentUser } from "../../../src/lib/auth";
 import { fetchEvents } from "../../../src/lib/events";
 import { fetchGroups } from "../../../src/lib/groups";
@@ -120,6 +119,8 @@ export default function HomeDashboardPage() {
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [sparkDroppedToday, setSparkDroppedToday] = useState(false);
   const [pulseCounts, setPulseCounts] = useState({
     sparks: 0,
     hubs: 0,
@@ -186,26 +187,38 @@ export default function HomeDashboardPage() {
 
     setIsSubmitting(true);
     setError(null);
+    setSuccess(null);
 
     try {
       const created = await createPost({ content: trimmed });
       setPostContent("");
-      setPosts((current) => [
-        {
-          ...mapPostToFeedPost({
-            ...created,
-            likeCount: 0,
-            commentCount: 0,
-            liked: false,
-            isFollowingAuthor: false,
-          }),
-        },
-        ...current,
-      ]);
-    } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Failed to drop spark",
-      );
+      markDailySparkComplete();
+      setSparkDroppedToday(true);
+      setSuccess("Your Spark is live.");
+
+      const mapped = mapPostToFeedPost({
+        ...created,
+        likeCount: 0,
+        commentCount: 0,
+        liked: false,
+        isFollowingAuthor: false,
+      });
+
+      setPosts((current) => {
+        const withoutDuplicate = current.filter((post) => post.id !== mapped.id);
+        return [mapped, ...withoutDuplicate.filter((post) => !post.isStatic)];
+      });
+
+      try {
+        const refreshed = await fetchFeed();
+        if (refreshed.length > 0) {
+          setPosts(refreshed.map(mapPostToFeedPost));
+        }
+      } catch {
+        // Optimistic update above is enough if refresh fails.
+      }
+    } catch {
+      setError("Could not drop your Spark. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -294,10 +307,16 @@ export default function HomeDashboardPage() {
 
             <DailySparkCard
               value={postContent}
-              onChange={setPostContent}
-              onSubmit={() => void handleCreatePost()}
+              onChange={(value) => {
+                setPostContent(value);
+                if (error) setError(null);
+                if (success) setSuccess(null);
+              }}
+              onSubmit={handleCreatePost}
               isSubmitting={isSubmitting}
               error={error}
+              success={success}
+              sparkDroppedToday={sparkDroppedToday}
               inputRef={sparkInputRef}
             />
 
