@@ -243,7 +243,7 @@ export default function FeedPostCard({
         <button
           type="button"
           onClick={() => void handleLike()}
-          className={`inline-flex items-center gap-2 rounded-full px-3 py-2 transition ${
+          className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-3 py-2.5 transition ${
             cardPost.liked
               ? "bg-pink-500/10 text-pink-600 dark:bg-pink-500/15 dark:text-pink-300"
               : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
@@ -266,7 +266,7 @@ export default function FeedPostCard({
         <button
           type="button"
           onClick={() => void handleToggleComments()}
-          className={`inline-flex items-center gap-2 rounded-full px-3 py-2 transition ${
+          className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-3 py-2.5 transition ${
             cardPost.showComments
               ? "bg-sky-500/10 text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
               : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
@@ -284,7 +284,7 @@ export default function FeedPostCard({
             cardPost.stats.comments
           )}
         </button>
-        <button className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2 text-slate-700 transition hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10">
+        <button className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-slate-100 px-3 py-2.5 text-slate-700 transition hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10">
           <Share2 className="h-4 w-4 text-cyan-500 dark:text-cyan-300" />
           {useSparkWording ? (
             <>
@@ -297,7 +297,7 @@ export default function FeedPostCard({
             cardPost.stats.shares
           )}
         </button>
-        <button className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2 text-slate-700 transition hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10">
+        <button className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-slate-100 px-3 py-2.5 text-slate-700 transition hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10">
           <Bookmark className="h-4 w-4 text-violet-500 dark:text-violet-300" />
           {cardPost.stats.saves}
         </button>

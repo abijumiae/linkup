@@ -253,8 +253,8 @@ export default function HomeDashboardPage() {
   return (
     <div className="linkup-page">
       <div className="linkup-container-wide max-w-[1760px]">
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-          <main className="space-y-6">
+        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
+          <main className="min-w-0 space-y-6">
             <header className="linkup-panel p-6 sm:p-7">
               <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
                 LinkUp Pulse
@@ -411,7 +411,7 @@ export default function HomeDashboardPage() {
             </section>
           </main>
 
-          <aside className="space-y-6">
+          <aside className="min-w-0 space-y-6">
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-white/10 dark:bg-slate-900/80">
               <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
                 Quick Connect

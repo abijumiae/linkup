@@ -72,7 +72,7 @@ export function SidebarNav({ items, title = "Navigation" }: SidebarNavProps) {
             <li key={item.href}>
               <Link
                 href={item.href}
-                className={`inline-flex w-full items-center gap-3 rounded-3xl px-4 py-3 text-sm font-medium transition ${
+                className={`inline-flex w-full min-w-0 items-center gap-3 rounded-3xl px-3 py-2.5 text-sm font-medium transition sm:px-4 sm:py-3 ${
                   isActive
                     ? "bg-gradient-to-r from-violet-500/20 via-purple-500/15 to-sky-500/20 text-slate-900 shadow-lg shadow-violet-500/10 dark:text-white"
                     : "text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-200 dark:hover:bg-white/5 dark:hover:text-white"
@@ -81,7 +81,7 @@ export function SidebarNav({ items, title = "Navigation" }: SidebarNavProps) {
                 <Icon
                   className={`h-5 w-5 ${isActive ? "text-violet-500 dark:text-violet-300" : "text-slate-400"}`}
                 />
-                <span className="flex-1">{item.label}</span>
+                <span className="min-w-0 flex-1 truncate">{item.label}</span>
                 {item.icon === "notifications" && unreadCount > 0 ? (
                   <span className="rounded-full bg-violet-500 px-2 py-0.5 text-[10px] font-bold text-slate-950">
                     {unreadCount > 99 ? "99+" : unreadCount}

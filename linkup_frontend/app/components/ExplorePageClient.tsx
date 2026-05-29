@@ -477,8 +477,8 @@ export default function ExplorePageClient() {
             </p>
           ) : null}
 
-          <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white p-3 shadow-lg dark:border-white/10 dark:bg-slate-900/80">
-            <div className="flex gap-2">
+          <div className="linkup-panel p-3 shadow-lg sm:p-3">
+            <div className="linkup-chip-row">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;

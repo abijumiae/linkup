@@ -182,7 +182,7 @@ export default function NotificationsPage() {
             </button>
           </div>
 
-          <div className="mt-6 flex flex-wrap gap-2">
+          <div className="linkup-chip-row mt-6">
             {FILTER_CHIPS.map((chip) => (
               <button
                 key={chip.id}

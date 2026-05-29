@@ -122,25 +122,25 @@ export default function ProfileHeader({
             ) : null}
           </div>
 
-          <div className="mt-6 grid grid-cols-3 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-slate-950/60">
-            <div className="text-center sm:text-left">
-              <p className="text-xl font-semibold text-slate-900 dark:text-white">
+          <div className="linkup-stat-grid mt-6 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:p-4 dark:border-white/10 dark:bg-slate-950/60">
+            <div className="min-w-0 text-center sm:text-left">
+              <p className="text-lg font-semibold text-slate-900 sm:text-xl dark:text-white">
                 {followers.toLocaleString()}
               </p>
               <p className="text-xs text-slate-600 dark:text-slate-400">
                 Network
               </p>
             </div>
-            <div className="border-x border-slate-200 px-2 text-center dark:border-white/10 sm:text-left">
-              <p className="text-xl font-semibold text-slate-900 dark:text-white">
+            <div className="min-w-0 border-x border-slate-200 px-1 text-center dark:border-white/10 sm:px-2 sm:text-left">
+              <p className="text-lg font-semibold text-slate-900 sm:text-xl dark:text-white">
                 {following.toLocaleString()}
               </p>
               <p className="text-xs text-slate-600 dark:text-slate-400">
                 Connections
               </p>
             </div>
-            <div className="text-center sm:text-left">
-              <p className="text-xl font-semibold text-slate-900 dark:text-white">
+            <div className="min-w-0 text-center sm:text-left">
+              <p className="text-lg font-semibold text-slate-900 sm:text-xl dark:text-white">
                 {posts.toLocaleString()}
               </p>
               <p className="text-xs text-slate-600 dark:text-slate-400">

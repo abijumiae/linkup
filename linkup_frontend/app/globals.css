@@ -137,11 +137,40 @@ select {
   }
 
   .linkup-title {
-    @apply text-3xl font-semibold tracking-tight text-slate-900 dark:text-white;
+    @apply text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl dark:text-white;
   }
 
   .linkup-subtitle {
     @apply mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400;
+  }
+
+  .linkup-auth-shell {
+    @apply relative flex min-h-screen items-center justify-center overflow-x-hidden px-4 py-8 sm:py-10;
+  }
+
+  .linkup-chip-row {
+    @apply -mx-1 flex gap-2 overflow-x-auto px-1 pb-1;
+    scrollbar-width: none;
+  }
+
+  .linkup-chip-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .linkup-stat-grid {
+    @apply grid grid-cols-3 gap-2 sm:gap-3;
+  }
+
+  .linkup-alert-success {
+    @apply rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-200;
+  }
+
+  .linkup-alert-error {
+    @apply rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-200;
+  }
+
+  .linkup-alert-warning {
+    @apply rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-200;
   }
 
   .linkup-btn-primary {
@@ -182,5 +211,13 @@ select {
 
   .linkup-topbar {
     @apply sticky top-0 z-40 border-b border-slate-200/90 bg-white/90 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/90;
+  }
+}
+
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
   }
 }

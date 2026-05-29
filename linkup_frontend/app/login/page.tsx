@@ -65,7 +65,7 @@ function LoginForm() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-slate-50 via-white to-violet-50 px-4 py-10 text-slate-900 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-white">
+    <div className="linkup-auth-shell bg-gradient-to-br from-slate-50 via-white to-violet-50 text-slate-900 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-white">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute left-1/2 top-[-14rem] h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-gradient-to-tr from-violet-500/20 via-fuchsia-500/10 to-sky-500/20 blur-3xl dark:from-violet-400/20 dark:via-fuchsia-400/10 dark:to-sky-400/15"
@@ -98,18 +98,16 @@ function LoginForm() {
 
         {/* Messages */}
         {success && (
-          <div className="mb-6 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-200">
-            {success}
-          </div>
+          <div className="linkup-alert-success mb-6">{success}</div>
         )}
         {error && (
-          <div className="mb-6 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm text-rose-200">
+          <div className="linkup-alert-error mb-6">
             {error}
             {error.toLowerCase().includes("verify your email") ? (
               <p className="mt-2">
                 <Link
                   href={`/verify-email?email=${encodeURIComponent(email.trim())}`}
-                  className="font-semibold text-violet-300 underline"
+                  className="font-semibold text-violet-600 underline dark:text-violet-300"
                 >
                   Go to email verification
                 </Link>
@@ -177,7 +175,7 @@ function LoginForm() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full rounded-lg bg-gradient-to-r from-violet-600 to-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
+            className="linkup-btn-primary w-full min-h-[44px] py-3"
           >
             {isLoading ? "Signing in..." : "Login"}
           </button>

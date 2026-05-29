@@ -81,7 +81,7 @@ function VerifyEmailForm() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-slate-50 via-white to-violet-50 px-4 py-10 text-slate-900 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-white">
+    <div className="linkup-auth-shell bg-gradient-to-br from-slate-50 via-white to-violet-50 text-slate-900 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-white">
       <div className="absolute right-4 top-4">
         <ThemeToggle />
       </div>
@@ -101,14 +101,10 @@ function VerifyEmailForm() {
         </p>
 
         {success ? (
-          <div className="mb-6 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-700 dark:text-emerald-200">
-            {success}
-          </div>
+          <div className="linkup-alert-success mb-6">{success}</div>
         ) : null}
         {error ? (
-          <div className="mb-6 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm text-rose-700 dark:text-rose-200">
-            {error}
-          </div>
+          <div className="linkup-alert-error mb-6">{error}</div>
         ) : null}
 
         <form className="space-y-5" onSubmit={handleVerify}>
@@ -151,7 +147,7 @@ function VerifyEmailForm() {
           <button
             type="submit"
             disabled={isVerifying || isResending}
-            className="linkup-btn-primary w-full disabled:cursor-not-allowed disabled:opacity-60"
+            className="linkup-btn-primary w-full min-h-[44px] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isVerifying ? "Verifying..." : "Verify Email"}
           </button>

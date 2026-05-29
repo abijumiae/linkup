@@ -110,7 +110,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="linkup-page flex min-h-screen items-center justify-center px-4 py-10">
+    <div className="linkup-auth-shell linkup-page">
       <div className="absolute right-4 top-4">
         <ThemeToggle />
       </div>
@@ -141,7 +141,7 @@ export default function OnboardingPage() {
         ) : null}
 
         {error ? (
-          <div className="mt-6 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-200">
+          <div className="linkup-alert-error mt-6">
             {error}
             {error.includes("Onboarding is being prepared") ? (
               <div className="mt-3 flex flex-wrap gap-3">
@@ -228,7 +228,7 @@ export default function OnboardingPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="linkup-btn-primary w-full disabled:cursor-not-allowed disabled:opacity-60"
+            className="linkup-btn-primary w-full min-h-[44px] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? "Saving..." : "Continue to LinkUp"}
           </button>

@@ -263,12 +263,12 @@ export default function MessagesPage() {
   return (
     <div className="linkup-page">
       <div className="linkup-container-wide">
-        <header className="mb-6 linkup-panel p-6 sm:p-7">
+        <header className="mb-6 linkup-panel p-5 sm:p-7">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
               LinkUp Chats
             </p>
-            <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">
+            <h1 className="linkup-title mt-2">
               Chats
             </h1>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
@@ -288,9 +288,9 @@ export default function MessagesPage() {
           </p>
         ) : null}
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
+        <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
           <aside
-            className={`rounded-[2rem] border border-slate-200 bg-white p-5 shadow-2xl shadow-slate-950/20 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 ${
+            className={`linkup-panel min-w-0 p-4 sm:p-5 ${
               mobileView === "chat" ? "hidden lg:block" : "block"
             }`}
           >
@@ -351,12 +351,12 @@ export default function MessagesPage() {
           </aside>
 
           <main
-            className={`rounded-[2rem] border border-slate-200 bg-white p-5 shadow-2xl shadow-slate-950/20 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 ${
+            className={`linkup-panel min-w-0 p-4 sm:p-5 ${
               mobileView === "list" ? "hidden lg:block" : "block"
             }`}
           >
             {activeUser ? (
-              <div className="flex h-[min(74vh,720px)] flex-col gap-5">
+              <div className="flex h-[min(68vh,720px)] flex-col gap-4 sm:h-[min(74vh,720px)] sm:gap-5">
                 <div className="flex flex-wrap items-center justify-between gap-4 rounded-[1.75rem] bg-slate-50 p-4 dark:bg-slate-950/85">
                   <div className="flex items-center gap-3">
                     <button
@@ -423,8 +423,8 @@ export default function MessagesPage() {
                   <div ref={messagesEndRef} />
                 </div>
 
-                <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-slate-950/80">
-                  <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-3 dark:border-white/10 dark:bg-slate-900/90">
+                <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-slate-950/80 sm:p-4">
+                  <div className="flex min-w-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 dark:border-white/10 dark:bg-slate-900/90 sm:gap-3 sm:px-4 sm:py-3">
                     <input
                       value={messageInput}
                       onChange={(event) => setMessageInput(event.target.value)}
@@ -434,14 +434,14 @@ export default function MessagesPage() {
                           void handleSendMessage();
                         }
                       }}
-                      className="flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
+                      className="min-w-0 flex-1 bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500 sm:text-sm"
                       placeholder="Type a chat..."
                     />
                     <button
                       type="button"
                       onClick={() => void handleSendMessage()}
                       disabled={!messageInput.trim() || isSending}
-                      className="inline-flex items-center gap-2 rounded-full bg-violet-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="linkup-btn-primary shrink-0 px-3 py-2.5 text-xs sm:px-4 sm:text-sm disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <Send className="h-4 w-4" />
                       {isSending ? "Sending..." : "Send"}
