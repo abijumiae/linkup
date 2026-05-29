@@ -6,6 +6,10 @@ type ChatListItemProps = {
   unread?: number;
   active?: boolean;
   onClick?: () => void;
+  variant?: "direct" | "group" | "live";
+  online?: boolean;
+  memberCount?: number;
+  live?: boolean;
 };
 
 function getInitials(name: string): string {
@@ -16,6 +20,12 @@ function getInitials(name: string): string {
   return (name[0] ?? "U").toUpperCase();
 }
 
+const badgeLabels: Record<NonNullable<ChatListItemProps["variant"]>, string> = {
+  direct: "Individual",
+  group: "Group",
+  live: "Live",
+};
+
 export default function ChatListItem({
   name,
   lastMessage,
@@ -24,41 +34,85 @@ export default function ChatListItem({
   unread,
   active,
   onClick,
+  variant = "direct",
+  online,
+  memberCount,
+  live,
 }: ChatListItemProps) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full items-start justify-between rounded-[1.75rem] border p-4 text-left transition duration-300 ${
+      className={`flex w-full min-w-0 items-start justify-between gap-2 rounded-3xl border p-4 text-left transition duration-300 ${
         active
-          ? "border-brand-primary/40 bg-brand-primary/10"
-          : "border-slate-200 bg-white hover:-translate-y-0.5 hover:border-brand-primary/30 hover:bg-slate-50 dark:border-white/10 dark:bg-brand-dark/85 dark:hover:bg-white/5"
+          ? "border-brand-primary/40 bg-gradient-to-r from-brand-primary/10 to-brand-secondary/5 shadow-sm shadow-brand-primary/10"
+          : "border-slate-200/80 bg-white hover:border-brand-primary/25 hover:bg-slate-50 dark:border-white/10 dark:bg-brand-dark/85 dark:hover:border-brand-secondary/30 dark:hover:bg-white/[0.04]"
       }`}
     >
-      <div className="flex min-w-0 items-center gap-3">
-        {avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={avatarUrl}
-            alt=""
-            className="h-12 w-12 shrink-0 rounded-3xl object-cover ring-2 ring-brand-primary/20"
-          />
-        ) : (
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-3xl bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white">
-            {getInitials(name)}
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <div className="relative shrink-0">
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatarUrl}
+              alt=""
+              className="h-12 w-12 rounded-2xl object-cover ring-2 ring-brand-primary/15"
+            />
+          ) : variant === "group" ? (
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white shadow-md shadow-brand-primary/20">
+              {getInitials(name)}
+            </div>
+          ) : (
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white shadow-md shadow-brand-primary/20">
+              {getInitials(name)}
+            </div>
+          )}
+          {(online || live) && (
+            <span
+              className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-brand-dark ${
+                live ? "bg-rose-500 animate-pulse" : "bg-emerald-500"
+              }`}
+              aria-hidden
+            />
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="truncate font-semibold text-slate-900 dark:text-white">
+              {name}
+            </p>
+            <span
+              className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                variant === "live"
+                  ? "bg-rose-500/10 text-rose-600 dark:text-rose-300"
+                  : variant === "group"
+                    ? "bg-brand-secondary/10 text-brand-secondary"
+                    : "bg-brand-primary/10 text-brand-primary dark:text-brand-secondary"
+              }`}
+            >
+              {badgeLabels[variant]}
+            </span>
           </div>
-        )}
-        <div className="min-w-0">
-          <p className="font-semibold text-slate-900 dark:text-white">{name}</p>
+          {memberCount !== undefined && memberCount > 0 ? (
+            <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+              {memberCount} member{memberCount === 1 ? "" : "s"}
+            </p>
+          ) : null}
           <p className="mt-1 truncate text-sm text-slate-600 dark:text-slate-400">
             {lastMessage}
           </p>
         </div>
       </div>
-      <div className="flex shrink-0 flex-col items-end gap-2 pl-2 text-right">
-        <span className="text-xs text-slate-500 dark:text-slate-400">{time}</span>
+
+      <div className="flex shrink-0 flex-col items-end gap-2 pl-1 text-right">
+        {time ? (
+          <span className="text-[11px] text-slate-500 dark:text-slate-400">
+            {time}
+          </span>
+        ) : null}
         {unread && unread > 0 ? (
-          <span className="rounded-full bg-brand-primary px-2 py-1 text-[10px] font-semibold text-white">
+          <span className="rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
             {unread > 99 ? "99+" : unread}
           </span>
         ) : null}

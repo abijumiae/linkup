@@ -6,7 +6,10 @@ import Link from "next/link";
 import {
   ArrowLeft,
   MessageCircle,
+  MoreVertical,
+  Paperclip,
   Phone,
+  Radio,
   Search,
   Send,
   Smile,
@@ -35,18 +38,40 @@ import {
   sendMessage,
 } from "@/src/lib/messages";
 import { formatTimeAgo } from "@/src/lib/posts";
-import { CallSession, CallType } from "@/src/lib/webrtc";
 import AuthLoadingScreen from "../../components/AuthLoadingScreen";
-import CallOverlay from "../../components/CallOverlay";
 import ChatListItem from "../../components/ChatListItem";
 import EmojiPicker from "../../components/EmojiPicker";
+import LiveRoomCard from "../../components/LiveRoomCard";
 import MessageBubble from "../../components/MessageBubble";
 
-type ChatTab = "direct" | "group";
+type ChatTab = "direct" | "group" | "live";
+
+const LIVE_PLACEHOLDER_ROOMS = [
+  {
+    title: "Live Hub Chat",
+    subtitle: "Real-time conversations when your hub goes live.",
+  },
+  {
+    title: "Event Live Room",
+    subtitle: "Join happening rooms during events and meetups.",
+  },
+  {
+    title: "Work Room",
+    subtitle: "Collaborate live with your project crew.",
+  },
+] as const;
 
 function formatMessageTime(dateStr: string): string {
   const date = new Date(dateStr);
   return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+  return (name[0] ?? "U").toUpperCase();
 }
 
 export default function MessagesPage() {
@@ -72,6 +97,7 @@ export default function MessagesPage() {
   const [activeGroup, setActiveGroup] = useState<
     GroupChatSummary["group"] | null
   >(null);
+  const [activeGroupMemberCount, setActiveGroupMemberCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [messageInput, setMessageInput] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -83,18 +109,20 @@ export default function MessagesPage() {
   const [typingPeerId, setTypingPeerId] = useState<string | null>(null);
   const [typingGroupId, setTypingGroupId] = useState<string | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<Record<string, boolean>>({});
-  const [callType, setCallType] = useState<CallType | null>(null);
-  const [callStatus, setCallStatus] = useState<
-    "connecting" | "active" | "incoming" | null
-  >(null);
-  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
-  const callSessionRef = useRef<CallSession | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const noticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  const showFeatureNotice = useCallback((message: string) => {
+    setNotice(message);
+    if (noticeTimeoutRef.current) {
+      clearTimeout(noticeTimeoutRef.current);
+    }
+    noticeTimeoutRef.current = setTimeout(() => setNotice(null), 4000);
   }, []);
 
   const loadConversations = useCallback(async () => {
@@ -135,6 +163,7 @@ export default function MessagesPage() {
         const data = await fetchConversation(userId);
         setActiveUser(data.user);
         setActiveGroup(null);
+        setActiveGroupMemberCount(0);
         setMessages(data.messages);
         setGroupMessages([]);
         setMobileView("chat");
@@ -168,8 +197,14 @@ export default function MessagesPage() {
       setChatTab("group");
 
       try {
-        const data = await fetchGroupConversation(groupId);
+        const [data, chats] = await Promise.all([
+          fetchGroupConversation(groupId),
+          fetchGroupChats(),
+        ]);
+        setGroupChats(chats);
+        const summary = chats.find((c) => c.group.id === groupId);
         setActiveGroup(data.group);
+        setActiveGroupMemberCount(summary?.membersCount ?? 0);
         setActiveUser(null);
         setGroupMessages(data.messages);
         setMessages([]);
@@ -184,7 +219,7 @@ export default function MessagesPage() {
         setError(
           err instanceof ApiError
             ? err.message
-            : "Unable to load hub chat. Please try again.",
+            : "Unable to load group chat. Please try again.",
         );
       }
     },
@@ -208,13 +243,12 @@ export default function MessagesPage() {
 
       if (selectedGroupId) {
         await openGroupConversation(selectedGroupId);
-      } else {
-        const targetId = selectedUserId ?? list[0]?.user.id ?? null;
-        if (targetId) {
-          await openConversation(targetId);
-        } else if (groups[0]?.group.id) {
-          setChatTab("group");
-        }
+      } else if (selectedUserId) {
+        await openConversation(selectedUserId);
+      } else if (list[0]?.user.id) {
+        await openConversation(list[0].user.id);
+      } else if (groups[0]?.group.id) {
+        setChatTab("group");
       }
 
       if (!cancelled) {
@@ -227,14 +261,8 @@ export default function MessagesPage() {
     return () => {
       cancelled = true;
     };
-  }, [
-    selectedUserId,
-    selectedGroupId,
-    loadConversations,
-    loadGroupChats,
-    openConversation,
-    openGroupConversation,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedUserId, selectedGroupId]);
 
   useEffect(() => {
     const socket = getChatSocket();
@@ -363,7 +391,9 @@ export default function MessagesPage() {
       }
       setMessages((current) =>
         current.map((message) =>
-          message.senderId === currentUserId ? { ...message, read: true } : message,
+          message.senderId === currentUserId
+            ? { ...message, read: true }
+            : message,
         ),
       );
     };
@@ -397,25 +427,11 @@ export default function MessagesPage() {
       }
     };
 
-    const onPresence = (payload: {
-      userId: string;
-      online: boolean;
-    }) => {
+    const onPresence = (payload: { userId: string; online: boolean }) => {
       setOnlineUsers((current) => ({
         ...current,
         [payload.userId]: payload.online,
       }));
-    };
-
-    const onCallOffer = (payload: {
-      fromUserId: string;
-      callType?: CallType;
-    }) => {
-      if (chatTab !== "direct" || activeUser?.id !== payload.fromUserId) {
-        return;
-      }
-      setCallType(payload.callType ?? "video");
-      setCallStatus("incoming");
     };
 
     socket.on("message:new", onMessage);
@@ -423,7 +439,6 @@ export default function MessagesPage() {
     socket.on("typing:start", onTypingStart);
     socket.on("typing:stop", onTypingStop);
     socket.on("presence:update", onPresence);
-    socket.on("call:offer", onCallOffer);
 
     return () => {
       socket.off("message:new", onMessage);
@@ -431,12 +446,10 @@ export default function MessagesPage() {
       socket.off("typing:start", onTypingStart);
       socket.off("typing:stop", onTypingStop);
       socket.off("presence:update", onPresence);
-      socket.off("call:offer", onCallOffer);
     };
   }, [
     activeGroup?.id,
     activeUser?.id,
-    chatTab,
     currentUserId,
     loadConversations,
     loadGroupChats,
@@ -444,8 +457,10 @@ export default function MessagesPage() {
 
   useEffect(() => {
     return () => {
-      callSessionRef.current?.end();
       disconnectChatSocket();
+      if (noticeTimeoutRef.current) {
+        clearTimeout(noticeTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -465,6 +480,13 @@ export default function MessagesPage() {
   async function handleSelectGroup(groupId: string) {
     router.replace(`/messages?groupId=${groupId}`);
     await openGroupConversation(groupId);
+  }
+
+  function handleTabChange(tab: ChatTab) {
+    setChatTab(tab);
+    if (tab === "live") {
+      setMobileView("list");
+    }
   }
 
   function emitTypingStop() {
@@ -518,7 +540,6 @@ export default function MessagesPage() {
 
     setIsSending(true);
     setError(null);
-    setNotice(null);
     emitTypingStop();
 
     try {
@@ -584,77 +605,39 @@ export default function MessagesPage() {
     }
   }
 
-  async function startCall(type: CallType) {
-    if (!activeUser || !currentUserId) {
-      return;
-    }
-
-    const socket = getChatSocket();
-    if (!socket) {
-      setError("Live connection unavailable. Refresh and try again.");
-      return;
-    }
-
-    setCallType(type);
-    setCallStatus("connecting");
-
-    const session = new CallSession({
-      socket,
-      localUserId: currentUserId,
-      peerId: activeUser.id,
-      callType: type,
-      isInitiator: true,
-      onLocalStream: setLocalStream,
-      onRemoteStream: (stream) => {
-        setRemoteStream(stream);
-        setCallStatus("active");
-      },
-      onEnded: endCall,
-      onError: (message) => setError(message),
-    });
-
-    callSessionRef.current = session;
-    await session.start();
-  }
-
-  async function acceptCall() {
-    if (!activeUser || !currentUserId || !callType) {
-      return;
-    }
-
-    const socket = getChatSocket();
-    if (!socket) {
-      return;
-    }
-
-    setCallStatus("connecting");
-
-    const session = new CallSession({
-      socket,
-      localUserId: currentUserId,
-      peerId: activeUser.id,
-      callType,
-      isInitiator: false,
-      onLocalStream: setLocalStream,
-      onRemoteStream: (stream) => {
-        setRemoteStream(stream);
-        setCallStatus("active");
-      },
-      onEnded: endCall,
-      onError: (message) => setError(message),
-    });
-
-    callSessionRef.current = session;
-    await session.start();
-  }
-
-  function endCall() {
-    callSessionRef.current?.end();
-    callSessionRef.current = null;
-    setCallType(null);
-    setCallStatus(null);
-    setLocalStream(null);
-    setRemoteStream(null);
+  function renderCallActions() {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() =>
+            showFeatureNotice("Audio call feature is coming soon.")
+          }
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-700 transition hover:border-brand-primary/30 hover:bg-brand-primary/5 dark:border-white/10 dark:bg-brand-dark dark:text-slate-200 dark:hover:bg-white/10"
+          aria-label="Audio call"
+        >
+          <Phone className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            showFeatureNotice("Video call feature is coming soon.")
+          }
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-700 transition hover:border-brand-primary/30 hover:bg-brand-primary/5 dark:border-white/10 dark:bg-brand-dark dark:text-slate-200 dark:hover:bg-white/10"
+          aria-label="Video call"
+        >
+          <Video className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => showFeatureNotice("More options coming soon.")}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-700 transition hover:border-brand-primary/30 hover:bg-brand-primary/5 dark:border-white/10 dark:bg-brand-dark dark:text-slate-200 dark:hover:bg-white/10"
+          aria-label="More options"
+        >
+          <MoreVertical className="h-4 w-4" />
+        </button>
+      </>
+    );
   }
 
   if (isLoading) {
@@ -664,9 +647,10 @@ export default function MessagesPage() {
   const filteredConversations = conversations.filter((conversation) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
-    const name = conversation.user.name.toLowerCase();
-    const last = conversation.lastMessage.content.toLowerCase();
-    return name.includes(q) || last.includes(q);
+    return (
+      conversation.user.name.toLowerCase().includes(q) ||
+      conversation.lastMessage.content.toLowerCase().includes(q)
+    );
   });
 
   const filteredGroupChats = groupChats.filter((chat) => {
@@ -677,118 +661,132 @@ export default function MessagesPage() {
     return name.includes(q) || last.includes(q);
   });
 
-  const activeMessages =
-    chatTab === "group"
-      ? groupMessages
-      : messages;
-
   const showChatPanel =
-    chatTab === "direct" ? Boolean(activeUser) : Boolean(activeGroup);
+    chatTab !== "live" &&
+    (chatTab === "direct" ? Boolean(activeUser) : Boolean(activeGroup));
+
+  const isDirectOnline =
+    chatTab === "direct" && activeUser
+      ? Boolean(onlineUsers[activeUser.id])
+      : false;
 
   return (
-    <div className="linkup-page pb-24 lg:pb-8">
-      <div className="linkup-container-wide">
-        <header className="mb-6 linkup-panel p-5 sm:p-7">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-primary dark:text-brand-secondary/80">
-              LinkUp Chats
-            </p>
-            <h1 className="linkup-title mt-2">Chats</h1>
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-              Real-time messages, hub chats, and live calls.
-            </p>
+    <div className="linkup-page overflow-x-hidden pb-24 lg:pb-8">
+      <div className="linkup-container-wide min-w-0">
+        <header className="linkup-panel mb-6 overflow-hidden p-5 sm:p-7">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-primary dark:text-brand-secondary/80">
+                LinkUp
+              </p>
+              <h1 className="linkup-title mt-2">Chats</h1>
+              <p className="mt-2 max-w-xl text-sm text-slate-600 dark:text-slate-400">
+                Talk, collaborate, and stay live with your network.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-200">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              Live-ready
+            </div>
           </div>
         </header>
 
         {error ? (
-          <p className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">
+          <p className="mb-4 rounded-3xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">
             {error}
           </p>
         ) : null}
         {notice ? (
-          <p className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-200">
+          <p className="mb-4 rounded-3xl border border-brand-primary/25 bg-brand-primary/10 px-4 py-3 text-sm text-brand-primary dark:text-brand-secondary">
             {notice}
           </p>
         ) : null}
 
-        <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
+        <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] xl:gap-6">
+          {/* Left panel — chat list */}
           <aside
-            className={`linkup-panel min-w-0 p-4 sm:p-5 ${
-              mobileView === "chat" ? "hidden lg:block" : "block"
+            className={`linkup-panel min-w-0 overflow-hidden p-4 sm:p-5 ${
+              mobileView === "chat" ? "hidden lg:flex lg:flex-col" : "flex flex-col"
             }`}
           >
-            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 p-1 dark:border-white/10 dark:bg-brand-dark/80">
-              <button
-                type="button"
-                onClick={() => setChatTab("direct")}
-                className={`flex-1 rounded-full px-3 py-2 text-xs font-semibold transition ${
-                  chatTab === "direct"
-                    ? "bg-brand-primary text-white"
-                    : "text-slate-600 dark:text-slate-300"
-                }`}
-              >
-                Direct
-              </button>
-              <button
-                type="button"
-                onClick={() => setChatTab("group")}
-                className={`flex-1 rounded-full px-3 py-2 text-xs font-semibold transition ${
-                  chatTab === "group"
-                    ? "bg-brand-primary text-white"
-                    : "text-slate-600 dark:text-slate-300"
-                }`}
-              >
-                Hubs
-              </button>
-            </div>
-
-            <div className="mt-4 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-primary dark:text-brand-secondary">
-                  {chatTab === "direct" ? "Direct" : "Hub chats"}
-                </h2>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  {chatTab === "direct"
-                    ? "Pick a chat to continue the flow."
-                    : "Chat with your hub members."}
-                </p>
-              </div>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+                Chats
+              </h2>
               <Link
-                href={chatTab === "direct" ? "/explore" : "/hubs"}
-                className="shrink-0 rounded-full border border-brand-primary/30 bg-brand-primary/10 px-3 py-1.5 text-xs font-semibold text-brand-primary transition hover:bg-brand-primary/15 dark:text-brand-secondary"
+                href={
+                  chatTab === "group"
+                    ? "/groups"
+                    : chatTab === "live"
+                      ? "/events"
+                      : "/explore"
+                }
+                className="shrink-0 rounded-full border border-brand-primary/25 bg-brand-primary/10 px-3 py-1.5 text-xs font-semibold text-brand-primary transition hover:bg-brand-primary/15 dark:text-brand-secondary"
               >
-                {chatTab === "direct" ? "New Chat" : "Browse Hubs"}
+                {chatTab === "group"
+                  ? "Browse Groups"
+                  : chatTab === "live"
+                    ? "Happenings"
+                    : "New Chat"}
               </Link>
             </div>
 
-            <div className="mt-4 rounded-full border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-600 dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-300">
+            <div className="mt-4 rounded-full border border-slate-200/80 bg-slate-50 px-3 py-2.5 text-sm text-slate-600 dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-300">
               <div className="flex items-center gap-2">
-                <Search className="h-4 w-4 text-slate-400" />
+                <Search className="h-4 w-4 shrink-0 text-slate-400" />
                 <input
                   type="search"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Search chats..."
-                  className="w-full bg-transparent outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                  className="w-full min-w-0 bg-transparent outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 />
               </div>
             </div>
 
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 grid grid-cols-3 gap-1 rounded-full border border-slate-200/80 bg-slate-50 p-1 dark:border-white/10 dark:bg-brand-dark/80">
+              {(
+                [
+                  { id: "direct", label: "Direct" },
+                  { id: "group", label: "Groups" },
+                  { id: "live", label: "Live" },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`rounded-full px-2 py-2 text-xs font-semibold transition sm:px-3 ${
+                    chatTab === tab.id
+                      ? "bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-sm shadow-brand-primary/25"
+                      : "text-slate-600 hover:text-brand-primary dark:text-slate-300 dark:hover:text-brand-secondary"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-4 min-h-0 flex-1 space-y-2.5 overflow-y-auto pr-0.5">
               {chatTab === "direct" ? (
                 filteredConversations.length === 0 ? (
-                  <p className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-brand-dark/85 dark:text-slate-400">
+                  <p className="rounded-3xl border border-slate-200/80 bg-slate-50 p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-brand-dark/85 dark:text-slate-400">
                     No chats yet. Start a new connection from Discover.
                   </p>
                 ) : (
                   filteredConversations.map((conversation) => (
                     <ChatListItem
                       key={conversation.user.id}
+                      variant="direct"
                       name={conversation.user.name}
                       avatarUrl={conversation.user.avatarUrl}
                       lastMessage={conversation.lastMessage.content}
                       time={formatTimeAgo(conversation.lastMessage.createdAt)}
                       unread={conversation.unreadCount}
+                      online={onlineUsers[conversation.user.id]}
                       active={activeUser?.id === conversation.user.id}
                       onClick={() =>
                         void handleSelectConversation(conversation.user.id)
@@ -796,48 +794,76 @@ export default function MessagesPage() {
                     />
                   ))
                 )
-              ) : filteredGroupChats.length === 0 ? (
-                <p className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-brand-dark/85 dark:text-slate-400">
-                  No hub chats yet. Join a hub to start chatting.
-                </p>
+              ) : chatTab === "group" ? (
+                filteredGroupChats.length === 0 ? (
+                  <p className="rounded-3xl border border-slate-200/80 bg-slate-50 p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-brand-dark/85 dark:text-slate-400">
+                    No group chats yet. Join a group to start chatting.
+                  </p>
+                ) : (
+                  filteredGroupChats.map((chat) => (
+                    <ChatListItem
+                      key={chat.group.id}
+                      variant="group"
+                      name={chat.group.name}
+                      avatarUrl={chat.group.coverImage}
+                      lastMessage={
+                        chat.lastMessage?.content ?? "No messages yet"
+                      }
+                      time={
+                        chat.lastMessage
+                          ? formatTimeAgo(chat.lastMessage.createdAt)
+                          : ""
+                      }
+                      memberCount={chat.membersCount}
+                      unread={0}
+                      active={activeGroup?.id === chat.group.id}
+                      onClick={() => void handleSelectGroup(chat.group.id)}
+                    />
+                  ))
+                )
               ) : (
-                filteredGroupChats.map((chat) => (
-                  <ChatListItem
-                    key={chat.group.id}
-                    name={chat.group.name}
-                    avatarUrl={chat.group.coverImage}
-                    lastMessage={chat.lastMessage?.content ?? "No messages yet"}
-                    time={
-                      chat.lastMessage
-                        ? formatTimeAgo(chat.lastMessage.createdAt)
-                        : ""
-                    }
-                    unread={0}
-                    active={activeGroup?.id === chat.group.id}
-                    onClick={() => void handleSelectGroup(chat.group.id)}
-                  />
-                ))
+                <>
+                  {LIVE_PLACEHOLDER_ROOMS.map((room) => (
+                    <LiveRoomCard
+                      key={room.title}
+                      title={room.title}
+                      subtitle={room.subtitle}
+                      onClick={() =>
+                        showFeatureNotice(
+                          "Live rooms will appear here when your hubs or happenings go live.",
+                        )
+                      }
+                    />
+                  ))}
+                  <p className="rounded-3xl border border-dashed border-slate-200/80 bg-slate-50/80 p-4 text-center text-sm text-slate-600 dark:border-white/10 dark:bg-brand-dark/60 dark:text-slate-400">
+                    Live rooms will appear here when your hubs or happenings go
+                    live.
+                  </p>
+                </>
               )}
             </div>
           </aside>
 
+          {/* Right panel — active chat */}
           <main
-            className={`linkup-panel relative min-w-0 p-4 sm:p-5 ${
+            className={`linkup-panel relative min-w-0 overflow-hidden p-0 sm:p-0 ${
               mobileView === "list" ? "hidden lg:block" : "block"
             }`}
           >
             {showChatPanel ? (
-              <div className="flex h-[min(68vh,720px)] flex-col gap-4 sm:h-[min(74vh,720px)] sm:gap-5">
-                <div className="flex flex-wrap items-center justify-between gap-4 rounded-[1.75rem] bg-slate-50 p-4 dark:bg-brand-dark/85">
-                  <div className="flex items-center gap-3">
+              <div className="flex h-[min(72vh,760px)] flex-col">
+                {/* Chat header */}
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 px-4 py-4 dark:border-white/10 sm:px-5">
+                  <div className="flex min-w-0 items-center gap-3">
                     <button
                       type="button"
                       onClick={() => setMobileView("list")}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 lg:hidden dark:border-white/10 dark:bg-brand-dark dark:text-slate-200 dark:hover:bg-white/10"
+                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-700 hover:bg-slate-50 lg:hidden dark:border-white/10 dark:bg-brand-dark dark:text-slate-200"
                       aria-label="Back to chats"
                     >
                       <ArrowLeft className="h-4 w-4" />
                     </button>
+
                     {chatTab === "direct" && activeUser ? (
                       <>
                         {activeUser.avatarUrl ? (
@@ -845,105 +871,75 @@ export default function MessagesPage() {
                           <img
                             src={activeUser.avatarUrl}
                             alt=""
-                            className="h-12 w-12 rounded-3xl object-cover ring-2 ring-brand-primary/20"
+                            className="h-11 w-11 shrink-0 rounded-2xl object-cover ring-2 ring-brand-primary/15"
                           />
                         ) : (
-                          <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-gradient-to-br from-brand-primary to-brand-secondary text-lg font-semibold text-white">
-                            {activeUser.name
-                              .trim()
-                              .split(/\s+/)
-                              .map((part) => part[0])
-                              .join("")
-                              .slice(0, 2)
-                              .toUpperCase() || "U"}
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white">
+                            {getInitials(activeUser.name)}
                           </div>
                         )}
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-brand-secondary">
-                            Direct chat
-                          </p>
-                          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
+                        <div className="min-w-0">
+                          <h2 className="truncate text-lg font-semibold text-slate-900 dark:text-white">
                             {activeUser.name}
                           </h2>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">
-                            @{activeUser.username}
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {isDirectOnline
+                              ? "Online · Active now"
+                              : "Offline · Direct chat"}
                           </p>
                         </div>
                       </>
                     ) : activeGroup ? (
                       <>
-                        <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-gradient-to-br from-brand-primary to-brand-secondary text-white">
+                        <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-primary to-brand-secondary text-white">
                           <Users className="h-5 w-5" />
                         </div>
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-brand-secondary">
-                            Hub chat
-                          </p>
-                          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
+                        <div className="min-w-0">
+                          <h2 className="truncate text-lg font-semibold text-slate-900 dark:text-white">
                             {activeGroup.name}
                           </h2>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            Group chat
+                            {activeGroupMemberCount > 0
+                              ? ` · ${activeGroupMemberCount} member${activeGroupMemberCount === 1 ? "" : "s"}`
+                              : ""}
+                          </p>
                         </div>
                       </>
                     ) : null}
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    {chatTab === "direct" && activeUser ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => void startCall("audio")}
-                          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-brand-dark dark:text-slate-200"
-                          aria-label="Audio call"
-                        >
-                          <Phone className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void startCall("video")}
-                          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-brand-dark dark:text-slate-200"
-                          aria-label="Video call"
-                        >
-                          <Video className="h-4 w-4" />
-                        </button>
-                        <div
-                          className={`flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium ${
-                            onlineUsers[activeUser.id]
-                              ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-200"
-                              : "bg-slate-500/10 text-slate-600 dark:text-slate-300"
-                          }`}
-                        >
-                          <span
-                            className={`h-2 w-2 rounded-full ${
-                              onlineUsers[activeUser.id]
-                                ? "bg-emerald-500"
-                                : "bg-slate-400"
-                            }`}
-                          />
-                          {onlineUsers[activeUser.id] ? "Online" : "Offline"}
-                        </div>
-                      </>
-                    ) : null}
+                  <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+                    {renderCallActions()}
                   </div>
                 </div>
 
-                <div className="flex-1 space-y-4 overflow-y-auto pr-1">
-                  {activeMessages.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center dark:border-white/15 dark:bg-brand-dark/60">
-                      <p className="text-sm text-slate-600 dark:text-slate-400">
-                        No messages yet. Say hello!
+                {/* Messages */}
+                <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 sm:px-5">
+                  {chatTab === "direct" ? (
+                    messages.length === 0 ? (
+                      <div className="flex h-full items-center justify-center">
+                        <p className="rounded-3xl border border-dashed border-slate-300/80 bg-white/80 px-6 py-5 text-center text-sm text-slate-600 dark:border-white/15 dark:bg-brand-dark/60 dark:text-slate-400">
+                          No messages yet. Say hello.
+                        </p>
+                      </div>
+                    ) : (
+                      messages.map((message) => (
+                        <MessageBubble
+                          key={message.id}
+                          text={message.content}
+                          time={formatMessageTime(message.createdAt)}
+                          fromMe={message.senderId === currentUserId}
+                          read={message.read}
+                        />
+                      ))
+                    )
+                  ) : groupMessages.length === 0 ? (
+                    <div className="flex h-full items-center justify-center">
+                      <p className="rounded-3xl border border-dashed border-slate-300/80 bg-white/80 px-6 py-5 text-center text-sm text-slate-600 dark:border-white/15 dark:bg-brand-dark/60 dark:text-slate-400">
+                        No messages yet. Say hello.
                       </p>
                     </div>
-                  ) : chatTab === "direct" ? (
-                    messages.map((message) => (
-                      <MessageBubble
-                        key={message.id}
-                        text={message.content}
-                        time={formatMessageTime(message.createdAt)}
-                        fromMe={message.senderId === currentUserId}
-                        read={message.read}
-                      />
-                    ))
                   ) : (
                     groupMessages.map((message) => (
                       <MessageBubble
@@ -959,21 +955,27 @@ export default function MessagesPage() {
                       />
                     ))
                   )}
+
                   {typingPeerId && chatTab === "direct" ? (
-                    <p className="text-xs text-slate-500">Typing...</p>
+                    <p className="text-xs italic text-slate-500 dark:text-slate-400">
+                      Typing…
+                    </p>
                   ) : null}
                   {typingGroupId && chatTab === "group" ? (
-                    <p className="text-xs text-slate-500">Someone is typing...</p>
+                    <p className="text-xs italic text-slate-500 dark:text-slate-400">
+                      Someone is typing…
+                    </p>
                   ) : null}
                   <div ref={messagesEndRef} />
                 </div>
 
-                <div className="sticky bottom-0 z-10 rounded-[1.75rem] border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-brand-dark/80 sm:p-4">
-                  <div className="relative flex min-w-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 dark:border-white/10 dark:bg-brand-dark/90 sm:gap-3 sm:px-4 sm:py-3">
+                {/* Input */}
+                <div className="border-t border-slate-200/80 bg-slate-50/90 px-3 py-3 dark:border-white/10 dark:bg-brand-dark/90 sm:px-4 sm:py-4">
+                  <div className="relative flex min-w-0 items-center gap-1.5 rounded-full border border-slate-200/80 bg-white px-2 py-2 dark:border-white/10 dark:bg-brand-dark sm:gap-2 sm:px-3 sm:py-2.5">
                     <button
                       type="button"
                       onClick={() => setShowEmoji((current) => !current)}
-                      className="shrink-0 text-slate-500 hover:text-brand-primary dark:hover:text-brand-secondary"
+                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-brand-primary dark:hover:bg-white/10 dark:hover:text-brand-secondary"
                       aria-label="Add emoji"
                     >
                       <Smile className="h-5 w-5" />
@@ -986,9 +988,21 @@ export default function MessagesPage() {
                         }}
                       />
                     ) : null}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        showFeatureNotice("Attachments are coming soon.")
+                      }
+                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-brand-primary dark:hover:bg-white/10 dark:hover:text-brand-secondary"
+                      aria-label="Attach file"
+                    >
+                      <Paperclip className="h-5 w-5" />
+                    </button>
                     <input
                       value={messageInput}
-                      onChange={(event) => handleInputChange(event.target.value)}
+                      onChange={(event) =>
+                        handleInputChange(event.target.value)
+                      }
                       onKeyDown={(event) => {
                         if (event.key === "Enter" && !event.shiftKey) {
                           event.preventDefault();
@@ -996,35 +1010,56 @@ export default function MessagesPage() {
                         }
                       }}
                       className="min-w-0 flex-1 bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500 sm:text-sm"
-                      placeholder="Type a message..."
+                      placeholder="Type your message..."
                     />
                     <button
                       type="button"
                       onClick={() => void handleSendMessage()}
                       disabled={!messageInput.trim() || isSending}
-                      className="linkup-btn-primary shrink-0 px-3 py-2.5 text-xs sm:px-4 sm:text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                      className="linkup-btn-primary inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 sm:text-sm"
                     >
                       <Send className="h-4 w-4" />
-                      {isSending ? "Sending..." : "Send"}
+                      <span className="hidden sm:inline">
+                        {isSending ? "Sending…" : "Send"}
+                      </span>
                     </button>
                   </div>
                 </div>
               </div>
+            ) : chatTab === "live" ? (
+              <div className="flex h-[min(72vh,760px)] flex-col items-center justify-center px-6 py-10 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-gradient-to-br from-rose-500/15 to-brand-primary/15 text-rose-500">
+                  <Radio className="h-6 w-6" />
+                </div>
+                <h2 className="mt-5 text-xl font-semibold text-slate-900 dark:text-white">
+                  Live rooms
+                </h2>
+                <p className="mt-2 max-w-md text-sm text-slate-600 dark:text-slate-400">
+                  Live rooms will appear here when your hubs or happenings go
+                  live.
+                </p>
+                <Link
+                  href="/groups"
+                  className="mt-6 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20"
+                >
+                  Explore Hubs
+                </Link>
+              </div>
             ) : (
-              <div className="flex h-[min(74vh,720px)] items-center justify-center p-6">
-                <div className="max-w-sm rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center dark:border-white/15 dark:bg-brand-dark/60">
+              <div className="flex h-[min(72vh,760px)] items-center justify-center px-6 py-10">
+                <div className="max-w-sm rounded-3xl border border-dashed border-slate-300/80 bg-white/80 p-10 text-center dark:border-white/15 dark:bg-brand-dark/60">
                   <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary dark:text-brand-secondary">
                     <MessageCircle className="h-5 w-5" />
                   </div>
                   <h2 className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">
-                    No chat selected
+                    Select a chat
                   </h2>
                   <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                    Pick a chat or start a new connection.
+                    Select a chat to start the conversation.
                   </p>
                   <Link
                     href="/explore"
-                    className="mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover"
+                    className="mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20"
                   >
                     Start Chat
                   </Link>
@@ -1034,19 +1069,6 @@ export default function MessagesPage() {
           </main>
         </div>
       </div>
-
-      {callType && callStatus && activeUser ? (
-        <CallOverlay
-          callType={callType}
-          peerName={activeUser.name}
-          localStream={localStream}
-          remoteStream={remoteStream}
-          status={callStatus}
-          onAccept={() => void acceptCall()}
-          onDecline={endCall}
-          onEnd={endCall}
-        />
-      ) : null}
     </div>
   );
 }

@@ -16,10 +16,10 @@ export default function MessageBubble({
   return (
     <div className={`flex ${fromMe ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[85%] rounded-[1.75rem] border px-5 py-4 text-sm leading-6 shadow-sm transition duration-300 ${
+        className={`max-w-[80%] rounded-3xl px-4 py-3 text-sm leading-6 shadow-sm transition duration-300 sm:px-5 sm:py-3.5 ${
           fromMe
-            ? "border-brand-primary/30 bg-brand-primary/10 text-brand-text shadow-brand-primary/10 dark:border-white/10 dark:bg-brand-primary/15 dark:text-brand-light dark:shadow-brand-primary/10"
-            : "border-slate-200 bg-white text-slate-700 shadow-slate-950/10 dark:border-white/10 dark:bg-brand-dark/90 dark:text-slate-300 dark:shadow-slate-950/20"
+            ? "bg-gradient-to-br from-brand-primary to-brand-secondary text-white shadow-brand-primary/20"
+            : "border border-slate-200/80 bg-white text-slate-700 dark:border-white/10 dark:bg-brand-dark/90 dark:text-slate-200"
         }`}
       >
         {!fromMe && senderName ? (
@@ -27,11 +27,15 @@ export default function MessageBubble({
             {senderName}
           </p>
         ) : null}
-        <p>{text}</p>
-        <span className="mt-2 block text-right text-[11px] text-slate-500">
+        <p className="whitespace-pre-wrap break-words">{text}</p>
+        <span
+          className={`mt-1.5 block text-right text-[10px] ${
+            fromMe ? "text-white/75" : "text-slate-500 dark:text-slate-400"
+          }`}
+        >
           {time}
           {fromMe && read !== undefined ? (
-            <span className="ml-1">{read ? " · Read" : " · Sent"}</span>
+            <span className="ml-1">{read ? " · Seen" : " · Sent"}</span>
           ) : null}
         </span>
       </div>

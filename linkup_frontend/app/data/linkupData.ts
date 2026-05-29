@@ -24,7 +24,7 @@ export const landingMetrics = [
 export const homeSidebarLinks = [
   { label: "Home", href: "/home", icon: "home" },
   { label: "Explore", href: "/explore", icon: "explore" },
-  { label: "Messages", href: "/messages", icon: "messages" },
+  { label: "Chats", href: "/messages", icon: "messages" },
   { label: "Groups", href: "/groups", icon: "groups" },
   { label: "Notifications", href: "/notifications", icon: "notifications" },
 ] as const;
