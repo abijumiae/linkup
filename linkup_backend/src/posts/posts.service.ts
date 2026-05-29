@@ -1,9 +1,12 @@
 import {
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
+import { RealtimeEmitter } from '../chat/realtime.emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
@@ -46,10 +49,12 @@ export class PostsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
+    @Inject(forwardRef(() => RealtimeEmitter))
+    private readonly realtimeEmitter: RealtimeEmitter,
   ) {}
 
-  create(authorId: string, dto: CreatePostDto) {
-    return this.prisma.post.create({
+  async create(authorId: string, dto: CreatePostDto) {
+    const post = await this.prisma.post.create({
       data: {
         authorId,
         content: dto.content,
@@ -60,6 +65,9 @@ export class PostsService {
       },
       include: postInclude,
     });
+
+    this.realtimeEmitter.emitSparkCreated(post);
+    return post;
   }
 
   async getFeed(userId: string): Promise<FeedPost[]> {

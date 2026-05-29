@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { NotificationType, Prisma } from '../generated/prisma/client';
+import { RealtimeEmitter } from '../chat/realtime.emitter';
 import { PrismaService } from '../prisma/prisma.service';
 
 const actorSelect = {
@@ -17,7 +18,11 @@ const notificationInclude = {
 
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => RealtimeEmitter))
+    private readonly realtimeEmitter: RealtimeEmitter,
+  ) {}
 
   async notifyLike(actorId: string, postId: string) {
     const post = await this.prisma.post.findUnique({ where: { id: postId } });
@@ -269,17 +274,20 @@ export class NotificationsService {
     });
 
     if (existing) {
-      return this.prisma.notification.update({
+      const updated = await this.prisma.notification.update({
         where: { id: existing.id },
         data: {
           message: params.message,
           read: false,
           createdAt: new Date(),
         },
+        include: notificationInclude,
       });
+      this.realtimeEmitter.emitNotification(params.recipientId, updated);
+      return updated;
     }
 
-    return this.prisma.notification.create({
+    const created = await this.prisma.notification.create({
       data: {
         type: params.type,
         message: params.message,
@@ -287,7 +295,10 @@ export class NotificationsService {
         actorId: params.actorId,
         postId: params.postId,
       },
+      include: notificationInclude,
     });
+    this.realtimeEmitter.emitNotification(params.recipientId, created);
+    return created;
   }
 
   private async upsertMarketplaceNotification(params: {

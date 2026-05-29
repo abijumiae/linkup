@@ -3,6 +3,7 @@ import {
   MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  OnGatewayInit,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
@@ -15,6 +16,12 @@ import {
   GroupCallRoomType,
   groupCallRoomKey,
 } from './group-call.manager';
+import {
+  LiveRoomManager,
+  LiveRoomType,
+  liveRoomKey,
+} from './live-room.manager';
+import { RealtimeEmitter } from './realtime.emitter';
 import { WsAuthService } from './ws-auth.service';
 
 type AuthedSocket = Socket & {
@@ -24,6 +31,8 @@ type AuthedSocket = Socket & {
     userAvatarUrl?: string | null;
     groupCallRoomKey?: string;
     groupCallRoomId?: string;
+    liveRoomKey?: string;
+    liveRoomId?: string;
   };
 };
 
@@ -52,7 +61,9 @@ const SOCKET_CORS_ORIGINS = [
     credentials: true,
   },
 })
-export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class ChatGateway
+  implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit
+{
   private readonly logger = new Logger(ChatGateway.name);
 
   @WebSocketServer()
@@ -60,12 +71,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private readonly onlineUsers = new Map<string, Set<string>>();
   private readonly groupCallManager = new GroupCallManager();
+  private readonly liveRoomManager = new LiveRoomManager();
 
   constructor(
     private readonly wsAuthService: WsAuthService,
     @Inject(forwardRef(() => MessagesService))
     private readonly messagesService: MessagesService,
+    private readonly realtimeEmitter: RealtimeEmitter,
   ) {}
+
+  afterInit() {
+    this.realtimeEmitter.bindServer(this.server);
+  }
 
   async handleConnection(client: AuthedSocket) {
     try {
@@ -84,6 +101,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.onlineUsers.get(user.id)?.add(client.id);
 
       client.join(this.userRoom(user.id));
+      client.emit('socket_ready', { userId: user.id });
+      this.broadcastPresence(user.id, true);
+      this.server.emit('user_online', {
+        userId: user.id,
+        online: true,
+      });
       this.server.emit('presence:update', {
         userId: user.id,
         online: true,
@@ -97,6 +120,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleDisconnect(client: AuthedSocket) {
     this.leaveActiveGroupCall(client);
+    this.leaveActiveLiveRoom(client);
 
     const userId = client.data?.userId;
     if (!userId) {
@@ -107,12 +131,172 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     sockets?.delete(client.id);
     if (sockets && sockets.size === 0) {
       this.onlineUsers.delete(userId);
+      this.broadcastPresence(userId, false);
+      this.server.emit('user_offline', {
+        userId,
+        online: false,
+      });
       this.server.emit('presence:update', {
         userId,
         online: false,
         lastActive: new Date().toISOString(),
       });
     }
+  }
+
+  @SubscribeMessage('get_online_users')
+  handleGetOnlineUsers(@ConnectedSocket() client: AuthedSocket) {
+    client.emit('online_users', {
+      userIds: Array.from(this.onlineUsers.keys()),
+    });
+  }
+
+  @SubscribeMessage('join_direct_chat')
+  handleJoinDirectChat(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody() payload: { otherUserId: string },
+  ) {
+    if (!client.data?.userId || !payload?.otherUserId) {
+      return;
+    }
+    client.join(this.directRoom(client.data.userId, payload.otherUserId));
+    client.emit('joined_direct_chat', { otherUserId: payload.otherUserId });
+  }
+
+  @SubscribeMessage('send_direct_message')
+  async handleSendDirectMessage(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody() payload: { receiverId: string; content: string },
+  ) {
+    await this.handleSendMessage(client, {
+      chatType: 'direct',
+      receiverId: payload?.receiverId,
+      content: payload?.content ?? '',
+    });
+  }
+
+  @SubscribeMessage('join_group_chat')
+  handleJoinGroupChat(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody() payload: { groupId: string },
+  ) {
+    if (!client.data?.userId || !payload?.groupId) {
+      return;
+    }
+    client.join(this.groupRoom(payload.groupId));
+    client.emit('joined_group_chat', { groupId: payload.groupId });
+  }
+
+  @SubscribeMessage('send_group_message')
+  async handleSendGroupMessage(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody() payload: { groupId: string; content: string },
+  ) {
+    await this.handleSendMessage(client, {
+      chatType: 'group',
+      groupId: payload?.groupId,
+      content: payload?.content ?? '',
+    });
+  }
+
+  @SubscribeMessage('typing_start')
+  handleTypingStartEvent(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: { chatType: ChatType; targetId: string },
+  ) {
+    this.emitTypingUpdate(client, payload, true);
+  }
+
+  @SubscribeMessage('typing_stop')
+  handleTypingStopEvent(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: { chatType: ChatType; targetId: string },
+  ) {
+    this.emitTypingUpdate(client, payload, false);
+  }
+
+  @SubscribeMessage('join_pulse')
+  handleJoinPulse(@ConnectedSocket() client: AuthedSocket) {
+    client.join('pulse');
+    client.emit('joined_pulse', { ok: true });
+  }
+
+  @SubscribeMessage('join_live_room')
+  handleJoinLiveRoom(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: { roomId: string; roomType: LiveRoomType },
+  ) {
+    const userId = client.data?.userId;
+    if (!userId || !payload?.roomId || !payload?.roomType) {
+      client.emit('group_call_error', { message: 'Invalid live room payload' });
+      return;
+    }
+
+    this.leaveActiveLiveRoom(client);
+
+    const roomKey = liveRoomKey(payload.roomType, payload.roomId);
+    const participant = {
+      userId,
+      name: client.data.userName ?? 'LinkUp user',
+      avatarUrl: client.data.userAvatarUrl ?? null,
+    };
+
+    client.join(roomKey);
+    client.data.liveRoomKey = roomKey;
+    client.data.liveRoomId = payload.roomId;
+    this.liveRoomManager.join(roomKey, participant);
+
+    client.emit('live_room_participants', {
+      roomId: payload.roomId,
+      roomType: payload.roomType,
+      participants: this.liveRoomManager.getParticipants(roomKey),
+    });
+
+    client.to(roomKey).emit('participant_joined', {
+      roomId: payload.roomId,
+      roomType: payload.roomType,
+      user: participant,
+    });
+  }
+
+  @SubscribeMessage('leave_live_room')
+  handleLeaveLiveRoom(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody() payload: { roomId: string; roomType?: LiveRoomType },
+  ) {
+    if (!payload?.roomId) {
+      return;
+    }
+    this.leaveActiveLiveRoom(client, payload.roomId, payload.roomType);
+  }
+
+  @SubscribeMessage('live_room_message')
+  handleLiveRoomMessage(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: { roomId: string; roomType: LiveRoomType; content: string },
+  ) {
+    const userId = client.data?.userId;
+    const content = payload?.content?.trim();
+    if (!userId || !payload?.roomId || !payload?.roomType || !content) {
+      return;
+    }
+
+    const roomKey = liveRoomKey(payload.roomType, payload.roomId);
+    const message = {
+      id: `live-${Date.now()}-${userId}`,
+      roomId: payload.roomId,
+      roomType: payload.roomType,
+      content,
+      senderId: userId,
+      senderName: client.data.userName ?? 'LinkUp user',
+      createdAt: new Date().toISOString(),
+    };
+
+    this.server.to(roomKey).emit('live_room_message_received', message);
   }
 
   @SubscribeMessage('join_chat')
@@ -325,7 +509,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const payload = { chatType: 'direct' as const, message };
 
     this.server.to(room).emit('message_received', payload);
+    this.server.to(room).emit('direct_message_received', { message });
     this.server.to(room).emit('message:new', { type: 'direct', message });
+
+    this.realtimeEmitter.emitNewMessageNotification(message.receiverId, {
+      peerId: message.senderId,
+      message,
+    });
 
     this.server
       .to(this.userRoom(message.receiverId))
@@ -347,6 +537,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const payload = { chatType: 'group' as const, message };
 
     this.server.to(this.groupRoom(message.groupId)).emit('message_received', payload);
+    this.server
+      .to(this.groupRoom(message.groupId))
+      .emit('group_message_received', { message });
     this.server
       .to(this.groupRoom(message.groupId))
       .emit('message:new', { type: 'group', message });
@@ -649,9 +842,91 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    this.server.to(this.userRoom(peerId)).emit(event, {
+    const payload = {
       ...data,
       fromUserId,
+    };
+
+    this.server.to(this.userRoom(peerId)).emit(event, payload);
+
+    if (event === 'call_offer') {
+      this.server.to(this.userRoom(peerId)).emit('incoming_call', {
+        ...payload,
+        callType: data.callType ?? 'video',
+        offer: data.sdp,
+      });
+    }
+
+    if (event === 'call_end') {
+      this.server.to(this.userRoom(peerId)).emit('call_ended', payload);
+    }
+  }
+
+  private emitTypingUpdate(
+    client: AuthedSocket,
+    payload: { chatType?: ChatType; targetId?: string },
+    isTyping: boolean,
+  ) {
+    const userId = client.data?.userId;
+    if (!userId || !payload?.targetId || !payload?.chatType) {
+      return;
+    }
+
+    const eventPayload = {
+      userId,
+      chatType: payload.chatType,
+      targetId: payload.targetId,
+      isTyping,
+    };
+
+    if (payload.chatType === 'group') {
+      client.to(this.groupRoom(payload.targetId)).emit('typing_update', eventPayload);
+      client.to(this.groupRoom(payload.targetId)).emit('typing', eventPayload);
+      return;
+    }
+
+    client
+      .to(this.directRoom(userId, payload.targetId))
+      .emit('typing_update', eventPayload);
+    client
+      .to(this.directRoom(userId, payload.targetId))
+      .emit('typing', eventPayload);
+  }
+
+  private broadcastPresence(userId: string, online: boolean) {
+    this.server.emit(online ? 'user_online' : 'user_offline', { userId, online });
+  }
+
+  private leaveActiveLiveRoom(
+    client: AuthedSocket,
+    roomId?: string,
+    roomType?: LiveRoomType,
+  ) {
+    const roomKey =
+      client.data.liveRoomKey ??
+      (roomId && roomType ? liveRoomKey(roomType, roomId) : null) ??
+      this.liveRoomManager.findRoomKeyForUser(client.data?.userId ?? '');
+
+    const userId = client.data?.userId;
+    if (!roomKey || !userId) {
+      return;
+    }
+
+    const resolvedRoomId =
+      roomId ?? client.data.liveRoomId ?? roomKey.split(':').slice(2).join(':');
+
+    const removed = this.liveRoomManager.leave(roomKey, userId);
+    client.leave(roomKey);
+    delete client.data.liveRoomKey;
+    delete client.data.liveRoomId;
+
+    if (!removed) {
+      return;
+    }
+
+    this.server.to(roomKey).emit('participant_left', {
+      roomId: resolvedRoomId,
+      userId,
     });
   }
 

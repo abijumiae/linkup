@@ -15,6 +15,7 @@ import {
   getToken,
   logout as clearAuthStorage,
 } from "./auth";
+import { disconnectSocket } from "./socket";
 
 type AuthContextValue = {
   user: User | null;
@@ -48,6 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshUser]);
 
   const logout = useCallback(() => {
+    disconnectSocket();
     clearAuthStorage();
     setUser(null);
   }, []);

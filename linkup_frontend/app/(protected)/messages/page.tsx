@@ -19,14 +19,12 @@ import {
 import { ApiError } from "@/src/lib/api";
 import { getCurrentUser } from "@/src/lib/auth";
 import {
-  connectSocket,
-  disconnectSocket,
   getSocket,
   isSocketConnected,
-  MessageReceivedPayload,
-  normalizeReceivedMessage,
+  toMessageReceivedPayload,
   TypingPayload,
 } from "@/src/lib/socket";
+import { useSocket } from "@/src/components/SocketProvider";
 import {
   GroupChatMessage,
   GroupChatSummary,
@@ -125,7 +123,7 @@ export default function MessagesPage() {
   const [typingPeerId, setTypingPeerId] = useState<string | null>(null);
   const [typingGroupId, setTypingGroupId] = useState<string | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<Record<string, boolean>>({});
-  const [socketConnected, setSocketConnected] = useState(false);
+  const { socket, status: socketStatus } = useSocket();
   const [callType, setCallType] = useState<CallType | null>(null);
   const [callStatus, setCallStatus] = useState<
     "connecting" | "active" | "incoming" | null
@@ -268,6 +266,7 @@ export default function MessagesPage() {
               : conversation,
           ),
         );
+        getSocket()?.emit("join_direct_chat", { otherUserId: userId });
         getSocket()?.emit("join_chat", {
           chatType: "direct",
           targetId: userId,
@@ -307,6 +306,7 @@ export default function MessagesPage() {
         setMessages([]);
         setActiveGroupCallLive(false);
         setMobileView("chat");
+        getSocket()?.emit("join_group_chat", { groupId });
         getSocket()?.emit("join_chat", {
           chatType: "group",
           targetId: groupId,
@@ -366,20 +366,33 @@ export default function MessagesPage() {
   }, [selectedUserId, selectedGroupId]);
 
   useEffect(() => {
-    if (!currentUserId) {
+    if (!currentUserId || !socket) {
       return;
     }
 
-    const socket = connectSocket();
-    if (!socket) {
-      return;
-    }
+    const onConnect = () => {
+      if (activeUser?.id) {
+        socket.emit("join_direct_chat", { otherUserId: activeUser.id });
+        socket.emit("join_chat", {
+          chatType: "direct",
+          targetId: activeUser.id,
+        });
+      }
+      if (activeGroup?.id) {
+        socket.emit("join_group_chat", { groupId: activeGroup.id });
+        socket.emit("join_chat", {
+          chatType: "group",
+          targetId: activeGroup.id,
+        });
+      }
+      socket.emit("get_online_users");
+    };
 
-    const onConnect = () => setSocketConnected(true);
-    const onDisconnect = () => setSocketConnected(false);
-
-    const onMessageReceived = (payload: MessageReceivedPayload) => {
-      const normalized = normalizeReceivedMessage(payload);
+    const applyIncomingMessage = (raw: unknown) => {
+      const normalized = toMessageReceivedPayload(raw);
+      if (!normalized) {
+        return;
+      }
 
       if (normalized.chatType === "direct") {
         const message = normalized.message;
@@ -501,9 +514,37 @@ export default function MessagesPage() {
       }));
     };
 
+    const onOnlineUsers = (payload: { userIds?: string[] }) => {
+      if (!payload.userIds) {
+        return;
+      }
+      setOnlineUsers((current) => {
+        const next = { ...current };
+        payload.userIds?.forEach((userId) => {
+          next[userId] = true;
+        });
+        return next;
+      });
+    };
+
+    const onUserOnline = (payload: { userId: string }) => {
+      setOnlineUsers((current) => ({
+        ...current,
+        [payload.userId]: true,
+      }));
+    };
+
+    const onUserOffline = (payload: { userId: string }) => {
+      setOnlineUsers((current) => ({
+        ...current,
+        [payload.userId]: false,
+      }));
+    };
+
     const onCallOffer = (payload: {
       fromUserId: string;
-      sdp: RTCSessionDescriptionInit;
+      sdp?: RTCSessionDescriptionInit;
+      offer?: RTCSessionDescriptionInit;
       callType?: CallType;
     }) => {
       if (callSessionRef.current || incomingCallRef.current) {
@@ -511,9 +552,15 @@ export default function MessagesPage() {
         return;
       }
 
+      const sdp = payload.sdp ?? payload.offer;
+      if (!sdp) {
+        showFeatureNotice("Audio/video calling is getting ready.");
+        return;
+      }
+
       incomingCallRef.current = {
         fromUserId: payload.fromUserId,
-        sdp: payload.sdp,
+        sdp,
         callType: payload.callType ?? "video",
       };
       setCallPeerId(payload.fromUserId);
@@ -522,7 +569,7 @@ export default function MessagesPage() {
       setCallStatus("incoming");
     };
 
-    const onCallEnd = (payload: { fromUserId: string }) => {
+    const onCallEnded = (payload: { fromUserId: string }) => {
       if (
         callPeerId === payload.fromUserId ||
         incomingCallRef.current?.fromUserId === payload.fromUserId
@@ -561,30 +608,47 @@ export default function MessagesPage() {
       }
     };
 
-    setSocketConnected(socket.connected);
+    if (socket.connected) {
+      onConnect();
+    }
+
     socket.on("connect", onConnect);
-    socket.on("disconnect", onDisconnect);
-    socket.on("message_received", onMessageReceived);
+    socket.on("message_received", applyIncomingMessage);
+    socket.on("direct_message_received", applyIncomingMessage);
+    socket.on("group_message_received", applyIncomingMessage);
     socket.on("message_error", onMessageError);
     socket.on("message:read", onRead);
     socket.on("typing", onTyping);
+    socket.on("typing_update", onTyping);
     socket.on("presence:update", onPresence);
+    socket.on("online_users", onOnlineUsers);
+    socket.on("user_online", onUserOnline);
+    socket.on("user_offline", onUserOffline);
     socket.on("call_offer", onCallOffer);
-    socket.on("call_end", onCallEnd);
+    socket.on("incoming_call", onCallOffer);
+    socket.on("call_end", onCallEnded);
+    socket.on("call_ended", onCallEnded);
     socket.on("group_call_user_joined", onGroupCallUserJoined);
     socket.on("group_call_user_left", onGroupCallUserLeft);
     socket.on("group_call_ended", onGroupCallEnded);
 
     return () => {
       socket.off("connect", onConnect);
-      socket.off("disconnect", onDisconnect);
-      socket.off("message_received", onMessageReceived);
+      socket.off("message_received", applyIncomingMessage);
+      socket.off("direct_message_received", applyIncomingMessage);
+      socket.off("group_message_received", applyIncomingMessage);
       socket.off("message_error", onMessageError);
       socket.off("message:read", onRead);
       socket.off("typing", onTyping);
+      socket.off("typing_update", onTyping);
       socket.off("presence:update", onPresence);
+      socket.off("online_users", onOnlineUsers);
+      socket.off("user_online", onUserOnline);
+      socket.off("user_offline", onUserOffline);
       socket.off("call_offer", onCallOffer);
-      socket.off("call_end", onCallEnd);
+      socket.off("incoming_call", onCallOffer);
+      socket.off("call_end", onCallEnded);
+      socket.off("call_ended", onCallEnded);
       socket.off("group_call_user_joined", onGroupCallUserJoined);
       socket.off("group_call_user_left", onGroupCallUserLeft);
       socket.off("group_call_ended", onGroupCallEnded);
@@ -599,13 +663,14 @@ export default function MessagesPage() {
     resetCallState,
     resetGroupCallState,
     resolvePeerName,
+    showFeatureNotice,
+    socket,
   ]);
 
   useEffect(() => {
     return () => {
       callSessionRef.current?.end(false);
       groupCallSessionRef.current?.leave(false);
-      disconnectSocket();
       if (noticeTimeoutRef.current) {
         clearTimeout(noticeTimeoutRef.current);
       }
@@ -638,22 +703,30 @@ export default function MessagesPage() {
   }
 
   function emitTyping(isTyping: boolean) {
-    const socket = getSocket();
-    if (!socket?.connected) {
+    const activeSocket = getSocket();
+    if (!activeSocket?.connected) {
       return;
     }
 
     if (activeUser) {
-      socket.emit("typing", {
-        chatType: "direct",
+      const payload = {
+        chatType: "direct" as const,
         targetId: activeUser.id,
+      };
+      activeSocket.emit(isTyping ? "typing_start" : "typing_stop", payload);
+      activeSocket.emit("typing", {
+        ...payload,
         isTyping,
       });
     }
     if (activeGroup) {
-      socket.emit("typing", {
-        chatType: "group",
+      const payload = {
+        chatType: "group" as const,
         targetId: activeGroup.id,
+      };
+      activeSocket.emit(isTyping ? "typing_start" : "typing_stop", payload);
+      activeSocket.emit("typing", {
+        ...payload,
         isTyping,
       });
     }
@@ -769,6 +842,17 @@ export default function MessagesPage() {
 
     try {
       if (canUseSocket && socket) {
+        if (chatTab === "direct" && activeUser) {
+          socket.emit("send_direct_message", {
+            receiverId: activeUser.id,
+            content: trimmed,
+          });
+        } else if (chatTab === "group" && activeGroup) {
+          socket.emit("send_group_message", {
+            groupId: activeGroup.id,
+            content: trimmed,
+          });
+        }
         socket.emit("send_message", {
           chatType: chatTab === "direct" ? "direct" : "group",
           receiverId: activeUser?.id,
@@ -1114,16 +1198,22 @@ export default function MessagesPage() {
             </div>
             <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-200">
               <span className="relative flex h-2 w-2">
-                {socketConnected ? (
+                {socketStatus === "connected" ? (
                   <>
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
                     <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
                   </>
+                ) : socketStatus === "reconnecting" ? (
+                  <span className="relative inline-flex h-2 w-2 animate-pulse rounded-full bg-amber-400" />
                 ) : (
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-slate-400" />
                 )}
               </span>
-              {socketConnected ? "Live" : "Live-ready"}
+              {socketStatus === "connected"
+                ? "Live connected"
+                : socketStatus === "reconnecting"
+                  ? "Reconnecting"
+                  : "Offline"}
             </div>
           </div>
         </header>
@@ -1558,7 +1648,7 @@ export default function MessagesPage() {
           status={groupCallStatus}
           audioEnabled={groupCallAudioEnabled}
           videoEnabled={groupCallVideoEnabled}
-          socketConnected={socketConnected}
+          socketConnected={socketStatus === "connected"}
           onLeave={leaveGroupCall}
           onToggleAudio={handleToggleGroupCallAudio}
           onToggleVideo={handleToggleGroupCallVideo}

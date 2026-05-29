@@ -63,7 +63,7 @@ function filterAlerts(
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const { unreadCount, setUnreadCount, refreshUnreadCount } = useNotifications();
+  const { unreadCount, setUnreadCount, refreshUnreadCount, latestNotification, clearLatestNotification } = useNotifications();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activeFilter, setActiveFilter] = useState<AlertFilter>("all");
   const [isLoading, setIsLoading] = useState(true);
@@ -97,6 +97,18 @@ export default function NotificationsPage() {
   useEffect(() => {
     void loadNotifications();
   }, [loadNotifications]);
+
+  useEffect(() => {
+    if (!latestNotification) {
+      return;
+    }
+
+    setNotifications((current) => [
+      latestNotification,
+      ...current.filter((item) => item.id !== latestNotification.id),
+    ]);
+    clearLatestNotification();
+  }, [latestNotification, clearLatestNotification]);
 
   async function handleMarkAllRead() {
     setIsMarkingAll(true);

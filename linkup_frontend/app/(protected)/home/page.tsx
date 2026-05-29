@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { useSocket } from "@/src/components/SocketProvider";
 import {
   Briefcase,
   CalendarDays,
@@ -113,6 +114,7 @@ function getInitials(name: string): string {
 export default function HomeDashboardPage() {
   const currentUser = getCurrentUser();
   const currentUserId = currentUser?.id ?? null;
+  const { socket } = useSocket();
   const sparkInputRef = useRef<HTMLTextAreaElement>(null);
 
   const [postContent, setPostContent] = useState("");
@@ -120,6 +122,7 @@ export default function HomeDashboardPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [sparkNotice, setSparkNotice] = useState<string | null>(null);
   const [sparkDroppedToday, setSparkDroppedToday] = useState(false);
   const [pulseCounts, setPulseCounts] = useState({
     sparks: 0,
@@ -170,6 +173,50 @@ export default function HomeDashboardPage() {
 
     void loadPulseCounts();
   }, []);
+
+  useEffect(() => {
+    if (!socket) {
+      return;
+    }
+
+    socket.emit("join_pulse");
+
+    const onSparkCreated = (post: ApiFeedPost) => {
+      if (!post?.id) {
+        setSparkNotice("New Spark available");
+        return;
+      }
+
+      const mapped = mapPostToFeedPost({
+        ...post,
+        likeCount: post.likeCount ?? 0,
+        commentCount: post.commentCount ?? 0,
+        liked: post.liked ?? false,
+        isFollowingAuthor: post.isFollowingAuthor ?? false,
+      });
+
+      setPosts((current) => {
+        const withoutDuplicate = current.filter((item) => item.id !== mapped.id);
+        return [mapped, ...withoutDuplicate.filter((item) => !item.isStatic)];
+      });
+      setSparkNotice("New Spark available");
+    };
+
+    socket.on("spark_created", onSparkCreated);
+
+    return () => {
+      socket.off("spark_created", onSparkCreated);
+    };
+  }, [socket]);
+
+  useEffect(() => {
+    if (!sparkNotice) {
+      return;
+    }
+
+    const timer = setTimeout(() => setSparkNotice(null), 4000);
+    return () => clearTimeout(timer);
+  }, [sparkNotice]);
 
   useEffect(() => {
     setPulseCounts((current) => ({
@@ -302,6 +349,12 @@ export default function HomeDashboardPage() {
                 People, communities, opportunities — all in one social workspace.
               </p>
             </header>
+
+            {sparkNotice ? (
+              <p className="rounded-3xl border border-brand-primary/25 bg-brand-primary/10 px-4 py-3 text-sm text-brand-primary dark:text-brand-secondary">
+                {sparkNotice}
+              </p>
+            ) : null}
 
             <PulseMeter stats={pulseMeterStats} />
 

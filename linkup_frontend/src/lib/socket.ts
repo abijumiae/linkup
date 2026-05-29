@@ -5,6 +5,35 @@ import { getApiBaseUrl } from "./api";
 import { getToken } from "./auth";
 
 let socket: Socket | null = null;
+let statusListenersAttached = false;
+
+export type SocketConnectionStatus = "connected" | "reconnecting" | "offline";
+
+const statusListeners = new Set<(status: SocketConnectionStatus) => void>();
+let currentStatus: SocketConnectionStatus = "offline";
+
+function notifyStatus(status: SocketConnectionStatus) {
+  currentStatus = status;
+  statusListeners.forEach((listener) => listener(status));
+}
+
+function attachStatusListeners(activeSocket: Socket) {
+  if (statusListenersAttached) {
+    return;
+  }
+
+  statusListenersAttached = true;
+
+  activeSocket.on("connect", () => notifyStatus("connected"));
+  activeSocket.on("disconnect", () => notifyStatus("offline"));
+  activeSocket.on("reconnect_attempt", () => notifyStatus("reconnecting"));
+  activeSocket.on("reconnect", () => notifyStatus("connected"));
+  activeSocket.on("connect_error", () => {
+    if (!activeSocket.connected) {
+      notifyStatus("reconnecting");
+    }
+  });
+}
 
 export type ReceivedDirectMessage = {
   chatType: "direct";
@@ -82,6 +111,35 @@ export function normalizeReceivedMessage(
   };
 }
 
+export function toMessageReceivedPayload(
+  payload: unknown,
+): MessageReceivedPayload | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  if ("chatType" in payload && "message" in payload) {
+    return normalizeReceivedMessage(payload as MessageReceivedPayload);
+  }
+
+  if ("message" in payload) {
+    const message = (payload as { message: Record<string, unknown> }).message;
+    if (typeof message.groupId === "string") {
+      return normalizeReceivedMessage({
+        chatType: "group",
+        message: message as ReceivedGroupMessage["message"],
+      });
+    }
+
+    return normalizeReceivedMessage({
+      chatType: "direct",
+      message: message as ReceivedDirectMessage["message"],
+    });
+  }
+
+  return null;
+}
+
 /** Connect to LinkUp real-time chat namespace with JWT auth. */
 export function connectSocket(token?: string | null): Socket | null {
   if (typeof window === "undefined") {
@@ -99,6 +157,8 @@ export function connectSocket(token?: string | null): Socket | null {
 
   if (socket && !socket.connected) {
     socket.auth = { token: authToken };
+    attachStatusListeners(socket);
+    notifyStatus("reconnecting");
     socket.connect();
     return socket;
   }
@@ -111,11 +171,28 @@ export function connectSocket(token?: string | null): Socket | null {
     reconnectionAttempts: 10,
   });
 
+  attachStatusListeners(socket);
+  notifyStatus(socket.connected ? "connected" : "reconnecting");
+
   return socket;
 }
 
 export function getSocket(): Socket | null {
-  return connectSocket();
+  return socket;
+}
+
+export function getSocketStatus(): SocketConnectionStatus {
+  return currentStatus;
+}
+
+export function subscribeSocketStatus(
+  listener: (status: SocketConnectionStatus) => void,
+): () => void {
+  statusListeners.add(listener);
+  listener(currentStatus);
+  return () => {
+    statusListeners.delete(listener);
+  };
 }
 
 export function isSocketConnected(): boolean {
@@ -126,6 +203,8 @@ export function disconnectSocket() {
   if (socket) {
     socket.disconnect();
     socket = null;
+    statusListenersAttached = false;
+    notifyStatus("offline");
   }
 }
 
