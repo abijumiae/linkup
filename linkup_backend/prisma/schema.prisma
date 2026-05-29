@@ -68,6 +68,7 @@ model User {
   notificationsSent     Notification[] @relation("NotificationActor")
   sentMessages          Message[]        @relation("MessageSender")
   receivedMessages      Message[]        @relation("MessageReceiver")
+  groupMessages         GroupMessage[]
   ownedGroups           Group[]             @relation("OwnedGroups")
   groupMembers          GroupMember[]
   marketplaceItems      MarketplaceItem[]
@@ -112,6 +113,7 @@ model Group {
   owner         User           @relation("OwnedGroups", fields: [ownerId], references: [id], onDelete: Cascade)
   members       GroupMember[]
   posts         Post[]
+  messages      GroupMessage[]
   notifications Notification[]
 
   @@index([ownerId])
@@ -318,4 +320,19 @@ model Message {
 
   @@index([senderId, receiverId, createdAt])
   @@index([receiverId, read])
+}
+
+model GroupMessage {
+  id        String   @id @default(cuid())
+  content   String
+  groupId   String
+  senderId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  group  Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  sender User  @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, createdAt])
+  @@index([senderId])
 }

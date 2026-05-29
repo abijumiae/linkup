@@ -2,9 +2,17 @@ type MessageBubbleProps = {
   text: string;
   time: string;
   fromMe?: boolean;
+  read?: boolean;
+  senderName?: string;
 };
 
-export default function MessageBubble({ text, time, fromMe }: MessageBubbleProps) {
+export default function MessageBubble({
+  text,
+  time,
+  fromMe,
+  read,
+  senderName,
+}: MessageBubbleProps) {
   return (
     <div className={`flex ${fromMe ? "justify-end" : "justify-start"}`}>
       <div
@@ -14,8 +22,18 @@ export default function MessageBubble({ text, time, fromMe }: MessageBubbleProps
             : "border-slate-200 bg-white text-slate-700 shadow-slate-950/10 dark:border-white/10 dark:bg-brand-dark/90 dark:text-slate-300 dark:shadow-slate-950/20"
         }`}
       >
+        {!fromMe && senderName ? (
+          <p className="mb-1 text-xs font-semibold text-brand-primary dark:text-brand-secondary">
+            {senderName}
+          </p>
+        ) : null}
         <p>{text}</p>
-        <span className="mt-2 block text-right text-[11px] text-slate-500">{time}</span>
+        <span className="mt-2 block text-right text-[11px] text-slate-500">
+          {time}
+          {fromMe && read !== undefined ? (
+            <span className="ml-1">{read ? " · Read" : " · Sent"}</span>
+          ) : null}
+        </span>
       </div>
     </div>
   );
