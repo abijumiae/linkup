@@ -32,6 +32,9 @@ function LoginForm() {
     if (searchParams.get("registered") === "1") {
       setSuccess("Account created successfully. Sign in to continue.");
     }
+    if (searchParams.get("verified") === "1") {
+      setSuccess("Email verified successfully. You can now sign in.");
+    }
   }, [searchParams]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -47,6 +50,12 @@ function LoginForm() {
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
+        if (
+          err.status === 403 &&
+          err.message.toLowerCase().includes("verify your email")
+        ) {
+          sessionStorage.setItem("linkup_pending_email", email.trim());
+        }
       } else {
         setError("Invalid email or password. Please try again.");
       }
@@ -96,6 +105,16 @@ function LoginForm() {
         {error && (
           <div className="mb-6 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm text-rose-200">
             {error}
+            {error.toLowerCase().includes("verify your email") ? (
+              <p className="mt-2">
+                <Link
+                  href={`/verify-email?email=${encodeURIComponent(email.trim())}`}
+                  className="font-semibold text-violet-300 underline"
+                >
+                  Go to email verification
+                </Link>
+              </p>
+            ) : null}
           </div>
         )}
 

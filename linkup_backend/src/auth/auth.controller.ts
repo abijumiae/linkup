@@ -14,6 +14,10 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { OnboardingDto } from './dto/onboarding.dto';
 import { SignupDto } from './dto/signup.dto';
+import {
+  ResendVerificationDto,
+  VerifyEmailDto,
+} from './dto/verify-email.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GoogleProfilePayload } from './strategies/google.strategy';
 import { SafeUser } from '../users/users.service';
@@ -34,6 +38,16 @@ export class AuthController {
   @Post('login')
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Post('verify-email')
+  verifyEmail(@Body() dto: VerifyEmailDto) {
+    return this.authService.verifyEmail(dto);
+  }
+
+  @Post('resend-verification')
+  resendVerification(@Body() dto: ResendVerificationDto) {
+    return this.authService.resendVerification(dto);
   }
 
   @Get('me')

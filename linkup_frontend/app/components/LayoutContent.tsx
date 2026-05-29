@@ -30,6 +30,7 @@ export default function LayoutContent({
   const isAuthPage =
     pathname === "/login" ||
     pathname === "/signup" ||
+    pathname === "/verify-email" ||
     pathname === "/onboarding" ||
     pathname.startsWith("/auth/") ||
     pathname === "/";

@@ -37,7 +37,7 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      await signup({
+      const result = await signup({
         name: name.trim(),
         username: username.trim(),
         email: email.trim(),
@@ -46,7 +46,8 @@ export default function SignupPage() {
         country: country.trim() || undefined,
         language: language.trim() || "en",
       });
-      router.push("/login?registered=1");
+      sessionStorage.setItem("linkup_pending_email", email.trim());
+      router.push(`/verify-email?email=${encodeURIComponent(result.email)}`);
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   ServiceUnavailableException,
@@ -8,12 +9,18 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { randomBytes, randomInt } from 'crypto';
 import { User } from '../generated/prisma/client';
+import { EmailService } from '../email/email.service';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { OnboardingDto } from './dto/onboarding.dto';
+import { ResendVerificationDto } from './dto/verify-email.dto';
 import { SignupDto } from './dto/signup.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
 import { GoogleProfilePayload } from './strategies/google.strategy';
+
+const VERIFICATION_EXPIRY_MINUTES = 30;
 
 @Injectable()
 export class AuthService {
@@ -22,6 +29,7 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly emailService: EmailService,
   ) {}
 
   isGoogleConfigured(): boolean {
@@ -53,6 +61,7 @@ export class AuthService {
       }
 
       const passwordHash = await bcrypt.hash(dto.password, this.saltRounds);
+      const verification = await this.createVerificationPayload();
 
       const user = await this.usersService.create({
         name: dto.name,
@@ -61,14 +70,34 @@ export class AuthService {
         passwordHash,
         provider: 'local',
         isOnboarded: true,
+        isEmailVerified: false,
         accountType: dto.accountType,
         country: dto.country,
         language: dto.language ?? 'en',
       });
 
+      await this.usersService.setEmailVerification(user.id, {
+        codeHash: verification.codeHash,
+        token: verification.token,
+        expiresAt: verification.expiresAt,
+      });
+
+      const delivery = await this.emailService.sendVerificationEmail({
+        to: email,
+        name: dto.name,
+        code: verification.plainCode,
+      });
+
       console.log('Signup successful:', { email, username: dto.username });
 
-      return { user: this.usersService.sanitize(user) };
+      return {
+        message:
+          delivery === 'sent'
+            ? 'Account created. Please check your email for the verification code.'
+            : 'Account created. Email delivery is pending — check server logs for the verification code in development.',
+        email,
+        emailDelivery: delivery,
+      };
     } catch (error) {
       if (error instanceof ConflictException) {
         throw error;
@@ -79,6 +108,83 @@ export class AuthService {
         'Unable to create account. Please try again.',
       );
     }
+  }
+
+  async verifyEmail(dto: VerifyEmailDto) {
+    const email = dto.email.toLowerCase();
+    const user = await this.usersService.findByEmail(email);
+
+    if (!user) {
+      throw new BadRequestException('Invalid verification request');
+    }
+
+    if (user.isEmailVerified) {
+      throw new BadRequestException('Email is already verified');
+    }
+
+    if (
+      !user.emailVerificationCode ||
+      !user.emailVerificationExpires ||
+      user.emailVerificationExpires < new Date()
+    ) {
+      throw new BadRequestException(
+        'Verification code has expired. Please request a new one.',
+      );
+    }
+
+    const codeMatches = await bcrypt.compare(
+      dto.code,
+      user.emailVerificationCode,
+    );
+
+    if (!codeMatches) {
+      throw new BadRequestException('Invalid verification code');
+    }
+
+    await this.usersService.markEmailVerified(user.id);
+
+    return {
+      message: 'Email verified successfully. You can now log in.',
+      email,
+    };
+  }
+
+  async resendVerification(dto: ResendVerificationDto) {
+    const email = dto.email.toLowerCase();
+    const user = await this.usersService.findByEmail(email);
+
+    if (!user || user.provider !== 'local') {
+      return {
+        message:
+          'If an unverified account exists for this email, a new verification code has been sent.',
+      };
+    }
+
+    if (user.isEmailVerified) {
+      throw new BadRequestException('Email is already verified');
+    }
+
+    const verification = await this.createVerificationPayload();
+    await this.usersService.setEmailVerification(user.id, {
+      codeHash: verification.codeHash,
+      token: verification.token,
+      expiresAt: verification.expiresAt,
+    });
+
+    const delivery = await this.emailService.sendVerificationEmail({
+      to: email,
+      name: user.name,
+      code: verification.plainCode,
+    });
+
+    return {
+      message:
+        delivery === 'sent'
+          ? 'A new verification code has been sent to your email.'
+          : 'Verification email setup is pending. Check server logs for the verification code in development.',
+      email,
+      emailDelivery: delivery,
+    };
   }
 
   async login(dto: LoginDto) {
@@ -102,10 +208,13 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    const accessToken = await this.jwtService.signAsync({
-      sub: user.id,
-      email: user.email,
-    });
+    if (!user.isEmailVerified) {
+      throw new ForbiddenException(
+        'Please verify your email before logging in.',
+      );
+    }
+
+    const accessToken = await this.createAccessToken(user);
 
     return {
       accessToken,
@@ -195,5 +304,21 @@ export class AuthService {
       sub: user.id,
       email: user.email,
     });
+  }
+
+  private async createVerificationPayload() {
+    const plainCode = randomInt(100000, 1000000).toString();
+    const codeHash = await bcrypt.hash(plainCode, this.saltRounds);
+    const token = randomBytes(32).toString('hex');
+    const expiresAt = new Date(
+      Date.now() + VERIFICATION_EXPIRY_MINUTES * 60 * 1000,
+    );
+
+    return {
+      plainCode,
+      codeHash,
+      token,
+      expiresAt,
+    };
   }
 }

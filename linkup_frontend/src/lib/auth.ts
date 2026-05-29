@@ -21,6 +21,7 @@ export interface User {
   avatarUrl: string | null;
   bio?: string | null;
   isVerified: boolean;
+  isEmailVerified: boolean;
   isOnboarded: boolean;
   provider: string;
   createdAt: string;
@@ -90,13 +91,38 @@ export function logout(): void {
   clearAuth();
 }
 
-export async function signup(payload: SignupPayload): Promise<User> {
-  const data = await apiRequest<{ user: User }>("/auth/signup", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+export async function signup(
+  payload: SignupPayload,
+): Promise<{ message: string; email: string; emailDelivery: string }> {
+  return apiRequest<{ message: string; email: string; emailDelivery: string }>(
+    "/auth/signup",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+}
 
-  return data.user;
+export async function verifyEmail(
+  email: string,
+  code: string,
+): Promise<{ message: string; email: string }> {
+  return apiRequest<{ message: string; email: string }>("/auth/verify-email", {
+    method: "POST",
+    body: JSON.stringify({ email, code }),
+  });
+}
+
+export async function resendVerificationEmail(
+  email: string,
+): Promise<{ message: string; email?: string; emailDelivery?: string }> {
+  return apiRequest<{ message: string; email?: string; emailDelivery?: string }>(
+    "/auth/resend-verification",
+    {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    },
+  );
 }
 
 export async function login(

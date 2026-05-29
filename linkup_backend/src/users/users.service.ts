@@ -86,6 +86,7 @@ export class UsersService {
         provider: 'google',
         avatarUrl: profile.avatarUrl,
         isOnboarded: false,
+        isEmailVerified: true,
       },
     });
   }
@@ -104,6 +105,37 @@ export class UsersService {
         googleId: profile.googleId,
         name: profile.name,
         avatarUrl: profile.avatarUrl ?? undefined,
+        isEmailVerified: true,
+      },
+    });
+  }
+
+  async setEmailVerification(
+    userId: string,
+    data: {
+      codeHash: string;
+      token: string;
+      expiresAt: Date;
+    },
+  ): Promise<User> {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        emailVerificationCode: data.codeHash,
+        emailVerificationToken: data.token,
+        emailVerificationExpires: data.expiresAt,
+      },
+    });
+  }
+
+  async markEmailVerified(userId: string): Promise<User> {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        isEmailVerified: true,
+        emailVerificationCode: null,
+        emailVerificationToken: null,
+        emailVerificationExpires: null,
       },
     });
   }
