@@ -168,6 +168,10 @@ export function formatAccountType(accountType: AccountType): string {
       return "Creator";
     case "BUSINESS":
       return "Business";
+    case "STUDENT":
+      return "Student";
+    case "PROFESSIONAL":
+      return "Professional";
     default:
       return "Personal";
   }

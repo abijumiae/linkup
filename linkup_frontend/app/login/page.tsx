@@ -8,6 +8,7 @@ import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import { login } from "@/src/lib/auth";
 import AuthLoadingScreen from "../components/AuthLoadingScreen";
+import GoogleSignInButton from "../components/GoogleSignInButton";
 import { ThemeToggle } from "../components/ThemeToggle";
 
 function LoginForm() {
@@ -42,7 +43,7 @@ function LoginForm() {
     try {
       const { user } = await login(email.trim(), password);
       setUser(user);
-      router.push("/home");
+      router.push(user.isOnboarded ? "/home" : "/onboarding");
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
@@ -98,7 +99,18 @@ function LoginForm() {
           </div>
         )}
 
-        {/* Form */}
+        {/* Google + Form */}
+        <div className="space-y-5">
+          <GoogleSignInButton />
+
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
+            <span className="text-xs uppercase tracking-wide text-slate-500">
+              or
+            </span>
+            <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
+          </div>
+
         <form className="space-y-5" onSubmit={handleSubmit}>
           <label className="block space-y-2">
             <span className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-300">Email</span>
@@ -151,6 +163,7 @@ function LoginForm() {
             {isLoading ? "Signing in..." : "Login"}
           </button>
         </form>
+        </div>
 
         {/* Link */}
         <p className="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">

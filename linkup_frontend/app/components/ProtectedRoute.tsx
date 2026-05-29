@@ -40,6 +40,13 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
         return;
       }
 
+      if (!user.isOnboarded) {
+        setUser(user);
+        setStatus("redirecting");
+        router.replace("/onboarding");
+        return;
+      }
+
       setUser(user);
       setStatus("authorized");
     }

@@ -1,3 +1,11 @@
+export const ACCOUNT_TYPES = [
+  { value: "PERSONAL", label: "Personal" },
+  { value: "CREATOR", label: "Creator" },
+  { value: "BUSINESS", label: "Business" },
+  { value: "STUDENT", label: "Student" },
+  { value: "PROFESSIONAL", label: "Professional" },
+] as const;
+
 export const COUNTRIES = [
   "Afghanistan",
   "Albania",
@@ -219,5 +227,6 @@ export function formatLanguageLabel(language: string | null | undefined): string
 }
 
 export function formatAccountType(accountType: string): string {
-  return accountType.charAt(0) + accountType.slice(1).toLowerCase();
+  const match = ACCOUNT_TYPES.find((item) => item.value === accountType);
+  return match?.label ?? accountType.charAt(0) + accountType.slice(1).toLowerCase();
 }

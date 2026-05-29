@@ -30,6 +30,8 @@ export default function LayoutContent({
   const isAuthPage =
     pathname === "/login" ||
     pathname === "/signup" ||
+    pathname === "/onboarding" ||
+    pathname.startsWith("/auth/") ||
     pathname === "/";
   const showNavigation = isAuthenticated && !isAuthPage;
 

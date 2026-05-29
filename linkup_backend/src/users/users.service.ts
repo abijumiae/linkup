@@ -50,6 +50,106 @@ export class UsersService {
     });
   }
 
+  findByGoogleId(googleId: string): Promise<User | null> {
+    return this.prisma.user.findUnique({
+      where: { googleId },
+    });
+  }
+
+  async createTempUsername(): Promise<string> {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const suffix = Math.random().toString(36).slice(2, 10);
+      const username = `user_${suffix}`;
+
+      if (!(await this.findByUsername(username))) {
+        return username;
+      }
+    }
+
+    return `user_${Date.now()}`;
+  }
+
+  async createGoogleUser(profile: {
+    googleId: string;
+    email: string;
+    name: string;
+    avatarUrl: string | null;
+  }): Promise<User> {
+    const username = await this.createTempUsername();
+
+    return this.prisma.user.create({
+      data: {
+        name: profile.name,
+        username,
+        email: profile.email,
+        googleId: profile.googleId,
+        provider: 'google',
+        avatarUrl: profile.avatarUrl,
+        isOnboarded: false,
+      },
+    });
+  }
+
+  async linkGoogleAccount(
+    userId: string,
+    profile: {
+      googleId: string;
+      name: string;
+      avatarUrl: string | null;
+    },
+  ): Promise<User> {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        googleId: profile.googleId,
+        name: profile.name,
+        avatarUrl: profile.avatarUrl ?? undefined,
+      },
+    });
+  }
+
+  async completeOnboarding(
+    userId: string,
+    data: {
+      username: string;
+      accountType: Prisma.UserUpdateInput['accountType'];
+      country: string;
+      language: string;
+    },
+  ): Promise<User> {
+    const existingUser = await this.findById(userId);
+
+    if (!existingUser) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (existingUser.isOnboarded) {
+      throw new BadRequestException('Onboarding already completed');
+    }
+
+    const usernameInUse = await this.prisma.user.findFirst({
+      where: {
+        username: data.username,
+        id: { not: userId },
+      },
+    });
+
+    if (usernameInUse) {
+      throw new ConflictException('Username already exists');
+    }
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        username: data.username,
+        accountType: data.accountType,
+        country: data.country,
+        language: data.language,
+        isOnboarded: true,
+      },
+    });
+  }
+
   findById(id: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: { id },

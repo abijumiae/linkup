@@ -1,6 +1,11 @@
 import { apiRequest } from "./api";
 
-export type AccountType = "PERSONAL" | "CREATOR" | "BUSINESS";
+export type AccountType =
+  | "PERSONAL"
+  | "CREATOR"
+  | "BUSINESS"
+  | "STUDENT"
+  | "PROFESSIONAL";
 
 export type Role = "USER" | "ADMIN";
 
@@ -16,6 +21,8 @@ export interface User {
   avatarUrl: string | null;
   bio?: string | null;
   isVerified: boolean;
+  isOnboarded: boolean;
+  provider: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -28,6 +35,13 @@ export interface SignupPayload {
   accountType: AccountType;
   country?: string;
   language?: string;
+}
+
+export interface OnboardingPayload {
+  username: string;
+  accountType: AccountType;
+  country: string;
+  language: string;
 }
 
 const TOKEN_KEY = "linkup_access_token";
@@ -99,6 +113,27 @@ export async function login(
 
   setAuth(data.accessToken, data.user);
   return data;
+}
+
+export async function completeOnboarding(
+  payload: OnboardingPayload,
+): Promise<User> {
+  const token = getToken();
+
+  if (!token) {
+    throw new Error("Not authenticated");
+  }
+
+  const data = await apiRequest<{ user: User }>("/auth/onboarding", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  saveUser(data.user);
+  return data.user;
 }
 
 export async function fetchMe(): Promise<User | null> {
