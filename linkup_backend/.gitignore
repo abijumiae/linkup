@@ -3,6 +3,9 @@
 
 # build
 /dist
+/prisma.config.js
+/prisma.config.d.ts
+/prisma.config.js.map
 
 # logs
 logs
@@ -25,4 +28,5 @@ npm-debug.log*
 # test
 /coverage
 
+/tsconfig.build.tsbuildinfo
 /generated/prisma
