@@ -10,10 +10,12 @@ import {
   PlusCircle,
   ShoppingBag,
   Sparkles,
+  UserPlus,
   Users,
 } from "lucide-react";
 import { homePosts, homeSuggestions } from "../../data/linkupData";
 import { ApiError } from "../../../src/lib/api";
+import { getLocalProfilePrefs } from "../../../src/lib/linkupFeatures";
 import { getCurrentUser } from "../../../src/lib/auth";
 import { fetchEvents } from "../../../src/lib/events";
 import { fetchGroups } from "../../../src/lib/groups";
@@ -25,6 +27,11 @@ import {
   formatAccountType,
   formatTimeAgo,
 } from "../../../src/lib/posts";
+import DailySparkCard from "../../components/linkup/DailySparkCard";
+import LocalPulseCard from "../../components/linkup/LocalPulseCard";
+import OpportunityBoard from "../../components/linkup/OpportunityBoard";
+import PulseMeter from "../../components/linkup/PulseMeter";
+import QuickConnectPanel from "../../components/linkup/QuickConnectPanel";
 import FeedPostCard from "../../components/FeedPostCard";
 
 type FeedComment = {
@@ -105,7 +112,8 @@ function getInitials(name: string): string {
 }
 
 export default function HomeDashboardPage() {
-  const currentUserId = getCurrentUser()?.id ?? null;
+  const currentUser = getCurrentUser();
+  const currentUserId = currentUser?.id ?? null;
   const sparkInputRef = useRef<HTMLTextAreaElement>(null);
 
   const [postContent, setPostContent] = useState("");
@@ -115,9 +123,15 @@ export default function HomeDashboardPage() {
   const [pulseCounts, setPulseCounts] = useState({
     sparks: 0,
     hubs: 0,
+    connects: 0,
     work: 0,
     happenings: 0,
   });
+  const [showLocalPulse, setShowLocalPulse] = useState(true);
+
+  useEffect(() => {
+    setShowLocalPulse(getLocalProfilePrefs().showLocalPulse);
+  }, []);
 
   const apiSparkCount = posts.filter((post) => !post.isStatic).length;
   const displaySparkCount = posts.length;
@@ -202,9 +216,9 @@ export default function HomeDashboardPage() {
     sparkInputRef.current?.focus();
   }
 
-  const todaysPulseCards = [
+  const pulseMeterStats = [
     {
-      label: "New Sparks",
+      label: "Today's Sparks",
       value: String(pulseCounts.sparks || displaySparkCount),
       icon: Sparkles,
       href: "#fresh-drops",
@@ -214,6 +228,12 @@ export default function HomeDashboardPage() {
       value: pulseCounts.hubs > 0 ? String(pulseCounts.hubs) : "—",
       icon: Users,
       href: "/groups",
+    },
+    {
+      label: "New Connects",
+      value: pulseCounts.connects > 0 ? String(pulseCounts.connects) : "—",
+      icon: UserPlus,
+      href: "/explore",
     },
     {
       label: "Work Drops",
@@ -229,7 +249,14 @@ export default function HomeDashboardPage() {
     },
   ];
 
-  const opportunityCards = [
+  const quickConnectSuggestions = homeSuggestions.map((name) => ({
+    id: name.toLowerCase().replace(/\s+/g, "-"),
+    name,
+    username: name.toLowerCase().replace(/\s+/g, ""),
+    subtitle: "Suggested creator",
+  }));
+
+  const opportunityItems = [
     {
       title: "Market",
       description: "Discover fresh listings from your network.",
@@ -238,13 +265,13 @@ export default function HomeDashboardPage() {
     },
     {
       title: "Work",
-      description: "Find roles, projects, and opportunities.",
+      description: "Find projects and roles worth your time.",
       href: "/jobs",
       icon: Briefcase,
     },
     {
       title: "Happenings",
-      description: "See what's happening around you.",
+      description: "Join what's moving around you.",
       href: "/events",
       icon: CalendarDays,
     },
@@ -256,93 +283,36 @@ export default function HomeDashboardPage() {
         <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
           <main className="min-w-0 space-y-6">
             <header className="linkup-panel p-6 sm:p-7">
-              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-primary dark:text-brand-secondary/80">
-                LinkUp Pulse
-              </p>
-              <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">
-                Pulse
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-                Catch what&apos;s moving across your world today.
+              <p className="linkup-eyebrow">LinkUp Pulse</p>
+              <h1 className="linkup-title mt-3">Pulse</h1>
+              <p className="linkup-subtitle">
+                People, communities, opportunities — all in one social workspace.
               </p>
             </header>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-white/10 dark:bg-brand-dark/80 dark:shadow-slate-950/20">
-              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-primary dark:text-brand-secondary/80">
-                Today&apos;s Pulse
-              </p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                {todaysPulseCards.map((card) => {
-                  const Icon = card.icon;
-                  return (
-                    <Link
-                      key={card.label}
-                      href={card.href}
-                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-brand-primary/30 hover:bg-brand-primary/5 dark:border-white/10 dark:bg-brand-dark/80 dark:hover:bg-brand-primary/10"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <Icon className="h-5 w-5 text-brand-primary dark:text-brand-secondary" />
-                        <span className="text-2xl font-semibold text-slate-900 dark:text-white">
-                          {card.value}
-                        </span>
-                      </div>
-                      <p className="mt-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-                        {card.label}
-                      </p>
-                    </Link>
-                  );
-                })}
-              </div>
-            </section>
+            <PulseMeter stats={pulseMeterStats} />
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-white/10 dark:bg-brand-dark/80 dark:shadow-slate-950/20">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-primary dark:text-brand-secondary/80">
-                    Daily Spark
-                  </p>
-                  <h2 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
-                    Drop your spark
-                  </h2>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void handleCreatePost()}
-                  disabled={!postContent.trim() || isSubmitting}
-                  className="inline-flex shrink-0 items-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <PlusCircle className="h-4 w-4" />
-                  {isSubmitting ? "Dropping…" : "Drop Spark"}
-                </button>
-              </div>
-              <textarea
-                ref={sparkInputRef}
-                value={postContent}
-                onChange={(event) => setPostContent(event.target.value)}
-                className="mt-5 min-h-[120px] w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-brand-primary/60 dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-brand-primary/50"
-                placeholder="Drop your spark..."
-              />
-              {error ? (
-                <p className="mt-3 text-sm text-red-500 dark:text-red-400">
-                  {error}
-                </p>
-              ) : null}
-            </section>
+            <DailySparkCard
+              value={postContent}
+              onChange={setPostContent}
+              onSubmit={() => void handleCreatePost()}
+              isSubmitting={isSubmitting}
+              error={error}
+              inputRef={sparkInputRef}
+            />
 
             <section
               id="fresh-drops"
-              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-white/10 dark:bg-brand-dark/80 dark:shadow-slate-950/20"
+              className="linkup-panel p-5 sm:p-6"
             >
-              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-primary dark:text-brand-secondary/80">
-                Fresh Drops
-              </p>
+              <p className="linkup-eyebrow">Fresh Drops</p>
               <h2 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
                 Sparks from your network
               </h2>
 
               <div className="mt-6 space-y-4">
                 {posts.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center dark:border-white/15 dark:bg-brand-dark/60">
+                  <div className="linkup-empty p-10 text-center">
                     <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary dark:text-brand-secondary">
                       <Sparkles className="h-5 w-5" />
                     </div>
@@ -355,7 +325,7 @@ export default function HomeDashboardPage() {
                     <button
                       type="button"
                       onClick={focusSparkInput}
-                      className="mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover"
+                      className="linkup-btn-primary mt-5 min-h-[44px]"
                     >
                       <PlusCircle className="h-4 w-4" />
                       Drop Spark
@@ -373,7 +343,7 @@ export default function HomeDashboardPage() {
                     ) : (
                       <article
                         key={post.id}
-                        className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg dark:border-white/10 dark:bg-brand-dark/80"
+                        className="linkup-card p-5"
                       >
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                           <div className="flex items-center gap-3">
@@ -412,80 +382,12 @@ export default function HomeDashboardPage() {
           </main>
 
           <aside className="min-w-0 space-y-6">
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-white/10 dark:bg-brand-dark/80">
-              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-primary dark:text-brand-secondary/80">
-                Quick Connect
-              </p>
-              <h2 className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">
-                Suggested connections
-              </h2>
-              <div className="mt-4 space-y-3">
-                {homeSuggestions.length === 0 ? (
-                  <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600 dark:border-white/15 dark:bg-brand-dark/60 dark:text-slate-400">
-                    Search Discover to find people to connect with.
-                  </p>
-                ) : (
-                  homeSuggestions.map((name) => (
-                    <div
-                      key={name}
-                      className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-brand-dark/80"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white">
-                          {getInitials(name)}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-slate-900 dark:text-white">
-                            {name}
-                          </p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
-                            @{name.toLowerCase().replace(/\s+/g, "")}
-                          </p>
-                        </div>
-                      </div>
-                      <Link
-                        href="/explore"
-                        className="rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-3 py-1.5 text-xs font-semibold text-white shadow-md shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover"
-                      >
-                        Connect
-                      </Link>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-white/10 dark:bg-brand-dark/80">
-              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-primary dark:text-brand-secondary/80">
-                Opportunity Board
-              </p>
-              <div className="mt-4 space-y-3">
-                {opportunityCards.map((card) => {
-                  const Icon = card.icon;
-                  return (
-                    <Link
-                      key={card.title}
-                      href={card.href}
-                      className="block rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-brand-primary/30 hover:bg-brand-primary/5 dark:border-white/10 dark:bg-brand-dark/80 dark:hover:bg-brand-primary/10"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-primary/10 text-brand-primary dark:text-brand-secondary">
-                          <Icon className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-slate-900 dark:text-white">
-                            {card.title}
-                          </p>
-                          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                            {card.description}
-                          </p>
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
+            <LocalPulseCard
+              country={currentUser?.country}
+              enabled={showLocalPulse}
+            />
+            <QuickConnectPanel suggestions={quickConnectSuggestions} />
+            <OpportunityBoard items={opportunityItems} />
           </aside>
         </div>
       </div>

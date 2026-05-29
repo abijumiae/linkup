@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import { useAuth } from "@/src/lib/AuthProvider";
+import { getLocalProfilePrefs } from "@/src/lib/linkupFeatures";
 import { formatTimeAgo } from "@/src/lib/posts";
 import {
   fetchMyPosts,
@@ -23,6 +24,7 @@ import {
   UserPost,
 } from "@/src/lib/users";
 import AuthLoadingScreen from "./AuthLoadingScreen";
+import ActivityBadges from "./linkup/ActivityBadges";
 import ProfileEditForm from "./ProfileEditForm";
 import ProfileHeader from "./ProfileHeader";
 import ProfileTabs, { ProfileTab } from "./ProfileTabs";
@@ -74,6 +76,11 @@ export default function ProfilePageClient() {
   const [activeTab, setActiveTab] = useState<ProfileTab>("Sparks");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [localPrefs, setLocalPrefs] = useState(getLocalProfilePrefs);
+
+  useEffect(() => {
+    setLocalPrefs(getLocalProfilePrefs());
+  }, [isEditing, success]);
 
   const handleAuthFailure = useCallback(() => {
     logout();
@@ -257,11 +264,20 @@ export default function ProfilePageClient() {
           following={profileUser.followingCount}
           posts={profileUser.postsCount}
           isEditing={isEditing}
+          interests={localPrefs.interests}
+          openToConnect={localPrefs.openToConnect}
+          profession={localPrefs.profession}
           onEditProfile={() => {
             setSuccess(null);
             setIsEditing(true);
           }}
         />
+
+        <div className="mt-6">
+          <ActivityBadges
+            sparkCount={profileUser.postsCount ?? userPosts.length}
+          />
+        </div>
 
         {isEditing ? (
           <div className="mt-6">

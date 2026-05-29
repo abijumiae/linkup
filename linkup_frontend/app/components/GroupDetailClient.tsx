@@ -17,6 +17,7 @@ import {
 import { FeedPost } from "@/src/lib/posts";
 import AuthLoadingScreen from "./AuthLoadingScreen";
 import FeedPostCard from "./FeedPostCard";
+import HubChallengeCard from "./linkup/HubChallengeCard";
 
 type GroupDetailClientProps = {
   groupId: string;
@@ -164,6 +165,10 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
             )}
           </div>
         </header>
+
+        <div className="mb-8">
+          <HubChallengeCard compact />
+        </div>
 
         {error && (
           <p className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">

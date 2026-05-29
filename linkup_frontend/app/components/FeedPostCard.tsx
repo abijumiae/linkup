@@ -19,6 +19,7 @@ import {
   toggleFollow,
   toggleLike,
 } from "@/src/lib/posts";
+import BoostReactionHints from "./linkup/BoostReactionHints";
 
 type FeedComment = {
   id: string;
@@ -302,6 +303,7 @@ export default function FeedPostCard({
           {cardPost.stats.saves}
         </button>
       </div>
+      {(pulseLabels || sparkLabels) ? <BoostReactionHints /> : null}
       {cardPost.interactionError ? (
         <p className="mt-3 text-sm text-red-500 dark:text-red-400">{cardPost.interactionError}</p>
       ) : null}

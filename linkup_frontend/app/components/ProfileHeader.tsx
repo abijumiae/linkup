@@ -9,6 +9,7 @@ import {
   Pencil,
   Rocket,
   ShieldCheck,
+  Tag,
   User,
   Users,
 } from "lucide-react";
@@ -25,6 +26,9 @@ type ProfileHeaderProps = {
   posts?: number;
   onEditProfile: () => void;
   isEditing?: boolean;
+  interests?: string[];
+  openToConnect?: string;
+  profession?: string;
 };
 
 function getInitials(user: AuthUser): string {
@@ -52,6 +56,9 @@ export default function ProfileHeader({
   posts = 0,
   onEditProfile,
   isEditing = false,
+  interests = [],
+  openToConnect,
+  profession,
 }: ProfileHeaderProps) {
   const avatarLabel = getInitials(user);
   const locationLabel = user.country ?? "Not set";
@@ -61,10 +68,6 @@ export default function ProfileHeader({
     bioText && bioText.length > 80
       ? bioText
       : "Share what you're building — projects, ideas, or what you're launching next.";
-  const connectHint =
-    bioText && bioText.length <= 80 && bioText.length > 0
-      ? bioText
-      : "Collaborations, mentorship, co-building, and meaningful connections on LinkUp.";
 
   return (
     <div className="space-y-6">
@@ -186,7 +189,7 @@ export default function ProfileHeader({
             <SectionLabel>What I do</SectionLabel>
           </div>
           <p className="text-sm font-medium text-slate-900 dark:text-white">
-            {formatAccountType(user.accountType)}
+            {profession?.trim() || formatAccountType(user.accountType)}
           </p>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
             Your role and focus on LinkUp.
@@ -222,11 +225,35 @@ export default function ProfileHeader({
 
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg shadow-slate-950/5 dark:border-white/10 dark:bg-brand-dark/80 sm:col-span-2">
           <div className="mb-3 flex items-center gap-2">
+            <Tag className="h-4 w-4 text-brand-primary dark:text-brand-secondary" />
+            <SectionLabel>Skills / interests</SectionLabel>
+          </div>
+          {interests.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {interests.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full border border-brand-primary/20 bg-brand-primary/10 px-3 py-1.5 text-xs font-medium text-brand-primary dark:text-brand-secondary"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm italic text-slate-500 dark:text-slate-400">
+              Add interests in Settings to show what you care about on your LinkUp Card.
+            </p>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg shadow-slate-950/5 dark:border-white/10 dark:bg-brand-dark/80 sm:col-span-2">
+          <div className="mb-3 flex items-center gap-2">
             <Handshake className="h-4 w-4 text-brand-primary dark:text-brand-secondary" />
             <SectionLabel>Open to connect for</SectionLabel>
           </div>
           <p className="text-sm leading-7 text-slate-700 dark:text-slate-300">
-            {connectHint}
+            {openToConnect?.trim() ||
+              "Set your connect preferences in Settings — collaborations, mentorship, co-building, and more."}
           </p>
         </section>
       </div>

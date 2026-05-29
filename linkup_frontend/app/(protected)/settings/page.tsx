@@ -41,6 +41,7 @@ type LocalUiPrefs = {
   visibility: Visibility;
   allowMessages: MessagePolicy;
   showCountry: boolean;
+  showLocalPulse: boolean;
   notifyMessages: boolean;
   notifyLikesComments: boolean;
   notifyFollows: boolean;
@@ -115,6 +116,7 @@ export default function SettingsPage() {
   const [visibility, setVisibility] = useState<Visibility>("PUBLIC");
   const [allowMessages, setAllowMessages] = useState<MessagePolicy>("EVERYONE");
   const [showCountry, setShowCountry] = useState(true);
+  const [showLocalPulse, setShowLocalPulse] = useState(true);
   const [notifyMessages, setNotifyMessages] = useState(true);
   const [notifyLikesComments, setNotifyLikesComments] = useState(true);
   const [notifyFollows, setNotifyFollows] = useState(true);
@@ -180,6 +182,9 @@ export default function SettingsPage() {
         setAllowMessages(parsed.allowMessages);
       }
       if (typeof parsed.showCountry === "boolean") setShowCountry(parsed.showCountry);
+      if (typeof parsed.showLocalPulse === "boolean") {
+        setShowLocalPulse(parsed.showLocalPulse);
+      }
       if (typeof parsed.notifyMessages === "boolean") setNotifyMessages(parsed.notifyMessages);
       if (typeof parsed.notifyLikesComments === "boolean") {
         setNotifyLikesComments(parsed.notifyLikesComments);
@@ -227,6 +232,7 @@ export default function SettingsPage() {
         visibility,
         allowMessages,
         showCountry,
+        showLocalPulse,
         notifyMessages,
         notifyLikesComments,
         notifyFollows,
@@ -537,6 +543,13 @@ export default function SettingsPage() {
               description="Control whether your country is visible on your public profile."
               checked={showCountry}
               onChange={setShowCountry}
+              disabled={isSaving}
+            />
+            <ToggleRow
+              label="Local Pulse"
+              description="Show what's moving near you on Pulse and Discover using your country."
+              checked={showLocalPulse}
+              onChange={setShowLocalPulse}
               disabled={isSaving}
             />
           </SettingsSection>

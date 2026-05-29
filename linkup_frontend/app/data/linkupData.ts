@@ -75,6 +75,12 @@ export const pulseTrendChips = [
   "Opportunities",
 ];
 export const exploreCreators = ["Avery Lane", "Noah Green", "Harper Quinn", "Milo Chen"];
+export const creatorSpotlight = [
+  { name: "Avery Lane", focus: "Product & community building" },
+  { name: "Noah Green", focus: "Design systems & creative work" },
+  { name: "Harper Quinn", focus: "Startups & opportunities" },
+  { name: "Milo Chen", focus: "Tech & learning momentum" },
+];
 export const exploreCommunities = ["Product Builders", "Design Leaders", "Launch Teams", "Growth Marketers"];
 export const explorePopularPosts = [
   {

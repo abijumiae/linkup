@@ -13,6 +13,7 @@ import {
 } from "@/src/lib/groups";
 import AuthLoadingScreen from "./AuthLoadingScreen";
 import GroupCard from "./GroupCard";
+import HubChallengeCard from "./linkup/HubChallengeCard";
 
 function HubsEmptyState({
   title,
@@ -179,6 +180,10 @@ export default function GroupsPageClient() {
         ? searchedGroups.filter((group) => !group.isMember)
         : searchedGroups;
 
+  const trendingHubs = [...groups]
+    .sort((a, b) => (b.membersCount ?? 0) - (a.membersCount ?? 0))
+    .slice(0, 3);
+
   if (isLoading) {
     return <AuthLoadingScreen message="Loading hubs..." />;
   }
@@ -223,6 +228,32 @@ export default function GroupsPageClient() {
             {error}
           </p>
         )}
+
+        <HubChallengeCard />
+
+        {trendingHubs.length > 0 ? (
+          <section className="linkup-panel mb-6 p-5 sm:p-6">
+            <p className="linkup-eyebrow">Active Hubs</p>
+            <h2 className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">
+              Trending in your network
+            </h2>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              {trendingHubs.map((hub) => (
+                <div
+                  key={hub.id}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-brand-dark/60"
+                >
+                  <p className="font-semibold text-slate-900 dark:text-white">
+                    {hub.name}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    {hub.membersCount ?? 0} members
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-brand-dark/80 dark:shadow-slate-950/20">
           <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

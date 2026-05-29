@@ -18,10 +18,13 @@ import { getCurrentUser } from "@/src/lib/auth";
 import { fetchExplorePosts, searchAll, SearchUser } from "@/src/lib/discovery";
 import { FeedPost } from "@/src/lib/posts";
 import {
+  creatorSpotlight,
   exploreCreators,
   pulseTrendChips,
 } from "../data/linkupData";
 import AuthLoadingScreen from "./AuthLoadingScreen";
+import CreatorSpotlight from "./linkup/CreatorSpotlight";
+import LocalPulseCard from "./linkup/LocalPulseCard";
 import FeedPostCard from "./FeedPostCard";
 import SearchUserCard from "./SearchUserCard";
 
@@ -506,7 +509,13 @@ export default function ExplorePageClient() {
             <section>{renderTabContent()}</section>
 
             <aside className="space-y-6">
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg dark:border-white/10 dark:bg-brand-dark/80">
+              <LocalPulseCard
+                country={getCurrentUser()?.country}
+              />
+
+              <CreatorSpotlight creators={creatorSpotlight} />
+
+              <div className="linkup-panel p-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-primary dark:text-brand-secondary/80">
                   Pulse Trends
                 </p>
@@ -531,7 +540,7 @@ export default function ExplorePageClient() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg dark:border-white/10 dark:bg-brand-dark/80">
+              <div className="linkup-panel p-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-primary dark:text-brand-secondary/80">
                   Quick Connect
                 </p>
