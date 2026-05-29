@@ -2,8 +2,10 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Image, Plus, Search, ShoppingBag, X } from "lucide-react";
+import { Plus, Search, ShoppingBag, X } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
+import MediaUploader from "@/src/components/MediaUploader";
+import { UploadMediaType } from "@/src/lib/uploads";
 import {
   createListing,
   fetchMarketplaceItems,
@@ -86,6 +88,10 @@ export default function MarketplacePageClient() {
     location: "",
     imageUrl: "",
   });
+  const [listingImage, setListingImage] = useState<{
+    url: string;
+    type: UploadMediaType;
+  } | null>(null);
 
   function buildFilters(overrides?: Partial<MarketplaceFilters>): MarketplaceFilters {
     const filters: MarketplaceFilters = {
@@ -170,7 +176,7 @@ export default function MarketplacePageClient() {
         category: form.category.trim(),
         condition: form.condition.trim() || undefined,
         location: form.location.trim() || undefined,
-        imageUrl: form.imageUrl.trim() || undefined,
+        imageUrl: listingImage?.url ?? (form.imageUrl.trim() || undefined),
       });
       setItems((prev) => [
         created,
@@ -187,6 +193,7 @@ export default function MarketplacePageClient() {
         location: "",
         imageUrl: "",
       });
+      setListingImage(null);
     } catch (err) {
       setCreateError(
         err instanceof ApiError ? err.message : "Unable to drop listing.",
@@ -460,23 +467,18 @@ export default function MarketplacePageClient() {
                   className={inputClass}
                 />
               </label>
-              <label className="block space-y-1.5">
+              <div className="space-y-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  Image URL (optional)
+                  Listing image (optional)
                 </span>
-                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-white/10 dark:bg-brand-dark">
-                  <Image className="h-4 w-4 shrink-0 text-slate-500" />
-                  <input
-                    value={form.imageUrl}
-                    onChange={(e) =>
-                      setForm({ ...form, imageUrl: e.target.value })
-                    }
-                    type="url"
-                    placeholder="https://example.com/image.jpg"
-                    className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
-                  />
-                </div>
-              </label>
+                <MediaUploader
+                  label="Upload listing photo"
+                  accept="image"
+                  disabled={isCreating}
+                  value={listingImage}
+                  onChange={setListingImage}
+                />
+              </div>
               {createError ? (
                 <p className="text-sm text-red-600 dark:text-red-300">
                   {createError}

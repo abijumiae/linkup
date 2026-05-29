@@ -1,0 +1,203 @@
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
+import { createHash, randomUUID } from 'crypto';
+import { mkdir, writeFile } from 'fs/promises';
+import { extname, join } from 'path';
+
+const IMAGE_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+]);
+
+const VIDEO_MIME_TYPES = new Set([
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+]);
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+
+export type UploadMediaType = 'image' | 'video';
+
+export type UploadResult = {
+  url: string;
+  type: UploadMediaType;
+  filename: string;
+};
+
+@Injectable()
+export class UploadsService {
+  private readonly logger = new Logger(UploadsService.name);
+  private readonly uploadDir = join(process.cwd(), 'uploads');
+
+  private get publicBaseUrl(): string {
+    return (
+      process.env.PUBLIC_API_URL ??
+      process.env.API_URL ??
+      `http://localhost:${process.env.PORT ?? 3000}`
+    ).replace(/\/$/, '');
+  }
+
+  private get useCloudinary(): boolean {
+    return Boolean(
+      process.env.CLOUDINARY_CLOUD_NAME &&
+        process.env.CLOUDINARY_API_KEY &&
+        process.env.CLOUDINARY_API_SECRET,
+    );
+  }
+
+  async uploadFile(file: Express.Multer.File): Promise<UploadResult> {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    const mediaType = this.resolveMediaType(file.mimetype);
+    this.validateSize(file.size, mediaType);
+
+    if (this.useCloudinary) {
+      return this.uploadToCloudinary(file, mediaType);
+    }
+
+    return this.uploadToLocal(file, mediaType);
+  }
+
+  private resolveMediaType(mimetype: string): UploadMediaType {
+    if (IMAGE_MIME_TYPES.has(mimetype)) {
+      return 'image';
+    }
+
+    if (VIDEO_MIME_TYPES.has(mimetype)) {
+      return 'video';
+    }
+
+    throw new BadRequestException(
+      'Unsupported file type. Allowed: JPEG, PNG, WebP, MP4, WebM, MOV.',
+    );
+  }
+
+  private validateSize(size: number, mediaType: UploadMediaType) {
+    const maxSize =
+      mediaType === 'image' ? MAX_IMAGE_BYTES : MAX_VIDEO_BYTES;
+    const label = mediaType === 'image' ? '5MB' : '50MB';
+
+    if (size > maxSize) {
+      throw new BadRequestException(
+        `${mediaType === 'image' ? 'Image' : 'Video'} must be ${label} or smaller.`,
+      );
+    }
+  }
+
+  private safeExtension(originalname: string, mimetype: string): string {
+    const fromName = extname(originalname).toLowerCase();
+    const allowed = new Set([
+      '.jpg',
+      '.jpeg',
+      '.png',
+      '.webp',
+      '.mp4',
+      '.webm',
+      '.mov',
+    ]);
+
+    if (allowed.has(fromName)) {
+      return fromName;
+    }
+
+    switch (mimetype) {
+      case 'image/jpeg':
+        return '.jpg';
+      case 'image/png':
+        return '.png';
+      case 'image/webp':
+        return '.webp';
+      case 'video/mp4':
+        return '.mp4';
+      case 'video/webm':
+        return '.webm';
+      case 'video/quicktime':
+        return '.mov';
+      default:
+        return '';
+    }
+  }
+
+  private async uploadToLocal(
+    file: Express.Multer.File,
+    mediaType: UploadMediaType,
+  ): Promise<UploadResult> {
+    await mkdir(this.uploadDir, { recursive: true });
+
+    const extension = this.safeExtension(file.originalname, file.mimetype);
+    const filename = `${randomUUID()}${extension}`;
+    const destination = join(this.uploadDir, filename);
+
+    await writeFile(destination, file.buffer);
+
+    this.logger.log(
+      `Stored upload locally as ${filename}. Configure Cloudinary or S3 for production persistence.`,
+    );
+
+    return {
+      url: `${this.publicBaseUrl}/uploads/${filename}`,
+      type: mediaType,
+      filename,
+    };
+  }
+
+  private async uploadToCloudinary(
+    file: Express.Multer.File,
+    mediaType: UploadMediaType,
+  ): Promise<UploadResult> {
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME!;
+    const apiKey = process.env.CLOUDINARY_API_KEY!;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET!;
+    const timestamp = Math.round(Date.now() / 1000);
+    const folder = process.env.CLOUDINARY_FOLDER ?? 'linkup';
+    const signature = createHash('sha1')
+      .update(`folder=${folder}&timestamp=${timestamp}${apiSecret}`)
+      .digest('hex');
+
+    const form = new FormData();
+    form.append(
+      'file',
+      new Blob([new Uint8Array(file.buffer)], { type: file.mimetype }),
+      file.originalname,
+    );
+    form.append('api_key', apiKey);
+    form.append('timestamp', String(timestamp));
+    form.append('signature', signature);
+    form.append('folder', folder);
+
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
+      {
+        method: 'POST',
+        body: form,
+      },
+    );
+
+    const data = (await response.json()) as {
+      secure_url?: string;
+      public_id?: string;
+      error?: { message?: string };
+    };
+
+    if (!response.ok || !data.secure_url) {
+      throw new InternalServerErrorException(
+        data.error?.message ?? 'Cloud upload failed',
+      );
+    }
+
+    return {
+      url: data.secure_url,
+      type: mediaType,
+      filename: data.public_id ?? file.originalname,
+    };
+  }
+}

@@ -28,6 +28,7 @@ export interface UpdateProfilePayload {
   country?: string;
   language?: string;
   avatarUrl?: string;
+  coverUrl?: string;
   bio?: string;
 }
 

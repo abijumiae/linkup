@@ -42,9 +42,13 @@ export interface Comment {
 }
 
 export interface CreatePostPayload {
-  content: string;
+  content?: string;
   postType?: string;
   visibility?: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  mediaUrl?: string;
+  mediaType?: "image" | "video";
 }
 
 export interface LikeResponse {

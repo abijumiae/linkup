@@ -1,9 +1,20 @@
-import { IsNotEmpty, IsOptional, IsString, IsUrl } from 'class-validator';
+import {
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUrl,
+  ValidateIf,
+} from 'class-validator';
 
 export class CreatePostDto {
+  @ValidateIf(
+    (dto: CreatePostDto) =>
+      !dto.mediaUrl && !dto.imageUrl && !dto.videoUrl,
+  )
   @IsString()
   @IsNotEmpty()
-  content: string;
+  content?: string;
 
   @IsOptional()
   @IsString()
@@ -20,4 +31,12 @@ export class CreatePostDto {
   @IsOptional()
   @IsUrl()
   videoUrl?: string;
+
+  @IsOptional()
+  @IsUrl()
+  mediaUrl?: string;
+
+  @IsOptional()
+  @IsIn(['image', 'video'])
+  mediaType?: 'image' | 'video';
 }

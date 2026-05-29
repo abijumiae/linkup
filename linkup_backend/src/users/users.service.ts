@@ -280,6 +280,7 @@ export class UsersService {
         country: dto.country,
         language: dto.language,
         avatarUrl: dto.avatarUrl,
+        coverUrl: dto.coverUrl,
         bio: dto.bio,
       },
     });

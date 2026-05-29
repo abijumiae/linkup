@@ -28,5 +28,7 @@ npm-debug.log*
 # test
 /coverage
 
+/uploads
+
 /tsconfig.build.tsbuildinfo
 /generated/prisma

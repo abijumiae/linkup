@@ -33,6 +33,7 @@ import OpportunityBoard from "../../components/linkup/OpportunityBoard";
 import PulseMeter from "../../components/linkup/PulseMeter";
 import QuickConnectPanel from "../../components/linkup/QuickConnectPanel";
 import FeedPostCard from "../../components/FeedPostCard";
+import { UploadMediaType } from "@/src/lib/uploads";
 
 type FeedComment = {
   id: string;
@@ -118,6 +119,10 @@ export default function HomeDashboardPage() {
   const sparkInputRef = useRef<HTMLTextAreaElement>(null);
 
   const [postContent, setPostContent] = useState("");
+  const [sparkMedia, setSparkMedia] = useState<{
+    url: string;
+    type: UploadMediaType;
+  } | null>(null);
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -228,7 +233,7 @@ export default function HomeDashboardPage() {
   async function handleCreatePost() {
     const trimmed = postContent.trim();
 
-    if (!trimmed || isSubmitting) {
+    if ((!trimmed && !sparkMedia) || isSubmitting) {
       return;
     }
 
@@ -237,8 +242,14 @@ export default function HomeDashboardPage() {
     setSuccess(null);
 
     try {
-      const created = await createPost({ content: trimmed });
+      const created = await createPost({
+        content: trimmed,
+        ...(sparkMedia
+          ? { mediaUrl: sparkMedia.url, mediaType: sparkMedia.type }
+          : {}),
+      });
       setPostContent("");
+      setSparkMedia(null);
       markDailySparkComplete();
       setSparkDroppedToday(true);
       setSuccess("Your Spark is live.");
@@ -371,6 +382,12 @@ export default function HomeDashboardPage() {
               success={success}
               sparkDroppedToday={sparkDroppedToday}
               inputRef={sparkInputRef}
+              media={sparkMedia}
+              onMediaChange={(value) => {
+                setSparkMedia(value);
+                if (error) setError(null);
+                if (success) setSuccess(null);
+              }}
             />
 
             <section

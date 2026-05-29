@@ -22,6 +22,10 @@ export class UpdateProfileDto {
   avatarUrl?: string;
 
   @IsOptional()
+  @IsUrl()
+  coverUrl?: string;
+
+  @IsOptional()
   @IsString()
   bio?: string;
 }

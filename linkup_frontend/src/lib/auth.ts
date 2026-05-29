@@ -19,6 +19,7 @@ export interface User {
   country: string | null;
   language: string | null;
   avatarUrl: string | null;
+  coverUrl?: string | null;
   bio?: string | null;
   isVerified: boolean;
   isEmailVerified: boolean;

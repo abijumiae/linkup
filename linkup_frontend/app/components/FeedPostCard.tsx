@@ -35,6 +35,8 @@ type CardPost = {
   role: string;
   time: string;
   content: string;
+  imageUrl: string | null;
+  videoUrl: string | null;
   liked: boolean;
   isFollowingAuthor: boolean;
   stats: { likes: number; comments: number; shares: number; saves: number };
@@ -52,6 +54,8 @@ function mapApiPost(post: FeedPost): CardPost {
     role: formatAccountType(post.author.accountType),
     time: formatTimeAgo(post.createdAt),
     content: post.content,
+    imageUrl: post.imageUrl,
+    videoUrl: post.videoUrl,
     liked: post.liked,
     isFollowingAuthor: post.isFollowingAuthor,
     stats: {
@@ -239,7 +243,30 @@ export default function FeedPostCard({
           </div>
         ) : null}
       </div>
-      <p className="mt-5 text-sm leading-7 text-slate-700 dark:text-slate-300">{cardPost.content}</p>
+      {cardPost.content ? (
+        <p className="mt-5 text-sm leading-7 text-slate-700 dark:text-slate-300">
+          {cardPost.content}
+        </p>
+      ) : null}
+      {cardPost.imageUrl ? (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={cardPost.imageUrl}
+            alt=""
+            className="max-h-[28rem] w-full object-contain bg-slate-100 dark:bg-brand-dark/60"
+          />
+        </div>
+      ) : null}
+      {cardPost.videoUrl ? (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10">
+          <video
+            src={cardPost.videoUrl}
+            controls
+            className="max-h-[28rem] w-full bg-slate-100 dark:bg-brand-dark/60"
+          />
+        </div>
+      ) : null}
       <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-slate-200 pt-4 text-sm text-slate-600 dark:border-white/10 dark:text-slate-400">
         <button
           type="button"

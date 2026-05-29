@@ -12,10 +12,11 @@ import { MessagesModule } from './messages/messages.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PostsModule } from './posts/posts.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { UploadsModule } from './uploads/uploads.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
-  imports: [PrismaModule, UsersModule, AuthModule, ChatModule, PostsModule, NotificationsModule, MessagesModule, DiscoveryModule, GroupsModule, MarketplaceModule, JobsModule, EventsModule],
+  imports: [PrismaModule, UsersModule, AuthModule, ChatModule, PostsModule, NotificationsModule, MessagesModule, DiscoveryModule, GroupsModule, MarketplaceModule, JobsModule, EventsModule, UploadsModule],
   controllers: [AppController],
   providers: [AppService],
 })

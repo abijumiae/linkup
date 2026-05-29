@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Inject,
   Injectable,
@@ -54,14 +55,39 @@ export class PostsService {
   ) {}
 
   async create(authorId: string, dto: CreatePostDto) {
+    const content = dto.content?.trim() ?? '';
+    let imageUrl = dto.imageUrl;
+    let videoUrl = dto.videoUrl;
+    let postType = dto.postType ?? 'TEXT';
+
+    if (dto.mediaUrl && dto.mediaType) {
+      if (dto.mediaType === 'image') {
+        imageUrl = dto.mediaUrl;
+        postType = 'IMAGE';
+      } else {
+        videoUrl = dto.mediaUrl;
+        postType = 'VIDEO';
+      }
+    } else if (imageUrl) {
+      postType = postType === 'TEXT' ? 'IMAGE' : postType;
+    } else if (videoUrl) {
+      postType = postType === 'TEXT' ? 'VIDEO' : postType;
+    }
+
+    if (!content && !imageUrl && !videoUrl) {
+      throw new BadRequestException(
+        'Post content or media is required.',
+      );
+    }
+
     const post = await this.prisma.post.create({
       data: {
         authorId,
-        content: dto.content,
-        postType: dto.postType ?? 'TEXT',
+        content,
+        postType,
         visibility: dto.visibility ?? 'PUBLIC',
-        imageUrl: dto.imageUrl,
-        videoUrl: dto.videoUrl,
+        imageUrl,
+        videoUrl,
       },
       include: postInclude,
     });

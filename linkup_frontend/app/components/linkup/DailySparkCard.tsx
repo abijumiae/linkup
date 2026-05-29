@@ -2,6 +2,8 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { Flame, PlusCircle, Sparkles } from "lucide-react";
+import MediaUploader from "@/src/components/MediaUploader";
+import { UploadMediaType } from "@/src/lib/uploads";
 import {
   getDailySparkPrompt,
   hasDailySparkToday,
@@ -16,6 +18,8 @@ type DailySparkCardProps = {
   success?: string | null;
   sparkDroppedToday?: boolean;
   inputRef?: React.RefObject<HTMLTextAreaElement | null>;
+  media?: { url: string; type: UploadMediaType } | null;
+  onMediaChange?: (value: { url: string; type: UploadMediaType } | null) => void;
 };
 
 export default function DailySparkCard({
@@ -27,6 +31,8 @@ export default function DailySparkCard({
   success,
   sparkDroppedToday = false,
   inputRef,
+  media = null,
+  onMediaChange,
 }: DailySparkCardProps) {
   const prompt = getDailySparkPrompt();
   const [pulseActiveToday, setPulseActiveToday] = useState(sparkDroppedToday);
@@ -37,7 +43,7 @@ export default function DailySparkCard({
 
   function handleFormSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!value.trim() || isSubmitting) {
+    if ((!value.trim() && !media) || isSubmitting) {
       return;
     }
     void onSubmit();
@@ -86,13 +92,22 @@ export default function DailySparkCard({
           className="min-h-[120px] w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-base text-slate-900 outline-none placeholder:text-slate-400 focus:border-brand-primary/60 disabled:opacity-60 dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-brand-primary/50 sm:text-sm"
           placeholder="Drop your spark..."
         />
+        {onMediaChange ? (
+          <MediaUploader
+            label="Add photo or video"
+            accept="both"
+            disabled={isSubmitting}
+            value={media}
+            onChange={onMediaChange}
+          />
+        ) : null}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Your answer posts as a normal Spark — the prompt stays visible here only.
           </p>
           <button
             type="submit"
-            disabled={!value.trim() || isSubmitting}
+            disabled={(!value.trim() && !media) || isSubmitting}
             className="linkup-btn-primary shrink-0 min-h-[44px] w-full px-5 py-3 sm:w-auto"
           >
             <PlusCircle className="h-4 w-4" />

@@ -72,7 +72,16 @@ export default function ProfileHeader({
   return (
     <div className="space-y-6">
       <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-950/5 dark:border-white/10 dark:bg-brand-dark/80 dark:shadow-slate-950/20">
-        <div className="h-24 bg-gradient-to-r from-brand-primary/25 via-brand-primary/15 to-brand-secondary/25 sm:h-28" />
+        <div className="h-24 bg-gradient-to-r from-brand-primary/25 via-brand-primary/15 to-brand-secondary/25 sm:h-28">
+          {user.coverUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={user.coverUrl}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          ) : null}
+        </div>
 
         <div className="px-4 pb-6 sm:px-6">
           <SectionLabel>My LinkUp Card</SectionLabel>

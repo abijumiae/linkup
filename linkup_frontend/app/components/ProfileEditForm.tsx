@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { FileText, Globe, Save, User, X } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import { User as AuthUser } from "@/src/lib/auth";
+import MediaUploader from "@/src/components/MediaUploader";
 import { COUNTRIES, LANGUAGES } from "@/src/lib/profileOptions";
 import { UpdateProfilePayload } from "@/src/lib/users";
 
@@ -25,6 +26,8 @@ export default function ProfileEditForm({
   const [bio, setBio] = useState(user.bio ?? "");
   const [country, setCountry] = useState(user.country ?? "United Arab Emirates");
   const [language, setLanguage] = useState(user.language ?? "en");
+  const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl ?? "");
+  const [coverUrl, setCoverUrl] = useState(user.coverUrl ?? "");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -33,6 +36,8 @@ export default function ProfileEditForm({
     setBio(user.bio ?? "");
     setCountry(user.country ?? "United Arab Emirates");
     setLanguage(user.language ?? "en");
+    setAvatarUrl(user.avatarUrl ?? "");
+    setCoverUrl(user.coverUrl ?? "");
     setError(null);
   }, [user]);
 
@@ -47,6 +52,8 @@ export default function ProfileEditForm({
         bio: bio.trim() || undefined,
         country: country.trim() || undefined,
         language: language.trim() || undefined,
+        avatarUrl: avatarUrl.trim() || undefined,
+        coverUrl: coverUrl.trim() || undefined,
       });
     } catch (err) {
       if (err instanceof ApiError) {
@@ -97,6 +104,35 @@ export default function ProfileEditForm({
             {error}
           </div>
         ) : null}
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <span className={labelClass}>Profile photo</span>
+            <MediaUploader
+              label="Upload avatar"
+              accept="image"
+              disabled={isSaving}
+              value={
+                avatarUrl
+                  ? { url: avatarUrl, type: "image" }
+                  : null
+              }
+              onChange={(value) => setAvatarUrl(value?.url ?? "")}
+            />
+          </div>
+          <div className="space-y-2">
+            <span className={labelClass}>Cover image</span>
+            <MediaUploader
+              label="Upload cover"
+              accept="image"
+              disabled={isSaving}
+              value={
+                coverUrl ? { url: coverUrl, type: "image" } : null
+              }
+              onChange={(value) => setCoverUrl(value?.url ?? "")}
+            />
+          </div>
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block space-y-2">
