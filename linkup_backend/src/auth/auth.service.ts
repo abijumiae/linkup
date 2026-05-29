@@ -14,7 +14,7 @@ import { User } from '../generated/prisma/client';
 import { EmailService } from '../email/email.service';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
-import { OnboardingDto } from './dto/onboarding.dto';
+import { CompleteOnboardingDto } from './dto/onboarding.dto';
 import { ResendVerificationDto } from './dto/verify-email.dto';
 import { SignupDto } from './dto/signup.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
@@ -268,7 +268,7 @@ export class AuthService {
     }
   }
 
-  async completeOnboarding(userId: string, dto: OnboardingDto) {
+  async completeOnboarding(userId: string, dto: CompleteOnboardingDto) {
     console.log('Onboarding submit:', {
       userId,
       username: dto.username,

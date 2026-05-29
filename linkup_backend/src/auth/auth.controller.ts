@@ -12,7 +12,7 @@ import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
-import { OnboardingDto } from './dto/onboarding.dto';
+import { CompleteOnboardingDto } from './dto/onboarding.dto';
 import { SignupDto } from './dto/signup.dto';
 import {
   ResendVerificationDto,
@@ -60,7 +60,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   completeOnboarding(
     @Req() req: { user: SafeUser },
-    @Body() dto: OnboardingDto,
+    @Body() dto: CompleteOnboardingDto,
   ) {
     return this.authService.completeOnboarding(req.user.id, dto);
   }

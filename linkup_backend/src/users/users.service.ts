@@ -167,7 +167,7 @@ export class UsersService {
     });
 
     if (usernameInUse) {
-      throw new ConflictException('Username already exists');
+      throw new BadRequestException('Username already exists');
     }
 
     return this.prisma.user.update({

@@ -86,7 +86,15 @@ export default function OnboardingPage() {
       router.replace("/home");
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(err.message);
+        if (err.status === 404) {
+          setError(
+            "Onboarding service is unavailable. Please try again after the backend finishes updating.",
+          );
+        } else {
+          setError(err.message);
+        }
+      } else if (err instanceof Error && err.message === "Not authenticated") {
+        router.replace("/login");
       } else {
         setError("Unable to complete onboarding. Please try again.");
       }

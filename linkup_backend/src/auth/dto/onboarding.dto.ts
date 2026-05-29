@@ -1,7 +1,7 @@
 import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
 import { AccountType } from '../../generated/prisma/client';
 
-export class OnboardingDto {
+export class CompleteOnboardingDto {
   @IsString()
   @IsNotEmpty()
   username: string;

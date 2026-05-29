@@ -2,6 +2,13 @@ export const getApiBaseUrl = (): string => {
   return process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 };
 
+function getStoredToken(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  return localStorage.getItem("linkup_access_token");
+}
+
 export class ApiError extends Error {
   status: number;
 
@@ -17,6 +24,13 @@ export async function apiRequest<T>(
   options: RequestInit = {},
 ): Promise<T> {
   const headers = new Headers(options.headers);
+
+  if (!headers.has("Authorization")) {
+    const token = getStoredToken();
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+  }
 
   if (!headers.has("Content-Type") && options.body) {
     headers.set("Content-Type", "application/json");
