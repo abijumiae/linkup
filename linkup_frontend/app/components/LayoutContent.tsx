@@ -9,6 +9,7 @@ import { SidebarNav } from "./SidebarNav";
 const sidebarNavItems = [
   { label: "Pulse", href: "/home", icon: "home" },
   { label: "Discover", href: "/explore", icon: "explore" },
+  { label: "Watch", href: "/watch", icon: "watch" },
   { label: "Chats", href: "/messages", icon: "messages" },
   { label: "Hubs", href: "/groups", icon: "groups" },
   { label: "Market", href: "/marketplace", icon: "marketplace" },

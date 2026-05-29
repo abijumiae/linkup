@@ -9,6 +9,7 @@ import {
   Compass,
   Home,
   MessageCircle,
+  Play,
   Settings,
   ShieldCheck,
   ShoppingBag,
@@ -20,6 +21,7 @@ import { useNotifications } from "@/src/lib/NotificationsContext";
 type SidebarIconKey =
   | "home"
   | "explore"
+  | "watch"
   | "messages"
   | "groups"
   | "notifications"
@@ -44,6 +46,7 @@ interface SidebarNavProps {
 const iconMap: Record<SidebarIconKey, typeof Home> = {
   home: Home,
   explore: Compass,
+  watch: Play,
   messages: MessageCircle,
   groups: Users,
   notifications: Bell,
@@ -66,7 +69,9 @@ export function SidebarNav({ items, title = "Navigation" }: SidebarNavProps) {
       </div>
       <ul className="space-y-2">
         {items.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive =
+            pathname === item.href ||
+            (item.href === "/watch" && pathname.startsWith("/watch/"));
           const Icon = iconMap[item.icon];
           return (
             <li key={item.href}>
