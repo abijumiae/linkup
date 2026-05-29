@@ -196,10 +196,10 @@ export default function FeedPostCard({
   }
 
   return (
-    <article className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-2xl shadow-slate-950/10 transition hover:border-violet-500/20 hover:shadow-violet-500/10 dark:border-white/10 dark:bg-slate-900/80">
+    <article className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-2xl shadow-slate-950/10 transition hover:border-brand-primary/20 hover:shadow-brand-primary/10 dark:border-white/10 dark:bg-brand-dark/80">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-violet-500/15 text-violet-600 dark:text-violet-300">
+          <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-brand-primary/15 text-brand-primary dark:text-brand-secondary">
             {cardPost.author[0]}
           </div>
           <div>
@@ -213,9 +213,9 @@ export default function FeedPostCard({
           <div className="flex flex-wrap gap-2">
             <Link
               href={`/messages?userId=${cardPost.authorId}`}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:border-sky-400/30 dark:hover:bg-white/10"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:border-brand-secondary/30 dark:hover:bg-white/10"
             >
-              <Mail className="h-4 w-4 text-sky-500 dark:text-sky-300" />
+              <Mail className="h-4 w-4 text-brand-secondary dark:text-brand-secondary" />
               {pulseLabels ? "Start Chat" : "Message"}
             </Link>
             <button
@@ -223,8 +223,8 @@ export default function FeedPostCard({
               onClick={() => void handleFollow()}
               className={`rounded-full border px-4 py-2 text-sm transition ${
                 cardPost.isFollowingAuthor
-                  ? "border-violet-400/40 bg-violet-500/15 text-violet-700 dark:text-violet-200"
-                  : "border-slate-200 bg-slate-100 text-slate-700 hover:border-violet-400/30 hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                  ? "border-brand-primary/40 bg-brand-primary/15 text-brand-primary dark:text-brand-secondary"
+                  : "border-slate-200 bg-slate-100 text-slate-700 hover:border-brand-primary/30 hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
               }`}
             >
               {cardPost.isFollowingAuthor
@@ -268,11 +268,11 @@ export default function FeedPostCard({
           onClick={() => void handleToggleComments()}
           className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-3 py-2.5 transition ${
             cardPost.showComments
-              ? "bg-sky-500/10 text-sky-700 dark:bg-sky-500/15 dark:text-sky-200"
+              ? "bg-brand-secondary/10 text-brand-primary dark:bg-brand-secondary/15 dark:text-brand-secondary"
               : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
           }`}
         >
-          <MessageCircle className="h-4 w-4 text-sky-500 dark:text-sky-300" />
+          <MessageCircle className="h-4 w-4 text-brand-secondary dark:text-brand-secondary" />
           {useSparkWording ? (
             <>
               Reply
@@ -285,7 +285,7 @@ export default function FeedPostCard({
           )}
         </button>
         <button className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-slate-100 px-3 py-2.5 text-slate-700 transition hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10">
-          <Share2 className="h-4 w-4 text-cyan-500 dark:text-cyan-300" />
+          <Share2 className="h-4 w-4 text-brand-secondary dark:text-brand-secondary" />
           {useSparkWording ? (
             <>
               Share
@@ -298,7 +298,7 @@ export default function FeedPostCard({
           )}
         </button>
         <button className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-slate-100 px-3 py-2.5 text-slate-700 transition hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10">
-          <Bookmark className="h-4 w-4 text-violet-500 dark:text-violet-300" />
+          <Bookmark className="h-4 w-4 text-brand-primary dark:text-brand-secondary" />
           {cardPost.stats.saves}
         </button>
       </div>
@@ -308,7 +308,7 @@ export default function FeedPostCard({
       {cardPost.showComments ? (
         <div className="mt-4 space-y-3 border-t border-slate-200 pt-4 dark:border-white/10">
           {cardPost.comments.map((comment) => (
-            <div key={comment.id} className="rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-950/80">
+            <div key={comment.id} className="rounded-2xl bg-slate-50 px-4 py-3 dark:bg-brand-dark/80">
               <p className="text-sm font-medium text-slate-900 dark:text-white">{comment.author}</p>
               <p className="mt-1 text-xs text-slate-500">{comment.time}</p>
               <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">{comment.content}</p>
@@ -325,13 +325,13 @@ export default function FeedPostCard({
                 }))
               }
               placeholder={pulseLabels ? "Write a reply..." : "Write a comment..."}
-              className="flex-1 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100 dark:placeholder:text-slate-500"
+              className="flex-1 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-100 dark:placeholder:text-slate-500"
             />
             <button
               type="button"
               onClick={() => void handleSubmitComment()}
               disabled={!cardPost.commentInput.trim()}
-              className="rounded-full bg-violet-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-full bg-brand-primary px-4 py-2 text-sm font-semibold text-brand-light transition hover:bg-brand-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
             >
               {pulseLabels ? "Reply" : "Comment"}
             </button>

@@ -41,22 +41,22 @@ const typeLabelMap: Record<NotificationType, string> = {
 
 const iconColorMap: Record<NotificationType, string> = {
   LIKE: "text-pink-500 dark:text-pink-400",
-  COMMENT: "text-sky-500 dark:text-sky-400",
-  FOLLOW: "text-violet-500 dark:text-violet-400",
+  COMMENT: "text-brand-secondary dark:text-brand-secondary",
+  FOLLOW: "text-brand-primary dark:text-brand-secondary",
   GROUP_JOIN: "text-emerald-600 dark:text-emerald-400",
   MARKETPLACE_INQUIRY: "text-amber-600 dark:text-amber-400",
-  JOB_APPLICATION: "text-cyan-600 dark:text-cyan-400",
-  EVENT_JOIN: "text-indigo-500 dark:text-indigo-400",
+  JOB_APPLICATION: "text-brand-secondary dark:text-brand-secondary",
+  EVENT_JOIN: "text-brand-primary dark:text-brand-secondary",
 };
 
 const badgeColorMap: Record<NotificationType, string> = {
   LIKE: "bg-pink-500/10 text-pink-700 dark:text-pink-200",
-  COMMENT: "bg-sky-500/10 text-sky-700 dark:text-sky-200",
-  FOLLOW: "bg-violet-500/10 text-violet-700 dark:text-violet-200",
+  COMMENT: "bg-brand-secondary/10 text-brand-primary dark:text-brand-secondary",
+  FOLLOW: "bg-brand-primary/10 text-brand-primary dark:text-brand-secondary",
   GROUP_JOIN: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-200",
   MARKETPLACE_INQUIRY: "bg-amber-500/10 text-amber-700 dark:text-amber-200",
-  JOB_APPLICATION: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-200",
-  EVENT_JOIN: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-200",
+  JOB_APPLICATION: "bg-brand-secondary/10 text-brand-primary dark:text-brand-secondary",
+  EVENT_JOIN: "bg-brand-primary/10 text-brand-primary dark:text-brand-secondary",
 };
 
 function getInitials(name: string, username: string): string {
@@ -82,8 +82,8 @@ export default function NotificationItem({
     <article
       className={`rounded-xl border p-4 transition duration-200 ${
         unread
-          ? "border-violet-400/30 bg-violet-500/5 shadow-sm dark:bg-violet-500/10"
-          : "border-slate-200 bg-white dark:border-white/10 dark:bg-slate-900/70"
+          ? "border-brand-primary/30 bg-brand-primary/5 shadow-sm dark:bg-brand-primary/10"
+          : "border-slate-200 bg-white dark:border-white/10 dark:bg-brand-dark/70"
       }`}
     >
       <div className="flex items-start gap-4">
@@ -93,14 +93,14 @@ export default function NotificationItem({
             <img
               src={actor.avatarUrl}
               alt=""
-              className="h-12 w-12 rounded-xl object-cover ring-2 ring-violet-500/20"
+              className="h-12 w-12 rounded-xl object-cover ring-2 ring-brand-primary/20"
             />
           ) : (
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-sky-500 text-sm font-semibold text-white">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white">
               {getInitials(actor.name, actor.username)}
             </div>
           )}
-          <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border border-white bg-white shadow dark:border-slate-900 dark:bg-slate-900">
+          <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border border-white bg-white shadow dark:border-brand-dark dark:bg-brand-dark">
             <Icon className={`h-3.5 w-3.5 ${iconColorMap[type]}`} />
           </div>
         </div>
@@ -117,7 +117,7 @@ export default function NotificationItem({
             </span>
             {unread ? (
               <span
-                className="inline-flex h-2 w-2 rounded-full bg-violet-500"
+                className="inline-flex h-2 w-2 rounded-full bg-brand-primary"
                 aria-label="Unread alert"
               />
             ) : null}

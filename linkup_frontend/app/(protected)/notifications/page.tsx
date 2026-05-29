@@ -154,7 +154,7 @@ export default function NotificationsPage() {
         <header className="mb-6 linkup-panel p-6 sm:p-7">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
+              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-primary dark:text-brand-secondary/80">
                 LinkUp Alerts
               </p>
               <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">
@@ -163,8 +163,8 @@ export default function NotificationsPage() {
               <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
                 Stay updated on what matters across your network.
               </p>
-              <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm dark:border-white/10 dark:bg-slate-950/60">
-                <Bell className="h-4 w-4 text-violet-500" />
+              <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm dark:border-white/10 dark:bg-brand-dark/60">
+                <Bell className="h-4 w-4 text-brand-primary" />
                 <span className="text-slate-700 dark:text-slate-300">
                   {unreadCount}{" "}
                   {unreadCount === 1 ? "unread alert" : "unread alerts"}
@@ -190,7 +190,7 @@ export default function NotificationsPage() {
                 onClick={() => setActiveFilter(chip.id)}
                 className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
                   activeFilter === chip.id
-                    ? "border-violet-500/50 bg-violet-600 text-white shadow-md shadow-violet-600/20 dark:bg-violet-600"
+                    ? "border-brand-primary/50 bg-brand-primary text-white shadow-md shadow-brand-primary/20 dark:bg-brand-primary"
                     : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
                 }`}
               >
@@ -208,8 +208,8 @@ export default function NotificationsPage() {
 
         <div className="space-y-3">
           {notifications.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center dark:border-white/15 dark:bg-slate-900/60">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-300">
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center dark:border-white/15 dark:bg-brand-dark/60">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary dark:text-brand-secondary">
                 <Bell className="h-5 w-5" />
               </div>
               <h2 className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">
@@ -220,7 +220,7 @@ export default function NotificationsPage() {
               </p>
             </div>
           ) : filteredNotifications.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center dark:border-white/15 dark:bg-slate-900/60">
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center dark:border-white/15 dark:bg-brand-dark/60">
               <p className="text-sm text-slate-600 dark:text-slate-400">
                 No alerts match this filter. Try another category or check back
                 later.

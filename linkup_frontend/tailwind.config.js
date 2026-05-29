@@ -10,18 +10,24 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: {
-          light: '#8b5cf6', // purple-500
-          dark: '#6366f1', // indigo-500
+        brand: {
+          primary: '#4B1F9D',
+          'primary-hover': '#5A28B8',
+          secondary: '#3C7BE2',
+          'secondary-hover': '#4A8AEF',
+          dark: '#121025',
+          text: '#111111',
+          light: '#FFFFFF',
         },
-        accent: '#3b82f6', // blue-500
       },
       backgroundImage: {
-        'gradient-dark': 'linear-gradient(to bottom right, #4338CA, #3B82F6)',
-        'gradient-light': 'linear-gradient(to bottom right, #8B5CF6, #3B82F6)',
+        'gradient-brand': 'linear-gradient(to right, #4B1F9D, #3C7BE2)',
+        'gradient-brand-hover': 'linear-gradient(to right, #5A28B8, #4A8AEF)',
+        'gradient-dark': 'linear-gradient(to bottom right, #4B1F9D, #3C7BE2)',
+        'gradient-light': 'linear-gradient(to bottom right, #4B1F9D, #3C7BE2)',
       },
       borderRadius: {
-        'lg': '1rem',
+        lg: '1rem',
       },
     },
   },

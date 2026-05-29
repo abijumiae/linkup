@@ -11,7 +11,7 @@ import JobCard from "./JobCard";
 import JobApplyModal from "./JobApplyModal";
 
 const inputClass =
-  "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50";
+  "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-brand-primary/60 dark:border-white/10 dark:bg-brand-dark dark:text-white dark:placeholder:text-slate-500 dark:focus:border-brand-primary/50";
 
 function WorkEmptyState({
   title,
@@ -25,8 +25,8 @@ function WorkEmptyState({
   onPost?: () => void;
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center dark:border-white/15 dark:bg-slate-900/60">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-300">
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center dark:border-white/15 dark:bg-brand-dark/60">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary dark:text-brand-secondary">
         <Briefcase className="h-5 w-5" />
       </div>
       <h3 className="mt-4 text-base font-semibold text-slate-900 dark:text-white">
@@ -39,7 +39,7 @@ function WorkEmptyState({
         <button
           type="button"
           onClick={onPost}
-          className="mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
+          className="mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover"
         >
           <Plus className="h-4 w-4" />
           Post Work
@@ -51,7 +51,7 @@ function WorkEmptyState({
 
 function JobSkeleton() {
   return (
-    <div className="animate-pulse rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-slate-900/80">
+    <div className="animate-pulse rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-brand-dark/80">
       <div className="h-4 w-2/3 rounded bg-slate-200 dark:bg-white/10" />
       <div className="mt-2 h-3 w-1/2 rounded bg-slate-200 dark:bg-white/10" />
       <div className="mt-4 h-3 w-full rounded bg-slate-200 dark:bg-white/10" />
@@ -191,7 +191,7 @@ export default function JobsPageClient() {
         <header className="mb-8 linkup-panel p-6 sm:p-7">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
+              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-primary dark:text-brand-secondary/80">
                 LinkUp Work
               </p>
               <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">
@@ -204,7 +204,7 @@ export default function JobsPageClient() {
             <button
               type="button"
               onClick={() => setShowCreateModal(true)}
-              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover"
             >
               <Plus className="h-4 w-4" />
               Post Work
@@ -213,7 +213,7 @@ export default function JobsPageClient() {
 
           <form onSubmit={handleSearch} className="mt-6 space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="relative flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-slate-950/80">
+              <div className="relative flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-brand-dark/80">
                 <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   value={searchInput}
@@ -222,7 +222,7 @@ export default function JobsPageClient() {
                   placeholder="Search work..."
                 />
               </div>
-              <div className="relative flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-slate-950/80">
+              <div className="relative flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-brand-dark/80">
                 <MapPin className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   value={locationInput}
@@ -247,7 +247,7 @@ export default function JobsPageClient() {
               onClick={() => handleJobTypeFilter(null)}
               className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
                 activeJobType === null
-                  ? "border-violet-500/50 bg-violet-600 text-white shadow-md shadow-violet-600/20 dark:bg-violet-600"
+                  ? "border-brand-primary/50 bg-brand-primary text-white shadow-md shadow-brand-primary/20 dark:bg-brand-primary"
                   : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
               }`}
             >
@@ -260,7 +260,7 @@ export default function JobsPageClient() {
                 onClick={() => handleJobTypeFilter(type)}
                 className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
                   activeJobType === type
-                    ? "border-violet-500/50 bg-violet-600 text-white shadow-md shadow-violet-600/20 dark:bg-violet-600"
+                    ? "border-brand-primary/50 bg-brand-primary text-white shadow-md shadow-brand-primary/20 dark:bg-brand-primary"
                     : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
                 }`}
               >
@@ -304,8 +304,8 @@ export default function JobsPageClient() {
       </div>
 
       {showCreateModal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/80 p-4 backdrop-blur-sm">
-          <div className="my-8 w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-slate-900">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-brand-dark/80 p-4 backdrop-blur-sm">
+          <div className="my-8 w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-brand-dark">
             <div className="mb-6 flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
@@ -444,7 +444,7 @@ export default function JobsPageClient() {
               <button
                 type="submit"
                 disabled={isCreating}
-                className="w-full rounded-full bg-gradient-to-r from-violet-600 to-sky-600 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500 disabled:opacity-50"
+                className="w-full rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary py-3 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover disabled:opacity-50"
               >
                 {isCreating ? "Posting…" : "Post Work"}
               </button>

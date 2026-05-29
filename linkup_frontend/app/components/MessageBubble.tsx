@@ -10,8 +10,8 @@ export default function MessageBubble({ text, time, fromMe }: MessageBubbleProps
       <div
         className={`max-w-[85%] rounded-[1.75rem] border px-5 py-4 text-sm leading-6 shadow-sm transition duration-300 ${
           fromMe
-            ? "border-violet-400/30 bg-violet-500/10 text-slate-900 shadow-violet-500/10 dark:border-white/10 dark:bg-violet-500/15 dark:text-slate-100 dark:shadow-violet-500/10"
-            : "border-slate-200 bg-white text-slate-700 shadow-slate-950/10 dark:border-white/10 dark:bg-slate-900/90 dark:text-slate-300 dark:shadow-slate-950/20"
+            ? "border-brand-primary/30 bg-brand-primary/10 text-brand-text shadow-brand-primary/10 dark:border-white/10 dark:bg-brand-primary/15 dark:text-brand-light dark:shadow-brand-primary/10"
+            : "border-slate-200 bg-white text-slate-700 shadow-slate-950/10 dark:border-white/10 dark:bg-brand-dark/90 dark:text-slate-300 dark:shadow-slate-950/20"
         }`}
       >
         <p>{text}</p>

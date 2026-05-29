@@ -42,7 +42,7 @@ export default function AdminPage() {
         <div className="grid gap-6 xl:grid-cols-[240px_minmax(0,1fr)]">
           <aside className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-6 shadow-2xl shadow-slate-950/20 backdrop-blur-xl">
             <div className="mb-8">
-              <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">Admin</p>
+              <p className="text-sm uppercase tracking-[0.35em] text-brand-secondary/80">Admin</p>
               <h1 className="mt-3 text-2xl font-semibold text-white">Dashboard</h1>
               <p className="mt-3 text-sm text-slate-400">Manage users, reports, listings, events, and platform health.</p>
             </div>
@@ -71,11 +71,11 @@ export default function AdminPage() {
               <div className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-6 shadow-2xl shadow-slate-950/20 backdrop-blur-xl">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">Recent reports</p>
+                    <p className="text-sm uppercase tracking-[0.35em] text-brand-secondary/80">Recent reports</p>
                     <h2 className="mt-2 text-xl font-semibold text-white">Action required</h2>
                   </div>
                   <button className="inline-flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-sm text-slate-200 transition hover:bg-white/10">
-                    <ShieldCheck className="h-4 w-4 text-violet-300" />
+                    <ShieldCheck className="h-4 w-4 text-brand-secondary" />
                     Review all
                   </button>
                 </div>
@@ -87,11 +87,11 @@ export default function AdminPage() {
               <div className="rounded-[2rem] border border-white/10 bg-slate-900/80 p-6 shadow-2xl shadow-slate-950/20 backdrop-blur-xl">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">Users</p>
+                    <p className="text-sm uppercase tracking-[0.35em] text-brand-secondary/80">Users</p>
                     <h2 className="mt-2 text-xl font-semibold text-white">Recent signups</h2>
                   </div>
                   <button className="inline-flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-sm text-slate-200 transition hover:bg-white/10">
-                    <Users className="h-4 w-4 text-violet-300" />
+                    <Users className="h-4 w-4 text-brand-secondary" />
                     Manage
                   </button>
                 </div>

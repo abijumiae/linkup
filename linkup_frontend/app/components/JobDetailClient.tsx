@@ -131,7 +131,7 @@ export default function JobDetailClient({ jobId }: JobDetailClientProps) {
 
   if (!job) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-700 dark:bg-slate-950 dark:text-slate-300">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-700 dark:bg-brand-dark dark:text-slate-300">
         {error ?? "Work opportunity not found."}
       </div>
     );
@@ -148,8 +148,8 @@ export default function JobDetailClient({ jobId }: JobDetailClientProps) {
           Back to work
         </Link>
 
-        <article className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl sm:p-8 dark:border-white/10 dark:bg-slate-900/80">
-          <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
+        <article className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl sm:p-8 dark:border-white/10 dark:bg-brand-dark/80">
+          <p className="text-sm uppercase tracking-[0.35em] text-brand-secondary/80">
             {job.company}
           </p>
           <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">{job.title}</h1>
@@ -161,7 +161,7 @@ export default function JobDetailClient({ jobId }: JobDetailClientProps) {
             </span>
             {job.jobType && (
               <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 dark:border-white/10">
-                <Briefcase className="h-4 w-4 text-violet-300" />
+                <Briefcase className="h-4 w-4 text-brand-secondary" />
                 {job.jobType}
               </span>
             )}
@@ -198,12 +198,12 @@ export default function JobDetailClient({ jobId }: JobDetailClientProps) {
                 <h2 className="text-sm uppercase tracking-[0.25em] text-slate-500">
                   Contact
                 </h2>
-                <p className="mt-2 text-sm text-violet-700 dark:text-violet-200">{job.contactEmail}</p>
+                <p className="mt-2 text-sm text-brand-primary dark:text-brand-secondary">{job.contactEmail}</p>
               </section>
             )}
           </div>
 
-          <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-white/10 dark:bg-slate-950/60">
+          <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-white/10 dark:bg-brand-dark/60">
             <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
               Posted by
             </p>
@@ -224,7 +224,7 @@ export default function JobDetailClient({ jobId }: JobDetailClientProps) {
               <>
                 <Link
                   href={`/jobs/${job.id}/applications`}
-                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
+                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover"
                 >
                   <Users className="h-4 w-4" />
                   View applications ({job.applicationsCount})
@@ -252,7 +252,7 @@ export default function JobDetailClient({ jobId }: JobDetailClientProps) {
                 type="button"
                 disabled={job.hasApplied}
                 onClick={() => setShowApplyModal(true)}
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover disabled:opacity-50"
               >
                 {job.hasApplied ? "Applied" : "Apply"}
                 {!job.hasApplied && <Sparkles className="h-4 w-4" />}
@@ -274,7 +274,7 @@ export default function JobDetailClient({ jobId }: JobDetailClientProps) {
       )}
 
       {showEditModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/80 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-brand-dark/80 p-4 backdrop-blur-sm">
           <div className="my-8 w-full max-w-lg rounded-[2rem] border border-white/10 bg-slate-900 p-6 shadow-2xl">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-white">Edit work post</h2>
@@ -362,7 +362,7 @@ export default function JobDetailClient({ jobId }: JobDetailClientProps) {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="w-full rounded-full bg-violet-500 py-3 text-sm font-semibold text-slate-950 disabled:opacity-50"
+                className="w-full rounded-full bg-brand-primary py-3 text-sm font-semibold text-brand-light disabled:opacity-50"
               >
                 {isSaving ? "Saving…" : "Save changes"}
               </button>

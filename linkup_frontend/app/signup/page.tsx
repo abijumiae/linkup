@@ -60,14 +60,14 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="linkup-auth-shell bg-gradient-to-br from-slate-50 via-white to-violet-50 text-slate-900 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-white">
+    <div className="linkup-auth-shell bg-gradient-to-br from-slate-50 via-white to-brand-primary/5 text-slate-900 dark:from-brand-dark dark:via-brand-dark dark:to-brand-dark dark:text-white">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-[-14rem] h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-gradient-to-tr from-violet-500/20 via-fuchsia-500/10 to-sky-500/20 blur-3xl dark:from-violet-400/20 dark:via-fuchsia-400/10 dark:to-sky-400/15"
+        className="pointer-events-none absolute left-1/2 top-[-14rem] h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-gradient-to-tr from-brand-primary/20 via-brand-primary/10 to-brand-secondary/20 blur-3xl dark:from-brand-primary/20 dark:via-brand-primary/10 dark:to-brand-secondary/15"
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute bottom-[-18rem] right-[-10rem] h-[30rem] w-[30rem] rounded-full bg-gradient-to-tr from-sky-500/10 via-violet-500/10 to-transparent blur-3xl dark:from-sky-400/10 dark:via-violet-400/10"
+        className="pointer-events-none absolute bottom-[-18rem] right-[-10rem] h-[30rem] w-[30rem] rounded-full bg-gradient-to-tr from-brand-secondary/10 via-brand-primary/10 to-transparent blur-3xl dark:from-brand-secondary/10 dark:via-brand-primary/10"
       />
       <div className="absolute right-4 top-4">
         <ThemeToggle />
@@ -75,7 +75,7 @@ export default function SignupPage() {
       <div className="linkup-panel relative w-full max-w-md p-7 text-slate-900 dark:text-white sm:max-w-lg sm:p-8">
         <div
           aria-hidden="true"
-          className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-violet-400/50 to-transparent dark:via-violet-400/40"
+          className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-brand-primary/50 to-transparent dark:via-brand-primary/40"
         />
         <div className="mb-6 flex justify-center">
           <img
@@ -86,7 +86,7 @@ export default function SignupPage() {
         </div>
 
         {/* Heading */}
-        <h1 className="text-center text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">Create your LinkUp account</h1>
+        <h1 className="text-center text-2xl font-semibold tracking-tight text-brand-text dark:text-brand-light">Create your LinkUp account</h1>
         <p className="mb-7 text-center text-sm text-slate-600 dark:text-slate-300">
           Set up your profile and start collaborating in minutes.
         </p>
@@ -112,7 +112,7 @@ export default function SignupPage() {
           <div className="grid gap-4 sm:grid-cols-2">
           <label className="block space-y-2">
             <span className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-300">Full name</span>
-            <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 transition focus-within:border-violet-400/60 dark:border-white/10 dark:bg-slate-950/70 dark:focus-within:border-violet-400/50">
+            <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 transition focus-within:border-brand-primary/60 dark:border-white/10 dark:bg-brand-dark/70 dark:focus-within:border-brand-primary/50">
               <User className="h-4 w-4 text-slate-500" />
               <input
                 className="w-full bg-transparent text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
@@ -128,7 +128,7 @@ export default function SignupPage() {
 
           <label className="block space-y-2">
             <span className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-300">Username</span>
-            <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 transition focus-within:border-violet-400/60 dark:border-white/10 dark:bg-slate-950/70 dark:focus-within:border-violet-400/50">
+            <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 transition focus-within:border-brand-primary/60 dark:border-white/10 dark:bg-brand-dark/70 dark:focus-within:border-brand-primary/50">
               <User className="h-4 w-4 text-slate-500" />
               <input
                 className="w-full bg-transparent text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
@@ -145,7 +145,7 @@ export default function SignupPage() {
 
           <label className="block space-y-2">
             <span className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-300">Email</span>
-            <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 transition focus-within:border-violet-400/60 dark:border-white/10 dark:bg-slate-950/70 dark:focus-within:border-violet-400/50">
+            <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 transition focus-within:border-brand-primary/60 dark:border-white/10 dark:bg-brand-dark/70 dark:focus-within:border-brand-primary/50">
               <Mail className="h-4 w-4 text-slate-500" />
               <input
                 className="w-full bg-transparent text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
@@ -162,7 +162,7 @@ export default function SignupPage() {
 
           <label className="block space-y-2">
             <span className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-300">Password</span>
-            <div className="relative flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 transition focus-within:border-violet-400/60 dark:border-white/10 dark:bg-slate-950/70 dark:focus-within:border-violet-400/50">
+            <div className="relative flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 transition focus-within:border-brand-primary/60 dark:border-white/10 dark:bg-brand-dark/70 dark:focus-within:border-brand-primary/50">
               <Lock className="h-4 w-4 text-slate-500" />
               <input
                 className="w-full bg-transparent pr-10 text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
@@ -180,7 +180,7 @@ export default function SignupPage() {
                 aria-label={showPassword ? "Hide password" : "Show password"}
                 onClick={() => setShowPassword((v) => !v)}
                 disabled={isLoading}
-                className="absolute right-2 inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/60 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-white/10 dark:hover:text-slate-200"
+                className="absolute right-2 inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/60 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-white/10 dark:hover:text-slate-200"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -192,7 +192,7 @@ export default function SignupPage() {
             <label className="block space-y-2">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-300">Account type</span>
               <select
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950/70 dark:text-white dark:focus:border-violet-400/50"
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-brand-primary/60 dark:border-white/10 dark:bg-brand-dark/70 dark:text-white dark:focus:border-brand-primary/50"
                 value={accountType}
                 onChange={(event) => setAccountType(event.target.value as AccountType)}
                 disabled={isLoading}
@@ -207,7 +207,7 @@ export default function SignupPage() {
 
             <label className="block space-y-2">
               <span className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-300">Country</span>
-              <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 transition focus-within:border-violet-400/60 dark:border-white/10 dark:bg-slate-950/70 dark:focus-within:border-violet-400/50">
+              <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 transition focus-within:border-brand-primary/60 dark:border-white/10 dark:bg-brand-dark/70 dark:focus-within:border-brand-primary/50">
                 <Globe className="h-4 w-4 text-slate-500" />
                 <select
                   className="w-full bg-transparent text-sm text-slate-900 outline-none dark:text-white"
@@ -227,7 +227,7 @@ export default function SignupPage() {
 
           <label className="block space-y-2">
             <span className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-300">Language</span>
-            <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 transition focus-within:border-violet-400/60 dark:border-white/10 dark:bg-slate-950/70 dark:focus-within:border-violet-400/50">
+            <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 transition focus-within:border-brand-primary/60 dark:border-white/10 dark:bg-brand-dark/70 dark:focus-within:border-brand-primary/50">
               <Globe className="h-4 w-4 text-slate-500" />
               <select
                 className="w-full bg-transparent text-sm text-slate-900 outline-none dark:text-white"
@@ -256,7 +256,7 @@ export default function SignupPage() {
         {/* Link */}
         <p className="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
           Already have an account?{" "}
-          <Link href="/login" className="font-semibold text-violet-600 transition hover:text-violet-500 dark:text-violet-400 dark:hover:text-violet-300">
+          <Link href="/login" className="font-semibold text-brand-primary transition hover:text-brand-primary dark:text-brand-secondary dark:hover:text-brand-secondary">
             Login
           </Link>
         </p>

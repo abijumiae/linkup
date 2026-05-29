@@ -81,18 +81,18 @@ function VerifyEmailForm() {
   }
 
   return (
-    <div className="linkup-auth-shell bg-gradient-to-br from-slate-50 via-white to-violet-50 text-slate-900 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 dark:text-white">
+    <div className="linkup-auth-shell bg-gradient-to-br from-slate-50 via-white to-brand-primary/5 text-slate-900 dark:from-brand-dark dark:via-brand-dark dark:to-brand-dark dark:text-white">
       <div className="absolute right-4 top-4">
         <ThemeToggle />
       </div>
       <div className="linkup-panel relative w-full max-w-md p-7 sm:p-8">
         <div className="mb-6 flex justify-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500/15 to-sky-500/10 text-violet-600 dark:text-violet-300">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-primary/15 to-brand-secondary/10 text-brand-primary dark:text-brand-secondary">
             <ShieldCheck className="h-7 w-7" />
           </div>
         </div>
 
-        <h1 className="text-center text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
+        <h1 className="text-center text-2xl font-semibold tracking-tight text-brand-text dark:text-brand-light">
           Verify your email
         </h1>
         <p className="mb-7 mt-2 text-center text-sm text-slate-600 dark:text-slate-300">
@@ -166,7 +166,7 @@ function VerifyEmailForm() {
           Already verified?{" "}
           <Link
             href="/login"
-            className="font-semibold text-violet-600 transition hover:text-violet-500 dark:text-violet-400"
+            className="font-semibold text-brand-primary transition hover:text-brand-primary dark:text-brand-secondary"
           >
             Login
           </Link>

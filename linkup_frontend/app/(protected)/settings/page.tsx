@@ -61,7 +61,7 @@ function ToggleRow({
   disabled?: boolean;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-900/70">
+    <div className="flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-brand-dark/70">
       <div className="min-w-0">
         <p className="text-sm font-semibold text-slate-900 dark:text-white">
           {label}
@@ -77,7 +77,7 @@ function ToggleRow({
         aria-label={checked ? `Disable ${label}` : `Enable ${label}`}
         className={`relative h-7 w-12 shrink-0 rounded-full border transition disabled:cursor-not-allowed disabled:opacity-60 ${
           checked
-            ? "border-violet-500/40 bg-violet-600"
+            ? "border-brand-primary/40 bg-brand-primary"
             : "border-slate-300 bg-slate-200 dark:border-white/20 dark:bg-white/10"
         }`}
       >
@@ -252,9 +252,9 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-[60vh] bg-slate-50 px-4 py-10 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <div className="min-h-[60vh] bg-slate-50 px-4 py-10 text-slate-900 dark:bg-brand-dark dark:text-slate-100">
         <div className="mx-auto max-w-6xl">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg dark:border-white/10 dark:bg-slate-900/80">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg dark:border-white/10 dark:bg-brand-dark/80">
             Loading settings...
           </div>
         </div>
@@ -264,9 +264,9 @@ export default function SettingsPage() {
 
   if (!uiPrefsReady) {
     return (
-      <div className="min-h-[60vh] bg-slate-50 px-4 py-10 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <div className="min-h-[60vh] bg-slate-50 px-4 py-10 text-slate-900 dark:bg-brand-dark dark:text-slate-100">
         <div className="mx-auto max-w-6xl">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg dark:border-white/10 dark:bg-slate-900/80">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg dark:border-white/10 dark:bg-brand-dark/80">
             Loading settings...
           </div>
         </div>
@@ -276,7 +276,7 @@ export default function SettingsPage() {
 
   if (!profileUser) {
     return (
-      <div className="min-h-[60vh] bg-slate-50 px-4 py-10 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <div className="min-h-[60vh] bg-slate-50 px-4 py-10 text-slate-900 dark:bg-brand-dark dark:text-slate-100">
         <div className="mx-auto max-w-6xl">
           <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-700 dark:text-rose-200">
             {error ?? "Settings unavailable."}
@@ -287,7 +287,7 @@ export default function SettingsPage() {
   }
 
   const inputShell =
-    "flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 transition focus-within:border-violet-400/60 dark:border-white/10 dark:bg-slate-950/70 dark:focus-within:border-violet-400/50";
+    "flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 transition focus-within:border-brand-primary/60 dark:border-white/10 dark:bg-brand-dark/70 dark:focus-within:border-brand-primary/50";
   const inputClass =
     "w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500";
   const selectClass = "w-full bg-transparent text-sm text-slate-900 outline-none dark:text-white";
@@ -350,7 +350,7 @@ export default function SettingsPage() {
                 </div>
               </label>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-900/70">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-brand-dark/70">
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-300">
                   Email
                 </p>
@@ -363,7 +363,7 @@ export default function SettingsPage() {
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-900/70">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-brand-dark/70">
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-300">
                   Account type
                 </p>
@@ -465,7 +465,7 @@ export default function SettingsPage() {
                     {interestsList.map((t) => (
                       <span
                         key={t}
-                        className="rounded-full bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-700 dark:text-violet-200"
+                        className="rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-medium text-brand-primary dark:text-brand-secondary"
                       >
                         {t}
                       </span>
@@ -581,7 +581,7 @@ export default function SettingsPage() {
             title="Appearance"
             description="How LinkUp looks on your device."
           >
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-900/70">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-brand-dark/70">
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -606,7 +606,7 @@ export default function SettingsPage() {
             description="Sign out or remove your account. Deletion requires backend support."
           >
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-900/70">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-brand-dark/70">
                 <p className="text-sm font-semibold text-slate-900 dark:text-white">
                   Logout
                 </p>
@@ -636,7 +636,7 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   disabled
-                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-rose-500 px-4 py-2 text-sm font-semibold text-slate-950 opacity-60"
+                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-rose-500 px-4 py-2 text-sm font-semibold text-brand-light opacity-60"
                 >
                   <Trash2 className="h-4 w-4" />
                   Delete account
@@ -645,15 +645,15 @@ export default function SettingsPage() {
             </div>
           </SettingsSection>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-lg shadow-slate-950/5 dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-lg shadow-slate-950/5 dark:border-white/10 dark:bg-brand-dark/80 dark:shadow-slate-950/20">
             <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-              <Bell className="h-4 w-4 text-violet-500" />
+              <Bell className="h-4 w-4 text-brand-primary" />
               Account bio saves to your profile. Privacy, alerts, and LinkUp Card extras save on this device.
             </div>
             <button
               type="submit"
               disabled={isSaving}
-              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSaving ? "Saving..." : "Save changes"}
             </button>

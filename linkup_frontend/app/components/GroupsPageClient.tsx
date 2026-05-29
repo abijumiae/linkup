@@ -26,8 +26,8 @@ function HubsEmptyState({
   onCreate?: () => void;
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center dark:border-white/15 dark:bg-slate-900/60 sm:p-10">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-300">
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center dark:border-white/15 dark:bg-brand-dark/60 sm:p-10">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary dark:text-brand-secondary">
         <Users className="h-5 w-5" />
       </div>
       <h3 className="mt-4 text-base font-semibold text-slate-900 dark:text-white">
@@ -40,7 +40,7 @@ function HubsEmptyState({
         <button
           type="button"
           onClick={onCreate}
-          className="mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
+          className="mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover"
         >
           <Plus className="h-4 w-4" />
           Create Hub
@@ -224,10 +224,10 @@ export default function GroupsPageClient() {
           </p>
         )}
 
-        <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
+        <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-brand-dark/80 dark:shadow-slate-950/20">
           <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
+              <p className="text-sm uppercase tracking-[0.35em] text-brand-primary dark:text-brand-secondary/80">
                 Communities
               </p>
               <h2 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
@@ -235,7 +235,7 @@ export default function GroupsPageClient() {
               </h2>
             </div>
             <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-violet-500 dark:text-violet-300" />
+              <Sparkles className="h-5 w-5 text-brand-primary dark:text-brand-secondary" />
               <span className="text-sm text-slate-600 dark:text-slate-400">
                 {myGroups.length} joined · {discoverGroups.length} to discover
               </span>
@@ -254,7 +254,7 @@ export default function GroupsPageClient() {
                 onClick={() => setActiveFilter(chip.id as typeof activeFilter)}
                 className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
                   activeFilter === chip.id
-                    ? "border-violet-500/50 bg-violet-600 text-white shadow-md shadow-violet-600/20"
+                    ? "border-brand-primary/50 bg-brand-primary text-white shadow-md shadow-brand-primary/20"
                     : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
                 }`}
               >
@@ -298,8 +298,8 @@ export default function GroupsPageClient() {
       </div>
 
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-slate-900">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-dark/80 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-brand-dark">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
                 Create Hub
@@ -323,7 +323,7 @@ export default function GroupsPageClient() {
                   required
                   minLength={2}
                   maxLength={80}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-brand-primary/60 dark:border-white/10 dark:bg-brand-dark dark:text-white dark:placeholder:text-slate-500 dark:focus:border-brand-primary/50"
                   placeholder="e.g. Design Creators Hub"
                 />
               </div>
@@ -331,7 +331,7 @@ export default function GroupsPageClient() {
                 <label className="mb-2 block text-sm text-slate-600 dark:text-slate-400">
                   Cover image URL (optional)
                 </label>
-                <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 dark:border-white/10 dark:bg-slate-950">
+                <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 dark:border-white/10 dark:bg-brand-dark">
                   <Image className="h-4 w-4 text-slate-500" />
                   <input
                     value={createCoverImage}
@@ -353,7 +353,7 @@ export default function GroupsPageClient() {
                   value={createCategory}
                   onChange={(e) => setCreateCategory(e.target.value)}
                   maxLength={40}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-brand-primary/60 dark:border-white/10 dark:bg-brand-dark dark:text-white dark:placeholder:text-slate-500 dark:focus:border-brand-primary/50"
                   placeholder="e.g. Design, Startups, Tech"
                 />
               </div>
@@ -368,7 +368,7 @@ export default function GroupsPageClient() {
                   minLength={1}
                   maxLength={500}
                   rows={4}
-                  className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
+                  className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-brand-primary/60 dark:border-white/10 dark:bg-brand-dark dark:text-white dark:placeholder:text-slate-500 dark:focus:border-brand-primary/50"
                   placeholder="What is this hub about?"
                 />
               </div>
@@ -378,7 +378,7 @@ export default function GroupsPageClient() {
               <button
                 type="submit"
                 disabled={isCreating}
-                className="w-full rounded-full bg-gradient-to-r from-violet-600 to-sky-600 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500 disabled:opacity-50"
+                className="w-full rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary py-3 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover disabled:opacity-50"
               >
                 {isCreating ? "Creating…" : "Create Hub"}
               </button>

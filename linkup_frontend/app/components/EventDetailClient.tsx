@@ -163,7 +163,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
 
   if (!event) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-700 dark:bg-slate-950 dark:text-slate-300">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-700 dark:bg-brand-dark dark:text-slate-300">
         {error ?? "Happening not found."}
       </div>
     );
@@ -180,7 +180,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
           Back to happenings
         </Link>
 
-        <article className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80">
+        <article className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-brand-dark/80">
           {event.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -189,11 +189,11 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
               className="h-64 w-full object-cover"
             />
           ) : (
-            <div className="h-48 bg-gradient-to-br from-violet-500/20 via-slate-900 to-slate-950" />
+            <div className="h-48 bg-gradient-to-br from-brand-primary/20 via-brand-dark to-brand-dark" />
           )}
 
           <div className="p-6 sm:p-8">
-            <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
+            <p className="text-sm uppercase tracking-[0.35em] text-brand-secondary/80">
               {event.category ?? "Happening"}
             </p>
             <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">
@@ -202,7 +202,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
 
             <div className="mt-5 flex flex-wrap gap-3 text-sm text-slate-700 dark:text-slate-300">
               <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 dark:border-white/10">
-                <CalendarDays className="h-4 w-4 text-violet-300" />
+                <CalendarDays className="h-4 w-4 text-brand-secondary" />
                 {formatEventDate(event.startDate)}
               </span>
               {event.endDate && (
@@ -215,7 +215,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                 {event.location}
               </span>
               <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 dark:border-white/10">
-                <Users className="h-4 w-4 text-violet-300" />
+                <Users className="h-4 w-4 text-brand-secondary" />
                 {event.attendeesCount}{" "}
                 {event.attendeesCount === 1 ? "person" : "people"} going
               </span>
@@ -225,7 +225,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
               {event.description}
             </p>
 
-            <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-white/10 dark:bg-slate-950/60">
+            <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-white/10 dark:bg-brand-dark/60">
               <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
                 Organizer
               </p>
@@ -269,7 +269,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                   type="button"
                   disabled={membershipLoading}
                   onClick={handleMembership}
-                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500 disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover disabled:opacity-50"
                 >
                   {membershipLoading
                     ? "Updating…"
@@ -293,7 +293,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                   {attendees.map((attendee) => (
                     <li
                       key={attendee.id}
-                      className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-slate-950/60"
+                      className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-brand-dark/60"
                     >
                       <div>
                         <p className="font-medium text-slate-900 dark:text-white">
@@ -303,7 +303,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                           @{attendee.user.username}
                         </p>
                       </div>
-                      <span className="rounded-full bg-violet-500/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-200">
+                      <span className="rounded-full bg-brand-primary/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-brand-primary dark:text-brand-secondary">
                         {attendee.status}
                       </span>
                     </li>
@@ -316,7 +316,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
       </div>
 
       {showEditModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/80 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-brand-dark/80 p-4 backdrop-blur-sm">
           <div className="my-8 w-full max-w-lg rounded-[2rem] border border-white/10 bg-slate-900 p-6 shadow-2xl">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-white">Edit happening</h2>
@@ -399,7 +399,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="w-full rounded-full bg-violet-500 py-3 text-sm font-semibold text-slate-950 disabled:opacity-50"
+                className="w-full rounded-full bg-brand-primary py-3 text-sm font-semibold text-brand-light disabled:opacity-50"
               >
                 {isSaving ? "Saving…" : "Save changes"}
               </button>

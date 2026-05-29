@@ -58,8 +58,8 @@ function DiscoveryHub({
   icon: typeof ShoppingBag;
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center dark:border-white/15 dark:bg-slate-900/60">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-300">
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center dark:border-white/15 dark:bg-brand-dark/60">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary dark:text-brand-secondary">
         <Icon className="h-5 w-5" />
       </div>
       <h3 className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">
@@ -70,7 +70,7 @@ function DiscoveryHub({
       </p>
       <Link
         href={href}
-        className="mt-5 inline-flex rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
+        className="mt-5 inline-flex rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover"
       >
         {cta}
       </Link>
@@ -80,8 +80,8 @@ function DiscoveryHub({
 
 function DiscoverEmptyState({ message }: { message?: string }) {
   return (
-    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center dark:border-white/15 dark:bg-slate-900/60">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-300">
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center dark:border-white/15 dark:bg-brand-dark/60">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary dark:text-brand-secondary">
         <Compass className="h-5 w-5" />
       </div>
       <h3 className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">
@@ -97,7 +97,7 @@ function DiscoverEmptyState({ message }: { message?: string }) {
 
 function SectionHeading({ title }: { title: string }) {
   return (
-    <h2 className="mb-4 text-sm font-semibold uppercase tracking-[0.25em] text-violet-600 dark:text-violet-300/80">
+    <h2 className="mb-4 text-sm font-semibold uppercase tracking-[0.25em] text-brand-primary dark:text-brand-secondary/80">
       {title}
     </h2>
   );
@@ -134,10 +134,10 @@ function QuickConnectCards({
         return (
           <div
             key={name}
-            className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-white/10 dark:bg-slate-950/60"
+            className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-white/10 dark:bg-brand-dark/60"
           >
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-sky-500 text-sm font-semibold text-white">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white">
                 {initials}
               </div>
               <div className="min-w-0 flex-1">
@@ -438,7 +438,7 @@ export default function ExplorePageClient() {
           <header className="linkup-panel p-6 sm:p-7">
             <div className="flex flex-col gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
+                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-primary dark:text-brand-secondary/80">
                   LinkUp Discover
                 </p>
                 <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">
@@ -457,13 +457,13 @@ export default function ExplorePageClient() {
                   <input
                     value={searchInput}
                     onChange={(event) => setSearchInput(event.target.value)}
-                    className="w-full rounded-full border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-100 dark:placeholder:text-slate-500"
+                    className="w-full rounded-full border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-100 dark:placeholder:text-slate-500"
                     placeholder="Discover people, sparks, hubs, market, work..."
                   />
                 </div>
                 <button
                   type="submit"
-                  className="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-6 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
+                  className="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-6 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover"
                 >
                   Discover
                 </button>
@@ -490,7 +490,7 @@ export default function ExplorePageClient() {
                     onClick={() => setActiveTab(tab.id)}
                     className={`inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
                       isActive
-                        ? "bg-gradient-to-r from-violet-600 to-sky-600 text-white shadow-md shadow-violet-600/20"
+                        ? "bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-md shadow-brand-primary/20"
                         : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
                     }`}
                   >
@@ -506,8 +506,8 @@ export default function ExplorePageClient() {
             <section>{renderTabContent()}</section>
 
             <aside className="space-y-6">
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg dark:border-white/10 dark:bg-slate-900/80">
-                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg dark:border-white/10 dark:bg-brand-dark/80">
+                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-primary dark:text-brand-secondary/80">
                   Pulse Trends
                 </p>
                 <h2 className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">
@@ -531,8 +531,8 @@ export default function ExplorePageClient() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg dark:border-white/10 dark:bg-slate-900/80">
-                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg dark:border-white/10 dark:bg-brand-dark/80">
+                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-primary dark:text-brand-secondary/80">
                   Quick Connect
                 </p>
                 <h2 className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">
@@ -559,7 +559,7 @@ export default function ExplorePageClient() {
                   <button
                     type="button"
                     onClick={() => setActiveTab("people")}
-                    className="mt-4 text-sm font-semibold text-violet-600 transition hover:text-violet-500 dark:text-violet-300 dark:hover:text-violet-200"
+                    className="mt-4 text-sm font-semibold text-brand-primary transition hover:text-brand-primary-hover dark:text-brand-secondary dark:hover:text-brand-light"
                   >
                     View all people →
                   </button>
@@ -567,7 +567,7 @@ export default function ExplorePageClient() {
               </div>
 
               {!isSearchMode && explorePosts.length > 0 ? (
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg dark:border-white/10 dark:bg-slate-900/80">
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg dark:border-white/10 dark:bg-brand-dark/80">
                   <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
                     Discover sparks
                   </h2>
@@ -578,7 +578,7 @@ export default function ExplorePageClient() {
                   <button
                     type="button"
                     onClick={() => setActiveTab("sparks")}
-                    className="mt-4 text-sm font-semibold text-violet-600 transition hover:text-violet-500 dark:text-violet-300 dark:hover:text-violet-200"
+                    className="mt-4 text-sm font-semibold text-brand-primary transition hover:text-brand-primary-hover dark:text-brand-secondary dark:hover:text-brand-light"
                   >
                     View sparks →
                   </button>

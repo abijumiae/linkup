@@ -68,7 +68,7 @@ export default function LinkupNavigation() {
             <img
               src="/brand/app-icon.png"
               alt="LinkUp"
-              className="h-8 w-8 rounded-xl object-cover shadow-lg shadow-violet-500/20 sm:h-9 sm:w-9"
+              className="h-8 w-8 rounded-xl object-cover shadow-lg shadow-brand-primary/20 sm:h-9 sm:w-9"
             />
             <span className="hidden sm:inline">LinkUp</span>
           </Link>
@@ -89,17 +89,17 @@ export default function LinkupNavigation() {
             {isAuthenticated ? <ThemeToggle /> : null}
             <Link
               href="/messages"
-              className="hidden rounded-full border border-slate-300 bg-white p-2.5 text-slate-700 transition hover:bg-slate-50 sm:inline-flex sm:p-3 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-300 dark:hover:bg-white/10"
+              className="hidden rounded-full border border-slate-300 bg-white p-2.5 text-slate-700 transition hover:bg-slate-50 sm:inline-flex sm:p-3 dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-300 dark:hover:bg-white/10"
             >
               <MessageCircle className="h-5 w-5" />
             </Link>
             <Link
               href="/notifications"
-              className="relative rounded-full border border-slate-300 bg-white p-2.5 text-slate-700 transition hover:bg-slate-50 sm:p-3 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-300 dark:hover:bg-white/10"
+              className="relative rounded-full border border-slate-300 bg-white p-2.5 text-slate-700 transition hover:bg-slate-50 sm:p-3 dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-300 dark:hover:bg-white/10"
             >
               <Bell className="h-5 w-5" />
               {isAuthenticated && unreadCount > 0 ? (
-                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-500 px-1 text-[10px] font-bold text-slate-950">
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-primary px-1 text-[10px] font-bold text-brand-light">
                   {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               ) : null}
@@ -107,7 +107,7 @@ export default function LinkupNavigation() {
 
             {showAuthActions && isAuthenticated && user ? (
               <>
-                <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 md:flex dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-300">
+                <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 md:flex dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-300">
                   {user.avatarUrl ? (
                     <img
                       src={user.avatarUrl}
@@ -115,7 +115,7 @@ export default function LinkupNavigation() {
                       className="h-8 w-8 rounded-full object-cover"
                     />
                   ) : (
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-500/15 text-sm font-semibold text-violet-300">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-primary/15 text-sm font-semibold text-brand-secondary">
                       {avatarLabel}
                     </span>
                   )}
@@ -136,7 +136,7 @@ export default function LinkupNavigation() {
                 <Link href="/login" className="hidden rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300 transition hover:bg-white/10 md:inline-flex">
                   Sign in
                 </Link>
-                <Link href="/signup" className="hidden rounded-full bg-violet-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-violet-400 md:inline-flex">
+                <Link href="/signup" className="hidden rounded-full bg-brand-primary px-4 py-2 text-sm font-semibold text-brand-light transition hover:bg-brand-primary-hover md:inline-flex">
                   Join
                 </Link>
               </>
@@ -157,7 +157,7 @@ export default function LinkupNavigation() {
         </div>
       </header>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/90 px-2 py-1.5 shadow-[0_-10px_60px_rgba(15,23,42,0.12)] backdrop-blur-xl md:hidden dark:border-white/10 dark:bg-slate-950/95 dark:shadow-[0_-10px_60px_rgba(15,23,42,0.35)]">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/90 px-2 py-1.5 shadow-[0_-10px_60px_rgba(15,23,42,0.12)] backdrop-blur-xl md:hidden dark:border-white/10 dark:bg-brand-dark/95 dark:shadow-[0_-10px_60px_rgba(15,23,42,0.35)]">
         <div className="mx-auto flex max-w-md items-center justify-between gap-0.5">
           {mobileNavItems.map((item) => {
             const isActive = pathname === item.href;
@@ -167,7 +167,7 @@ export default function LinkupNavigation() {
                 href={item.href}
                 className={`inline-flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-2xl px-1 py-1.5 text-[10px] font-semibold transition sm:text-[11px] ${
                   isActive
-                    ? "bg-violet-500 text-white"
+                    ? "bg-brand-primary text-white"
                     : "text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
                 }`}
               >

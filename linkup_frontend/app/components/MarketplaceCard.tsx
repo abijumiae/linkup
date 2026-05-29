@@ -10,7 +10,7 @@ type MarketplaceCardProps = {
 
 export default function MarketplaceCard({ item }: MarketplaceCardProps) {
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-950/5 transition duration-300 hover:-translate-y-1 hover:border-violet-400/30 hover:shadow-violet-500/10 dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20">
+    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-950/5 transition duration-300 hover:-translate-y-1 hover:border-brand-primary/30 hover:shadow-brand-primary/10 dark:border-white/10 dark:bg-brand-dark/80 dark:shadow-slate-950/20">
       {item.imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -19,14 +19,14 @@ export default function MarketplaceCard({ item }: MarketplaceCardProps) {
           className="h-44 w-full object-cover"
         />
       ) : (
-        <div className="flex h-44 items-center justify-center bg-gradient-to-br from-violet-500/15 via-slate-100 to-sky-500/10 dark:from-violet-500/20 dark:via-slate-900 dark:to-slate-950">
-          <ShoppingBag className="h-12 w-12 text-violet-500/40 dark:text-violet-300/50" />
+        <div className="flex h-44 items-center justify-center bg-gradient-to-br from-brand-primary/15 via-slate-100 to-brand-secondary/10 dark:from-brand-primary/20 dark:via-brand-dark dark:to-brand-dark">
+          <ShoppingBag className="h-12 w-12 text-brand-primary/40 dark:text-brand-secondary/50" />
         </div>
       )}
 
       <div className="flex flex-1 flex-col p-5">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-violet-500/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-200">
+          <span className="rounded-full bg-brand-primary/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-brand-primary dark:text-brand-secondary">
             {item.category}
           </span>
           {item.condition ? (
@@ -41,13 +41,13 @@ export default function MarketplaceCard({ item }: MarketplaceCardProps) {
           {item.title}
         </h3>
 
-        <p className="mt-2 text-xl font-semibold text-violet-700 dark:text-violet-200">
+        <p className="mt-2 text-xl font-semibold text-brand-primary dark:text-brand-secondary">
           {formatPrice(item.price, item.currency)}
         </p>
 
         {item.location ? (
           <p className="mt-2 flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400">
-            <MapPin className="h-3.5 w-3.5 shrink-0 text-violet-500 dark:text-violet-300" />
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-brand-primary dark:text-brand-secondary" />
             {item.location}
           </p>
         ) : null}
@@ -66,20 +66,20 @@ export default function MarketplaceCard({ item }: MarketplaceCardProps) {
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
           <Link
             href={`/marketplace/${item.id}`}
-            className="inline-flex flex-1 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-slate-700 transition hover:border-violet-400/40 hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+            className="inline-flex flex-1 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-slate-700 transition hover:border-brand-primary/40 hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
           >
             View Details
           </Link>
           {!item.isOwner ? (
             <Link
               href={`/messages?userId=${item.seller.id}&listingId=${item.id}`}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-white shadow-md shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-white shadow-md shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover"
             >
               <Mail className="h-3.5 w-3.5" />
               Message Seller
             </Link>
           ) : (
-            <span className="inline-flex flex-1 items-center justify-center rounded-full border border-violet-400/30 bg-violet-500/10 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-violet-700 dark:text-violet-200">
+            <span className="inline-flex flex-1 items-center justify-center rounded-full border border-brand-primary/30 bg-brand-primary/10 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-brand-primary dark:text-brand-secondary">
               Your drop
             </span>
           )}

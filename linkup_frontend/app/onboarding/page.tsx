@@ -123,7 +123,7 @@ export default function OnboardingPage() {
         </p>
 
         {user?.avatarUrl ? (
-          <div className="mt-6 flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-white/10 dark:bg-slate-950/50">
+          <div className="mt-6 flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-white/10 dark:bg-brand-dark/50">
             <img
               src={user.avatarUrl}
               alt={user.name}
@@ -145,10 +145,10 @@ export default function OnboardingPage() {
             {error}
             {error.includes("Onboarding is being prepared") ? (
               <div className="mt-3 flex flex-wrap gap-3">
-                <Link href="/login" className="font-semibold text-violet-600 underline dark:text-violet-300">
+                <Link href="/login" className="font-semibold text-brand-primary underline dark:text-brand-secondary">
                   Go to login
                 </Link>
-                <Link href="/home" className="font-semibold text-violet-600 underline dark:text-violet-300">
+                <Link href="/home" className="font-semibold text-brand-primary underline dark:text-brand-secondary">
                   Continue to workspace
                 </Link>
               </div>

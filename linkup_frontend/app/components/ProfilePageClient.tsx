@@ -41,8 +41,8 @@ function ProfileEmptyState({
   actionHref?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center dark:border-white/15 dark:bg-slate-900/60 sm:p-10">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-300">
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center dark:border-white/15 dark:bg-brand-dark/60 sm:p-10">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary dark:text-brand-secondary">
         <Icon className="h-5 w-5" />
       </div>
       <h3 className="mt-4 text-base font-semibold text-slate-900 dark:text-white">
@@ -54,7 +54,7 @@ function ProfileEmptyState({
       {actionLabel && actionHref ? (
         <Link
           href={actionHref}
-          className="mt-5 inline-flex rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
+          className="mt-5 inline-flex rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover"
         >
           {actionLabel}
         </Link>
@@ -153,10 +153,10 @@ export default function ProfilePageClient() {
           {userPosts.map((post) => (
             <article
               key={post.id}
-              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg shadow-slate-950/5 dark:border-white/10 dark:bg-slate-900/80 dark:shadow-slate-950/20"
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg shadow-slate-950/5 dark:border-white/10 dark:bg-brand-dark/80 dark:shadow-slate-950/20"
             >
               <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-600 dark:text-violet-300">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary dark:text-brand-secondary">
                   Spark
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -172,7 +172,7 @@ export default function ProfilePageClient() {
                   Boost {post.likeCount}
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2 dark:bg-white/5">
-                  <MessageCircle className="h-4 w-4 text-sky-500" />
+                  <MessageCircle className="h-4 w-4 text-brand-secondary" />
                   Reply {post.commentCount}
                 </span>
               </div>
@@ -277,7 +277,7 @@ export default function ProfilePageClient() {
         <section className="mt-8 space-y-4">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-violet-600 dark:text-violet-300/80">
+              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-brand-primary dark:text-brand-secondary/80">
                 My Sparks
               </p>
               <h2 className="mt-1 text-xl font-semibold text-slate-900 dark:text-white">

@@ -24,7 +24,7 @@ export default function LinkUpEmptyState({
 }: LinkUpEmptyStateProps) {
   return (
     <div className={`${linkupEmpty} p-8 text-center sm:p-10`}>
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500/15 to-sky-500/10 text-violet-600 dark:text-violet-300">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-primary/15 to-brand-secondary/10 text-brand-primary dark:text-brand-secondary">
         <Icon className="h-5 w-5" />
       </div>
       <h3 className="mt-4 text-base font-semibold text-slate-900 dark:text-white">

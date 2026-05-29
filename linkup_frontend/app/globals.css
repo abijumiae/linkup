@@ -1,42 +1,62 @@
 @import "tailwindcss";
 
 :root {
-  /* Light theme (default) */
+  /* LinkUp original light theme */
   --background: #ffffff;
-  --foreground: #0f172a;
-  --app-bg: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-  --selection-bg: rgba(99, 102, 241, 0.22);
+  --foreground: #111111;
+  --app-bg: linear-gradient(180deg, #ffffff 0%, #f8f9fc 100%);
+  --selection-bg: rgba(75, 31, 157, 0.22);
 
-  --panel-bg: rgba(255, 255, 255, 0.92);
-  --panel-border: rgba(15, 23, 42, 0.12);
-  --panel-shadow: 0 30px 90px rgba(2, 6, 23, 0.08);
+  --brand-primary: #4b1f9d;
+  --brand-secondary: #3c7be2;
+  --brand-primary-hover: #5a28b8;
+  --brand-secondary-hover: #4a8aef;
 
-  --float-shadow: 0 22px 70px rgba(2, 6, 23, 0.10);
-  --float-shadow-hover: 0 28px 90px rgba(79, 70, 229, 0.14);
-  --float-border-hover: rgba(99, 102, 241, 0.28);
+  --panel-bg: rgba(255, 255, 255, 0.96);
+  --panel-border: rgba(17, 17, 17, 0.1);
+  --panel-shadow: 0 30px 90px rgba(17, 17, 17, 0.06);
+
+  --float-shadow: 0 22px 70px rgba(17, 17, 17, 0.08);
+  --float-shadow-hover: 0 28px 90px rgba(75, 31, 157, 0.14);
+  --float-border-hover: rgba(75, 31, 157, 0.28);
 }
 
 .dark {
-  /* Dark theme */
-  --background: #050816;
-  --foreground: #e2e8f0;
-  --app-bg: radial-gradient(circle at top left, rgba(139, 92, 246, 0.22), transparent 22%),
-    radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.18), transparent 20%),
-    linear-gradient(180deg, #02040d 0%, #090c1d 100%);
-  --selection-bg: rgba(139, 92, 246, 0.35);
+  /* LinkUp original dark theme */
+  --background: #121025;
+  --foreground: #ffffff;
+  --app-bg: radial-gradient(
+      circle at top left,
+      rgba(75, 31, 157, 0.2),
+      transparent 22%
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(60, 123, 226, 0.16),
+      transparent 20%
+    ),
+    linear-gradient(180deg, #121025 0%, #121025 100%);
+  --selection-bg: rgba(60, 123, 226, 0.35);
 
-  --panel-bg: rgba(15, 23, 42, 0.92);
-  --panel-border: rgba(255, 255, 255, 0.10);
-  --panel-shadow: 0 40px 120px rgba(79, 70, 229, 0.10);
+  --panel-bg: rgba(18, 16, 37, 0.94);
+  --panel-border: rgba(255, 255, 255, 0.1);
+  --panel-shadow: 0 40px 120px rgba(75, 31, 157, 0.12);
 
-  --float-shadow: 0 30px 120px rgba(79, 70, 229, 0.12);
-  --float-shadow-hover: 0 30px 120px rgba(79, 70, 229, 0.18);
-  --float-border-hover: rgba(139, 92, 246, 0.30);
+  --float-shadow: 0 30px 120px rgba(75, 31, 157, 0.12);
+  --float-shadow-hover: 0 30px 120px rgba(75, 31, 157, 0.18);
+  --float-border-hover: rgba(60, 123, 226, 0.35);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-brand-primary: #4b1f9d;
+  --color-brand-primary-hover: #5a28b8;
+  --color-brand-secondary: #3c7be2;
+  --color-brand-secondary-hover: #4a8aef;
+  --color-brand-dark: #121025;
+  --color-brand-text: #111111;
+  --color-brand-light: #ffffff;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -86,15 +106,15 @@ select {
 
 @layer components {
   .linkup-page {
-    @apply min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100;
+    @apply min-h-screen bg-white text-brand-text dark:bg-brand-dark dark:text-brand-light;
     background-image: radial-gradient(
         ellipse 80% 50% at 0% -10%,
-        rgba(139, 92, 246, 0.08),
+        rgba(75, 31, 157, 0.07),
         transparent 55%
       ),
       radial-gradient(
         ellipse 60% 40% at 100% 0%,
-        rgba(56, 189, 248, 0.06),
+        rgba(60, 123, 226, 0.06),
         transparent 50%
       );
   }
@@ -102,12 +122,12 @@ select {
   .dark .linkup-page {
     background-image: radial-gradient(
         ellipse 70% 45% at 0% -5%,
-        rgba(139, 92, 246, 0.14),
+        rgba(75, 31, 157, 0.16),
         transparent 50%
       ),
       radial-gradient(
         ellipse 55% 35% at 100% 0%,
-        rgba(59, 130, 246, 0.1),
+        rgba(60, 123, 226, 0.12),
         transparent 45%
       );
   }
@@ -121,23 +141,23 @@ select {
   }
 
   .linkup-panel {
-    @apply rounded-3xl border border-slate-200/90 bg-white/95 shadow-xl shadow-slate-900/[0.04] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/75 dark:shadow-black/25;
+    @apply rounded-3xl border border-slate-200/90 bg-white/95 shadow-xl shadow-brand-text/[0.04] backdrop-blur-xl dark:border-white/10 dark:bg-brand-dark/90 dark:shadow-black/25;
   }
 
   .linkup-panel-soft {
-    @apply rounded-3xl border border-slate-200/80 bg-slate-50/95 dark:border-white/10 dark:bg-slate-950/55;
+    @apply rounded-3xl border border-slate-200/80 bg-slate-50/95 dark:border-white/10 dark:bg-brand-dark/70;
   }
 
   .linkup-card {
-    @apply rounded-3xl border border-slate-200/90 bg-white shadow-lg shadow-slate-900/[0.04] dark:border-white/10 dark:bg-slate-900/80 dark:shadow-black/20;
+    @apply rounded-3xl border border-slate-200/90 bg-white shadow-lg shadow-brand-text/[0.04] dark:border-white/10 dark:bg-brand-dark/85 dark:shadow-black/20;
   }
 
   .linkup-eyebrow {
-    @apply text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/90;
+    @apply text-xs font-semibold uppercase tracking-[0.35em] text-brand-primary dark:text-brand-secondary;
   }
 
   .linkup-title {
-    @apply text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl dark:text-white;
+    @apply text-2xl font-semibold tracking-tight text-brand-text sm:text-3xl dark:text-brand-light;
   }
 
   .linkup-subtitle {
@@ -174,35 +194,35 @@ select {
   }
 
   .linkup-btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/25 transition hover:from-violet-500 hover:to-sky-500 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-brand-light shadow-lg shadow-brand-primary/25 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .linkup-btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-violet-400/40 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:bg-white/10;
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-brand-text shadow-sm transition hover:border-brand-primary/40 hover:bg-slate-50 dark:border-white/10 dark:bg-brand-dark/80 dark:text-brand-light dark:hover:bg-white/10;
   }
 
   .linkup-btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-full border border-slate-200/80 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10;
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-slate-200/80 bg-slate-50 px-4 py-2 text-sm font-medium text-brand-text transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10;
   }
 
   .linkup-input-shell {
-    @apply flex items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/95 px-4 py-3 shadow-sm transition focus-within:border-violet-400/50 focus-within:ring-2 focus-within:ring-violet-500/15 dark:border-white/10 dark:bg-slate-950/80 dark:focus-within:border-violet-400/40;
+    @apply flex items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/95 px-4 py-3 shadow-sm transition focus-within:border-brand-primary/50 focus-within:ring-2 focus-within:ring-brand-primary/15 dark:border-white/10 dark:bg-brand-dark/80 dark:focus-within:border-brand-secondary/50;
   }
 
   .linkup-input {
-    @apply w-full min-w-0 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500;
+    @apply w-full min-w-0 bg-transparent text-sm text-brand-text outline-none placeholder:text-slate-400 dark:text-brand-light dark:placeholder:text-slate-500;
   }
 
   .linkup-empty {
-    @apply rounded-3xl border border-dashed border-slate-300/90 bg-white/80 dark:border-white/15 dark:bg-slate-900/50;
+    @apply rounded-3xl border border-dashed border-slate-300/90 bg-white/80 dark:border-white/15 dark:bg-brand-dark/50;
   }
 
   .linkup-chip {
-    @apply rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10;
+    @apply rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-medium text-brand-text transition hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10;
   }
 
   .linkup-chip-active {
-    @apply rounded-full border border-violet-500/40 bg-gradient-to-r from-violet-600 to-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-violet-600/20;
+    @apply rounded-full border border-brand-primary/40 bg-gradient-to-r from-brand-primary to-brand-secondary px-4 py-2 text-sm font-semibold text-brand-light shadow-md shadow-brand-primary/20;
   }
 
   .linkup-main {
@@ -210,7 +230,7 @@ select {
   }
 
   .linkup-topbar {
-    @apply sticky top-0 z-40 border-b border-slate-200/90 bg-white/90 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/90;
+    @apply sticky top-0 z-40 border-b border-slate-200/90 bg-white/90 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-brand-dark/90;
   }
 }
 

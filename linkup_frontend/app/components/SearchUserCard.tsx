@@ -45,7 +45,7 @@ export default function SearchUserCard({
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-900/70">
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-brand-dark/70">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           {user.avatarUrl ? (
@@ -53,10 +53,10 @@ export default function SearchUserCard({
             <img
               src={user.avatarUrl}
               alt=""
-              className="h-12 w-12 rounded-xl object-cover ring-2 ring-violet-500/20"
+              className="h-12 w-12 rounded-xl object-cover ring-2 ring-brand-primary/20"
             />
           ) : (
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-sky-500 text-sm font-semibold text-white">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white">
               {getInitials(user.name, user.username)}
             </div>
           )}
@@ -76,7 +76,7 @@ export default function SearchUserCard({
               href={`/messages?userId=${user.id}`}
               className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
             >
-              <Mail className="h-4 w-4 text-sky-500" />
+              <Mail className="h-4 w-4 text-brand-secondary" />
               Start Chat
             </Link>
             <button
@@ -85,8 +85,8 @@ export default function SearchUserCard({
               onClick={() => void handleFollow()}
               className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition disabled:opacity-60 ${
                 isFollowing
-                  ? "border border-violet-400/40 bg-violet-500/10 text-violet-700 dark:text-violet-200"
-                  : "bg-gradient-to-r from-violet-600 to-sky-600 text-white shadow-md shadow-violet-600/20 hover:from-violet-500 hover:to-sky-500"
+                  ? "border border-brand-primary/40 bg-brand-primary/10 text-brand-primary dark:text-brand-secondary"
+                  : "bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-md shadow-brand-primary/20 hover:from-brand-primary-hover hover:to-brand-secondary-hover"
               }`}
             >
               <UserPlus className="h-4 w-4" />

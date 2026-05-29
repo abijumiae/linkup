@@ -106,7 +106,7 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
 
   if (!group) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-700 dark:bg-slate-950 dark:text-slate-300">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-700 dark:bg-brand-dark dark:text-slate-300">
         {error ?? "Hub not found."}
       </div>
     );
@@ -123,8 +123,8 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
           Back to hubs
         </Link>
 
-        <header className="mb-8 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80">
-          <p className="text-sm uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
+        <header className="mb-8 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-brand-dark/80">
+          <p className="text-sm uppercase tracking-[0.35em] text-brand-primary dark:text-brand-secondary/80">
             Hub
           </p>
           <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">
@@ -145,7 +145,7 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
           </div>
           <div className="mt-6">
             {group.isOwner ? (
-              <span className="inline-flex rounded-full bg-violet-500/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-violet-700 dark:text-violet-200">
+              <span className="inline-flex rounded-full bg-brand-primary/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary dark:text-brand-secondary">
                 You host this hub
               </span>
             ) : (
@@ -153,7 +153,7 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
                 type="button"
                 disabled={membershipLoading}
                 onClick={handleMembership}
-                className="rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500 disabled:opacity-50"
+                className="rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover disabled:opacity-50"
               >
                 {membershipLoading
                   ? "Updating…"
@@ -174,7 +174,7 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
         {group.isMember && (
           <form
             onSubmit={handleCreatePost}
-            className="mb-8 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80"
+            className="mb-8 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-brand-dark/80"
           >
             <label className="mb-2 block text-sm text-slate-600 dark:text-slate-400">
               Share a spark in this hub
@@ -184,12 +184,12 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
               onChange={(e) => setPostContent(e.target.value)}
               rows={3}
               placeholder="Share an idea, update, or opportunity with the hub…"
-              className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400/60 dark:border-white/10 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-400/50"
+              className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-brand-primary/60 dark:border-white/10 dark:bg-brand-dark dark:text-white dark:placeholder:text-slate-500 dark:focus:border-brand-primary/50"
             />
             <button
               type="submit"
               disabled={isSubmitting || !postContent.trim()}
-              className="mt-4 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500 disabled:opacity-50"
+              className="mt-4 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover disabled:opacity-50"
             >
               {isSubmitting ? "Sharing…" : "Share spark"}
             </button>
@@ -201,7 +201,7 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
             Hub sparks
           </h2>
           {posts.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center dark:border-white/15 dark:bg-slate-900/60">
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center dark:border-white/15 dark:bg-brand-dark/60">
               <p className="text-sm text-slate-600 dark:text-slate-400">
                 No sparks in this hub yet.
                 {group.isMember ? " Be the first to share something." : ""}

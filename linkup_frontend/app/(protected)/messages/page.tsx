@@ -265,7 +265,7 @@ export default function MessagesPage() {
       <div className="linkup-container-wide">
         <header className="mb-6 linkup-panel p-5 sm:p-7">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-violet-600 dark:text-violet-300/80">
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-primary dark:text-brand-secondary/80">
               LinkUp Chats
             </p>
             <h1 className="linkup-title mt-2">
@@ -296,7 +296,7 @@ export default function MessagesPage() {
           >
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-sm font-semibold uppercase tracking-[0.28em] text-violet-500 dark:text-violet-300">
+                <h2 className="text-sm font-semibold uppercase tracking-[0.28em] text-brand-primary dark:text-brand-secondary">
                   Chats
                 </h2>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -305,13 +305,13 @@ export default function MessagesPage() {
               </div>
               <Link
                 href="/explore"
-                className="shrink-0 rounded-full border border-violet-400/30 bg-violet-500/10 px-3 py-1.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-500/15 dark:text-violet-200"
+                className="shrink-0 rounded-full border border-brand-primary/30 bg-brand-primary/10 px-3 py-1.5 text-xs font-semibold text-brand-primary transition hover:bg-brand-primary/15 dark:text-brand-secondary"
               >
                 New Chat
               </Link>
             </div>
 
-            <div className="mt-4 rounded-full border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-600 dark:border-white/10 dark:bg-slate-950/80 dark:text-slate-300">
+            <div className="mt-4 rounded-full border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-600 dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-300">
               <div className="flex items-center gap-2">
                 <Search className="h-4 w-4 text-slate-400" />
                 <input
@@ -326,7 +326,7 @@ export default function MessagesPage() {
 
             <div className="mt-4 space-y-3">
               {filteredConversations.length === 0 ? (
-                <p className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-slate-950/85 dark:text-slate-400">
+                <p className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-brand-dark/85 dark:text-slate-400">
                   {conversations.length === 0
                     ? "No chats yet. Start a new connection from Discover."
                     : "No chats match your search."}
@@ -357,12 +357,12 @@ export default function MessagesPage() {
           >
             {activeUser ? (
               <div className="flex h-[min(68vh,720px)] flex-col gap-4 sm:h-[min(74vh,720px)] sm:gap-5">
-                <div className="flex flex-wrap items-center justify-between gap-4 rounded-[1.75rem] bg-slate-50 p-4 dark:bg-slate-950/85">
+                <div className="flex flex-wrap items-center justify-between gap-4 rounded-[1.75rem] bg-slate-50 p-4 dark:bg-brand-dark/85">
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
                       onClick={() => setMobileView("list")}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 lg:hidden dark:border-white/10 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-white/10"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 lg:hidden dark:border-white/10 dark:bg-brand-dark dark:text-slate-200 dark:hover:bg-white/10"
                       aria-label="Back to chats"
                     >
                       <ArrowLeft className="h-4 w-4" />
@@ -372,10 +372,10 @@ export default function MessagesPage() {
                       <img
                         src={activeUser.avatarUrl}
                         alt=""
-                        className="h-12 w-12 rounded-3xl object-cover ring-2 ring-violet-500/20"
+                        className="h-12 w-12 rounded-3xl object-cover ring-2 ring-brand-primary/20"
                       />
                     ) : (
-                      <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-gradient-to-br from-violet-500 to-sky-500 text-lg font-semibold text-white">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-gradient-to-br from-brand-primary to-brand-secondary text-lg font-semibold text-white">
                         {activeUser.name
                           .trim()
                           .split(/\s+/)
@@ -386,7 +386,7 @@ export default function MessagesPage() {
                       </div>
                     )}
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-400">
+                      <p className="text-xs font-semibold uppercase tracking-[0.28em] text-brand-secondary">
                         Chat
                       </p>
                       <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
@@ -405,7 +405,7 @@ export default function MessagesPage() {
 
                 <div className="flex-1 space-y-4 overflow-y-auto pr-1">
                   {messages.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center dark:border-white/15 dark:bg-slate-900/60">
+                    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center dark:border-white/15 dark:bg-brand-dark/60">
                       <p className="text-sm text-slate-600 dark:text-slate-400">
                         No chats in this thread yet. Say hello!
                       </p>
@@ -423,8 +423,8 @@ export default function MessagesPage() {
                   <div ref={messagesEndRef} />
                 </div>
 
-                <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-slate-950/80 sm:p-4">
-                  <div className="flex min-w-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 dark:border-white/10 dark:bg-slate-900/90 sm:gap-3 sm:px-4 sm:py-3">
+                <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-brand-dark/80 sm:p-4">
+                  <div className="flex min-w-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 dark:border-white/10 dark:bg-brand-dark/90 sm:gap-3 sm:px-4 sm:py-3">
                     <input
                       value={messageInput}
                       onChange={(event) => setMessageInput(event.target.value)}
@@ -451,8 +451,8 @@ export default function MessagesPage() {
               </div>
             ) : (
               <div className="flex h-[min(74vh,720px)] items-center justify-center p-6">
-                <div className="max-w-sm rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center dark:border-white/15 dark:bg-slate-900/60">
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-300">
+                <div className="max-w-sm rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center dark:border-white/15 dark:bg-brand-dark/60">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary dark:text-brand-secondary">
                     <MessageCircle className="h-5 w-5" />
                   </div>
                   <h2 className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">
@@ -463,7 +463,7 @@ export default function MessagesPage() {
                   </p>
                   <Link
                     href="/explore"
-                    className="mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-sky-500"
+                    className="mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover"
                   >
                     Start Chat
                   </Link>

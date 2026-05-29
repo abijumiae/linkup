@@ -78,8 +78,8 @@ export default function JobApplicationsClient({
           Back to work
         </Link>
 
-        <header className="mb-8 rounded-[2rem] border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-slate-900/80">
-          <p className="text-sm uppercase tracking-[0.35em] text-violet-300/80">
+        <header className="mb-8 rounded-[2rem] border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-brand-dark/80">
+          <p className="text-sm uppercase tracking-[0.35em] text-brand-secondary/80">
             Applications
           </p>
           <h1 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
@@ -98,7 +98,7 @@ export default function JobApplicationsClient({
         )}
 
         {applications.length === 0 ? (
-          <p className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-600 dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-400">
+          <p className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-600 dark:border-white/10 dark:bg-brand-dark/60 dark:text-slate-400">
             No applications yet.
           </p>
         ) : (
@@ -106,7 +106,7 @@ export default function JobApplicationsClient({
             {applications.map((application) => (
               <article
                 key={application.id}
-                className="rounded-[2rem] border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-slate-900/80"
+                className="rounded-[2rem] border border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-brand-dark/80"
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
@@ -118,7 +118,7 @@ export default function JobApplicationsClient({
                       {application.applicant.email}
                     </p>
                   </div>
-                  <span className="rounded-full bg-violet-500/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-violet-200">
+                  <span className="rounded-full bg-brand-primary/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-brand-secondary">
                     {application.status}
                   </span>
                 </div>
@@ -132,7 +132,7 @@ export default function JobApplicationsClient({
                     href={application.resumeUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-4 inline-block text-sm text-violet-300 hover:text-violet-200"
+                    className="mt-4 inline-block text-sm text-brand-secondary hover:text-brand-light"
                   >
                     View resume
                   </a>

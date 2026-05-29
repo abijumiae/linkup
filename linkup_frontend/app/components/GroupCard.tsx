@@ -39,8 +39,8 @@ export default function GroupCard({
   };
 
   return (
-    <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-lg shadow-slate-950/10 transition duration-300 hover:-translate-y-1 hover:border-violet-400/30 hover:shadow-violet-500/20 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/85">
-      <div className="bg-gradient-to-r from-violet-500/20 via-sky-500/10 to-cyan-400/10 p-4 text-sm font-semibold uppercase tracking-[0.25em] text-slate-900 dark:text-slate-100">
+    <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-lg shadow-slate-950/10 transition duration-300 hover:-translate-y-1 hover:border-brand-primary/30 hover:shadow-brand-primary/20 backdrop-blur-xl dark:border-white/10 dark:bg-brand-dark/85">
+      <div className="bg-gradient-to-r from-brand-primary/20 via-brand-secondary/10 to-brand-secondary/10 p-4 text-sm font-semibold uppercase tracking-[0.25em] text-brand-text dark:text-brand-light">
         {group.coverImage ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -50,11 +50,11 @@ export default function GroupCard({
           />
         ) : (
           <div className="flex items-center justify-between">
-            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/70 text-base font-bold text-violet-700">
+            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/70 text-base font-bold text-brand-primary">
               {coverLabel}
             </span>
             {group.isOwner ? (
-              <span className="rounded-full bg-violet-500/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-700 dark:text-violet-200">
+              <span className="rounded-full bg-brand-primary/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-primary dark:text-brand-secondary">
                 Owner
               </span>
             ) : null}
@@ -89,7 +89,7 @@ export default function GroupCard({
                 className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] transition disabled:opacity-50 ${
                   group.isMember
                     ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-200"
-                    : "bg-violet-500/15 text-violet-700 hover:bg-violet-500/25 dark:text-violet-200"
+                    : "bg-brand-primary/15 text-brand-primary hover:bg-brand-primary/25 dark:text-brand-secondary"
                 }`}
               >
                 {group.isMember ? "Joined" : "Join Hub"}
@@ -97,7 +97,7 @@ export default function GroupCard({
             )}
             <Link
               href={`/groups/${group.id}`}
-              className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700 transition hover:border-violet-400/40 hover:text-slate-900 dark:border-white/10 dark:text-slate-200 dark:hover:text-white"
+              className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700 transition hover:border-brand-primary/40 hover:text-slate-900 dark:border-white/10 dark:text-slate-200 dark:hover:text-white"
             >
               Open Hub
             </Link>

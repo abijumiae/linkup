@@ -31,8 +31,8 @@ export default function ChatListItem({
       onClick={onClick}
       className={`flex w-full items-start justify-between rounded-[1.75rem] border p-4 text-left transition duration-300 ${
         active
-          ? "border-violet-400/40 bg-violet-500/10"
-          : "border-slate-200 bg-white hover:-translate-y-0.5 hover:border-violet-400/30 hover:bg-slate-50 dark:border-white/10 dark:bg-slate-950/85 dark:hover:bg-white/5"
+          ? "border-brand-primary/40 bg-brand-primary/10"
+          : "border-slate-200 bg-white hover:-translate-y-0.5 hover:border-brand-primary/30 hover:bg-slate-50 dark:border-white/10 dark:bg-brand-dark/85 dark:hover:bg-white/5"
       }`}
     >
       <div className="flex min-w-0 items-center gap-3">
@@ -41,10 +41,10 @@ export default function ChatListItem({
           <img
             src={avatarUrl}
             alt=""
-            className="h-12 w-12 shrink-0 rounded-3xl object-cover ring-2 ring-violet-500/20"
+            className="h-12 w-12 shrink-0 rounded-3xl object-cover ring-2 ring-brand-primary/20"
           />
         ) : (
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-3xl bg-gradient-to-br from-violet-500 to-sky-500 text-sm font-semibold text-white">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-3xl bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white">
             {getInitials(name)}
           </div>
         )}
@@ -58,7 +58,7 @@ export default function ChatListItem({
       <div className="flex shrink-0 flex-col items-end gap-2 pl-2 text-right">
         <span className="text-xs text-slate-500 dark:text-slate-400">{time}</span>
         {unread && unread > 0 ? (
-          <span className="rounded-full bg-violet-500 px-2 py-1 text-[10px] font-semibold text-white">
+          <span className="rounded-full bg-brand-primary px-2 py-1 text-[10px] font-semibold text-white">
             {unread > 99 ? "99+" : unread}
           </span>
         ) : null}

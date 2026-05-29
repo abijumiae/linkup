@@ -30,7 +30,7 @@ export default function AdminTable({ headers, rows, actions = false }: AdminTabl
                 <td className="border-b border-white/10 px-4 py-4">
                   <div className="flex flex-wrap gap-2">
                     <button className="rounded-full bg-white/5 px-3 py-2 text-xs text-slate-200 transition hover:bg-white/10">View</button>
-                    <button className="rounded-full bg-cyan-500/10 px-3 py-2 text-xs text-cyan-200 transition hover:bg-cyan-500/20">Verify</button>
+                    <button className="rounded-full bg-brand-secondary/10 px-3 py-2 text-xs text-brand-secondary transition hover:bg-brand-secondary/20">Verify</button>
                     <button className="rounded-full bg-amber-500/10 px-3 py-2 text-xs text-amber-200 transition hover:bg-amber-500/20">Suspend</button>
                     <button className="rounded-full bg-red-500/10 px-3 py-2 text-xs text-rose-200 transition hover:bg-red-500/20">Delete</button>
                   </div>
