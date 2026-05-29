@@ -245,7 +245,11 @@ export default function HomeDashboardPage() {
       const created = await createPost({
         content: trimmed,
         ...(sparkMedia
-          ? { mediaUrl: sparkMedia.url, mediaType: sparkMedia.type }
+          ? {
+              mediaUrl: sparkMedia.url,
+              mediaType:
+                sparkMedia.type === "video" ? ("video" as const) : ("image" as const),
+            }
           : {}),
       });
       setPostContent("");

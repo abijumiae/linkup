@@ -1,7 +1,7 @@
 import { ApiError, getApiBaseUrl } from "./api";
 import { clearAuth, getToken } from "./auth";
 
-export type UploadMediaType = "image" | "video";
+export type UploadMediaType = "image" | "video" | "audio";
 
 export type UploadResult = {
   url: string;
@@ -24,6 +24,16 @@ const VIDEO_TYPES = new Set([
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 
+const AUDIO_TYPES = new Set([
+  "audio/webm",
+  "audio/mpeg",
+  "audio/mp4",
+  "audio/wav",
+  "audio/ogg",
+]);
+
+const MAX_AUDIO_BYTES = 10 * 1024 * 1024;
+
 export function validateMediaFile(file: File): string | null {
   const isImage = IMAGE_TYPES.has(file.type);
   const isVideo = VIDEO_TYPES.has(file.type);
@@ -43,11 +53,35 @@ export function validateMediaFile(file: File): string | null {
   return null;
 }
 
+export function validateUploadFile(file: File): string | null {
+  const isImage = IMAGE_TYPES.has(file.type);
+  const isVideo = VIDEO_TYPES.has(file.type);
+  const isAudio = AUDIO_TYPES.has(file.type);
+
+  if (!isImage && !isVideo && !isAudio) {
+    return "Unsupported file type.";
+  }
+
+  if (isImage && file.size > MAX_IMAGE_BYTES) {
+    return "Images must be 5MB or smaller.";
+  }
+
+  if (isVideo && file.size > MAX_VIDEO_BYTES) {
+    return "Videos must be 50MB or smaller.";
+  }
+
+  if (isAudio && file.size > MAX_AUDIO_BYTES) {
+    return "Audio must be 10MB or smaller.";
+  }
+
+  return null;
+}
+
 export async function uploadFile(
   file: File,
   onProgress?: (progress: number) => void,
 ): Promise<UploadResult> {
-  const validationError = validateMediaFile(file);
+  const validationError = validateUploadFile(file);
   if (validationError) {
     throw new ApiError(validationError, 400);
   }

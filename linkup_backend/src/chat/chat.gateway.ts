@@ -166,12 +166,24 @@ export class ChatGateway
   @SubscribeMessage('send_direct_message')
   async handleSendDirectMessage(
     @ConnectedSocket() client: AuthedSocket,
-    @MessageBody() payload: { receiverId: string; content: string },
+    @MessageBody()
+    payload: {
+      receiverId: string;
+      content?: string;
+      type?: 'text' | 'voice';
+      mediaUrl?: string;
+      mediaType?: 'audio';
+      duration?: number;
+    },
   ) {
     await this.handleSendMessage(client, {
       chatType: 'direct',
       receiverId: payload?.receiverId,
       content: payload?.content ?? '',
+      type: payload?.type,
+      mediaUrl: payload?.mediaUrl,
+      mediaType: payload?.mediaType,
+      duration: payload?.duration,
     });
   }
 
@@ -349,7 +361,11 @@ export class ChatGateway
       chatType: ChatType;
       receiverId?: string;
       groupId?: string;
-      content: string;
+      content?: string;
+      type?: 'text' | 'voice';
+      mediaUrl?: string;
+      mediaType?: 'audio';
+      duration?: number;
     },
   ) {
     const userId = client.data?.userId;
@@ -358,8 +374,23 @@ export class ChatGateway
       return;
     }
 
-    const content = payload?.content?.trim();
-    if (!content) {
+    const messageType = payload?.type ?? 'text';
+    const content = payload?.content?.trim() ?? '';
+
+    if (messageType === 'voice') {
+      if (!payload.mediaUrl) {
+        client.emit('message_error', {
+          message: 'Voice note media URL is required',
+        });
+        return;
+      }
+      if (!payload.duration || payload.duration < 1) {
+        client.emit('message_error', {
+          message: 'Voice note duration is required',
+        });
+        return;
+      }
+    } else if (!content) {
       client.emit('message_error', { message: 'Message content is required' });
       return;
     }
@@ -385,6 +416,10 @@ export class ChatGateway
 
       await this.messagesService.sendMessage(userId, payload.receiverId, {
         content,
+        type: messageType,
+        mediaUrl: payload.mediaUrl,
+        mediaType: payload.mediaType,
+        duration: payload.duration,
       });
     } catch (error) {
       const message =

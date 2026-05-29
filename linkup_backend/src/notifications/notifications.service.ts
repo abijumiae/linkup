@@ -263,6 +263,7 @@ export class NotificationsService {
 
   emitDirectMessageAlert(message: {
     id: string;
+    type?: string;
     senderId: string;
     receiverId: string;
     sender: {
@@ -276,6 +277,10 @@ export class NotificationsService {
       messageId: message.id,
       sender: message.sender,
       recipientId: message.receiverId,
+      messageText:
+        message.type === 'voice'
+          ? `${message.sender.name} sent you a voice note`
+          : `${message.sender.name} sent you a chat`,
     });
     this.realtimeEmitter.emitAlert(message.receiverId, payload);
     return payload;

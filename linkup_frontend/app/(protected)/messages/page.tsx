@@ -38,8 +38,12 @@ import {
   Conversation,
   fetchConversation,
   fetchConversations,
+  getMessagePreview,
   sendMessage,
+  sendVoiceMessage,
 } from "@/src/lib/messages";
+import { uploadFile } from "@/src/lib/uploads";
+import VoiceNoteRecorder from "@/src/components/VoiceNoteRecorder";
 import { formatTimeAgo } from "@/src/lib/posts";
 import {
   CallSession,
@@ -415,7 +419,7 @@ export default function MessagesPage() {
             user,
             lastMessage: {
               id: message.id,
-              content: message.content,
+              content: getMessagePreview(message),
               createdAt: message.createdAt,
               senderId: message.senderId,
             },
@@ -759,6 +763,81 @@ export default function MessagesPage() {
     }, 1500);
   }
 
+  async function handleSendVoiceNote(file: File, durationSeconds: number) {
+    if (!activeUser || chatTab !== "direct" || isSending) {
+      return;
+    }
+
+    setIsSending(true);
+    setError(null);
+
+    try {
+      const uploaded = await uploadFile(file);
+      const socket = getSocket();
+      const canUseSocket = isSocketConnected() && socket;
+
+      if (canUseSocket) {
+        socket.emit("send_direct_message", {
+          receiverId: activeUser.id,
+          type: "voice",
+          content: "",
+          mediaUrl: uploaded.url,
+          mediaType: "audio",
+          duration: durationSeconds,
+        });
+        socket.emit("send_message", {
+          chatType: "direct",
+          receiverId: activeUser.id,
+          type: "voice",
+          content: "",
+          mediaUrl: uploaded.url,
+          mediaType: "audio",
+          duration: durationSeconds,
+        });
+        setTimeout(scrollToBottom, 50);
+        return;
+      }
+
+      const created = await sendVoiceMessage(activeUser.id, {
+        mediaUrl: uploaded.url,
+        duration: durationSeconds,
+      });
+
+      setMessages((current) => {
+        if (current.some((item) => item.id === created.id)) {
+          return current;
+        }
+        return [...current, created];
+      });
+      setConversations((current) => {
+        const updated: Conversation = {
+          user: activeUser,
+          lastMessage: {
+            id: created.id,
+            content: getMessagePreview(created),
+            createdAt: created.createdAt,
+            senderId: created.senderId,
+          },
+          unreadCount: 0,
+        };
+        return [
+          updated,
+          ...current.filter((c) => c.user.id !== activeUser.id),
+        ];
+      });
+      setTimeout(scrollToBottom, 50);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        router.replace("/login");
+        return;
+      }
+      setError("Could not send voice note. Please try again.");
+      throw err;
+    } finally {
+      setIsSending(false);
+    }
+  }
+
   async function sendViaRest(trimmed: string) {
     if (chatTab === "direct" && activeUser) {
       const marketplaceItemId =
@@ -785,7 +864,7 @@ export default function MessagesPage() {
           user: activeUser,
           lastMessage: {
             id: created.id,
-            content: created.content,
+            content: getMessagePreview(created),
             createdAt: created.createdAt,
             senderId: created.senderId,
           },
@@ -1488,6 +1567,9 @@ export default function MessagesPage() {
                         <MessageBubble
                           key={message.id}
                           text={message.content}
+                          type={message.type}
+                          mediaUrl={message.mediaUrl}
+                          duration={message.duration}
                           time={formatMessageTime(message.createdAt)}
                           fromMe={message.senderId === currentUserId}
                           read={message.read}
@@ -1531,6 +1613,14 @@ export default function MessagesPage() {
 
                 {/* Input */}
                 <div className="border-t border-slate-200/80 bg-slate-50/90 px-3 py-3 dark:border-white/10 dark:bg-brand-dark/90 sm:px-4 sm:py-4">
+                  {chatTab === "direct" && activeUser ? (
+                    <VoiceNoteRecorder
+                      disabled={!activeUser}
+                      isSending={isSending}
+                      onSend={handleSendVoiceNote}
+                      onError={setError}
+                    />
+                  ) : null}
                   <div className="relative flex min-w-0 items-center gap-1.5 rounded-full border border-slate-200/80 bg-white px-2 py-2 dark:border-white/10 dark:bg-brand-dark sm:gap-2 sm:px-3 sm:py-2.5">
                     <button
                       type="button"

@@ -39,7 +39,11 @@ export type ReceivedDirectMessage = {
   chatType: "direct";
   message: {
     id: string;
+    type?: string;
     content: string;
+    mediaUrl?: string | null;
+    mediaType?: string | null;
+    duration?: number | null;
     senderId: string;
     receiverId: string;
     read: boolean;

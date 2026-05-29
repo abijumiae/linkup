@@ -88,7 +88,8 @@ export class MessagesService {
           user: otherUser,
           lastMessage: {
             id: message.id,
-            content: message.content,
+            content:
+              message.type === 'voice' ? 'Voice note' : message.content,
             createdAt: message.createdAt,
             senderId: message.senderId,
           },
@@ -159,9 +160,26 @@ export class MessagesService {
       throw new NotFoundException('User not found');
     }
 
+    const messageType = dto.type ?? 'text';
+
+    if (messageType === 'voice') {
+      if (!dto.mediaUrl) {
+        throw new BadRequestException('Voice note media URL is required');
+      }
+      if (!dto.duration || dto.duration < 1) {
+        throw new BadRequestException('Voice note duration is required');
+      }
+    } else if (!dto.content?.trim()) {
+      throw new BadRequestException('Message content is required');
+    }
+
     const message = await this.prisma.message.create({
       data: {
-        content: dto.content.trim(),
+        type: messageType,
+        content: dto.content?.trim() ?? '',
+        mediaUrl: dto.mediaUrl,
+        mediaType: dto.mediaType,
+        duration: dto.duration,
         senderId,
         receiverId,
       },

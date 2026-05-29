@@ -90,11 +90,13 @@ export function buildChatAlertPayload(params: {
   messageId: string;
   sender: ActorShape;
   recipientId: string;
+  messageText?: string;
 }): RealtimeAlertPayload {
   return {
     id: `chat-${params.messageId}`,
     type: 'chat',
-    message: `${params.sender.name} sent you a chat`,
+    message:
+      params.messageText ?? `${params.sender.name} sent you a chat`,
     actorId: params.sender.id,
     actorName: params.sender.name,
     createdAt: new Date().toISOString(),

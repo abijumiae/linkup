@@ -23,7 +23,18 @@ const VIDEO_MIME_TYPES = new Set([
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 
-export type UploadMediaType = 'image' | 'video';
+const MAX_AUDIO_BYTES = 10 * 1024 * 1024;
+
+const AUDIO_MIME_TYPES = new Set([
+  'audio/webm',
+  'audio/mpeg',
+  'audio/mp4',
+  'audio/wav',
+  'audio/ogg',
+  'audio/x-wav',
+]);
+
+export type UploadMediaType = 'image' | 'video' | 'audio';
 
 export type UploadResult = {
   url: string;
@@ -76,20 +87,26 @@ export class UploadsService {
       return 'video';
     }
 
+    if (AUDIO_MIME_TYPES.has(mimetype)) {
+      return 'audio';
+    }
+
     throw new BadRequestException(
-      'Unsupported file type. Allowed: JPEG, PNG, WebP, MP4, WebM, MOV.',
+      'Unsupported file type. Allowed: JPEG, PNG, WebP, MP4, WebM, MOV, and common audio formats.',
     );
   }
 
   private validateSize(size: number, mediaType: UploadMediaType) {
-    const maxSize =
-      mediaType === 'image' ? MAX_IMAGE_BYTES : MAX_VIDEO_BYTES;
-    const label = mediaType === 'image' ? '5MB' : '50MB';
+    if (mediaType === 'image' && size > MAX_IMAGE_BYTES) {
+      throw new BadRequestException('Image must be 5MB or smaller.');
+    }
 
-    if (size > maxSize) {
-      throw new BadRequestException(
-        `${mediaType === 'image' ? 'Image' : 'Video'} must be ${label} or smaller.`,
-      );
+    if (mediaType === 'video' && size > MAX_VIDEO_BYTES) {
+      throw new BadRequestException('Video must be 50MB or smaller.');
+    }
+
+    if (mediaType === 'audio' && size > MAX_AUDIO_BYTES) {
+      throw new BadRequestException('Audio must be 10MB or smaller.');
     }
   }
 
@@ -103,6 +120,10 @@ export class UploadsService {
       '.mp4',
       '.webm',
       '.mov',
+      '.mp3',
+      '.wav',
+      '.ogg',
+      '.m4a',
     ]);
 
     if (allowed.has(fromName)) {
@@ -122,6 +143,17 @@ export class UploadsService {
         return '.webm';
       case 'video/quicktime':
         return '.mov';
+      case 'audio/mpeg':
+        return '.mp3';
+      case 'audio/wav':
+      case 'audio/x-wav':
+        return '.wav';
+      case 'audio/ogg':
+        return '.ogg';
+      case 'audio/mp4':
+        return '.m4a';
+      case 'audio/webm':
+        return '.webm';
       default:
         return '';
     }

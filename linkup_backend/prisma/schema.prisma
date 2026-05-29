@@ -309,7 +309,11 @@ model MarketplaceItem {
 
 model Message {
   id         String   @id @default(cuid())
-  content    String
+  type       String   @default("text")
+  content    String   @default("")
+  mediaUrl   String?
+  mediaType  String?
+  duration   Int?
   senderId   String
   receiverId String
   read       Boolean  @default(false)

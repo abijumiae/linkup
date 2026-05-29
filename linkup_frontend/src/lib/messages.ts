@@ -21,13 +21,30 @@ export interface Conversation {
 
 export interface ChatMessage {
   id: string;
+  type?: string;
   content: string;
+  mediaUrl?: string | null;
+  mediaType?: string | null;
+  duration?: number | null;
   senderId: string;
   receiverId: string;
   read: boolean;
   createdAt: string;
   updatedAt: string;
   sender: MessageUser;
+}
+
+export function getMessagePreview(message: Pick<ChatMessage, "type" | "content">) {
+  if (message.type === "voice") {
+    return "Voice note";
+  }
+  return message.content;
+}
+
+export function formatVoiceDuration(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
 export interface ConversationDetail {
@@ -87,7 +104,31 @@ export async function sendMessage(
       headers: authHeaders(),
       body: JSON.stringify({
         content,
+        type: "text",
         marketplaceItemId: options?.marketplaceItemId,
+      }),
+    }),
+  );
+}
+
+export async function sendVoiceMessage(
+  userId: string,
+  payload: {
+    mediaUrl: string;
+    duration: number;
+    content?: string;
+  },
+): Promise<ChatMessage> {
+  return withAuth(() =>
+    apiRequest<ChatMessage>(`/messages/${userId}`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({
+        type: "voice",
+        content: payload.content ?? "",
+        mediaUrl: payload.mediaUrl,
+        mediaType: "audio",
+        duration: payload.duration,
       }),
     }),
   );
