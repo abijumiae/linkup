@@ -345,6 +345,108 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return this.onlineUsers.has(userId);
   }
 
+  @SubscribeMessage('call_offer')
+  handleCallOffer(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: {
+      peerId: string;
+      sdp: unknown;
+      callType?: 'audio' | 'video';
+    },
+  ) {
+    this.relayToPeer(client, payload?.peerId, 'call_offer', {
+      sdp: payload.sdp,
+      callType: payload.callType ?? 'video',
+    });
+  }
+
+  @SubscribeMessage('call_answer')
+  handleCallAnswer(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody() payload: { peerId: string; sdp: unknown },
+  ) {
+    this.relayToPeer(client, payload?.peerId, 'call_answer', {
+      sdp: payload.sdp,
+    });
+  }
+
+  @SubscribeMessage('ice_candidate')
+  handleIceCandidate(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody() payload: { peerId: string; candidate: unknown },
+  ) {
+    this.relayToPeer(client, payload?.peerId, 'ice_candidate', {
+      candidate: payload.candidate,
+    });
+  }
+
+  @SubscribeMessage('call_end')
+  handleCallEnd(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody() payload: { peerId: string },
+  ) {
+    this.relayToPeer(client, payload?.peerId, 'call_end', {});
+  }
+
+  /** @deprecated Use call_offer */
+  @SubscribeMessage('call:offer')
+  handleLegacyCallOffer(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: {
+      peerId: string;
+      sdp: unknown;
+      callType?: 'audio' | 'video';
+    },
+  ) {
+    this.handleCallOffer(client, payload);
+  }
+
+  /** @deprecated Use call_answer */
+  @SubscribeMessage('call:answer')
+  handleLegacyCallAnswer(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody() payload: { peerId: string; sdp: unknown },
+  ) {
+    this.handleCallAnswer(client, payload);
+  }
+
+  /** @deprecated Use ice_candidate */
+  @SubscribeMessage('call:ice-candidate')
+  handleLegacyIceCandidate(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody() payload: { peerId: string; candidate: unknown },
+  ) {
+    this.handleIceCandidate(client, payload);
+  }
+
+  /** @deprecated Use call_end */
+  @SubscribeMessage('call:end')
+  handleLegacyCallEnd(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody() payload: { peerId: string },
+  ) {
+    this.handleCallEnd(client, payload);
+  }
+
+  private relayToPeer(
+    client: AuthedSocket,
+    peerId: string | undefined,
+    event: string,
+    data: Record<string, unknown>,
+  ) {
+    const fromUserId = client.data?.userId;
+    if (!fromUserId || !peerId) {
+      return;
+    }
+
+    this.server.to(this.userRoom(peerId)).emit(event, {
+      ...data,
+      fromUserId,
+    });
+  }
+
   private userRoom(userId: string) {
     return `user:${userId}`;
   }

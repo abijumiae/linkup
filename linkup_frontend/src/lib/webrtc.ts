@@ -10,8 +10,10 @@ export interface CallSessionOptions {
   peerId: string;
   callType: CallType;
   isInitiator: boolean;
+  pendingOffer?: RTCSessionDescriptionInit;
   onRemoteStream: (stream: MediaStream) => void;
   onLocalStream: (stream: MediaStream) => void;
+  onConnected: () => void;
   onEnded: () => void;
   onError: (message: string) => void;
 }
@@ -21,17 +23,39 @@ const ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun1.l.google.com:19302" },
 ];
 
+export function isWebRTCSupported(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return (
+    typeof RTCPeerConnection !== "undefined" &&
+    typeof navigator !== "undefined" &&
+    Boolean(navigator.mediaDevices?.getUserMedia)
+  );
+}
+
 export class CallSession {
   private peerConnection: RTCPeerConnection | null = null;
   private localStream: MediaStream | null = null;
   private readonly options: CallSessionOptions;
+  private readonly pendingCandidates: RTCIceCandidateInit[] = [];
   private ended = false;
+  private audioEnabled = true;
+  private videoEnabled = true;
 
   constructor(options: CallSessionOptions) {
     this.options = options;
+    this.videoEnabled = options.callType === "video";
   }
 
   async start() {
+    if (!isWebRTCSupported()) {
+      this.options.onError("Calls are not supported on this device or browser.");
+      this.end(false);
+      return;
+    }
+
     try {
       this.localStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
@@ -48,37 +72,65 @@ export class CallSession {
         const [stream] = event.streams;
         if (stream) {
           this.options.onRemoteStream(stream);
+          this.options.onConnected();
         }
       };
 
       this.peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
-          this.options.socket.emit("call:ice-candidate", {
+          this.options.socket.emit("ice_candidate", {
             peerId: this.options.peerId,
-            candidate: event.candidate,
+            candidate: event.candidate.toJSON(),
           });
         }
       };
 
-      this.options.socket.on("call:offer", this.handleOffer);
-      this.options.socket.on("call:answer", this.handleAnswer);
-      this.options.socket.on("call:ice-candidate", this.handleIceCandidate);
-      this.options.socket.on("call:end", this.handleRemoteEnd);
-      this.options.socket.on("call:decline", this.handleRemoteEnd);
+      this.options.socket.on("call_offer", this.handleOffer);
+      this.options.socket.on("call_answer", this.handleAnswer);
+      this.options.socket.on("ice_candidate", this.handleIceCandidate);
+      this.options.socket.on("call_end", this.handleRemoteEnd);
 
       if (this.options.isInitiator) {
-        const offer = await this.peerConnection.createOffer();
+        const offer = await this.peerConnection.createOffer({
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: this.options.callType === "video",
+        });
         await this.peerConnection.setLocalDescription(offer);
-        this.options.socket.emit("call:offer", {
+        this.options.socket.emit("call_offer", {
           peerId: this.options.peerId,
           sdp: offer,
           callType: this.options.callType,
         });
+        return;
+      }
+
+      if (this.options.pendingOffer) {
+        await this.applyOffer(this.options.pendingOffer);
       }
     } catch {
-      this.options.onError("Could not access camera or microphone.");
-      this.end();
+      this.options.onError(
+        "Could not access your camera or microphone. Check permissions and try again.",
+      );
+      this.end(false);
     }
+  }
+
+  private async applyOffer(sdp: RTCSessionDescriptionInit) {
+    if (!this.peerConnection) {
+      return;
+    }
+
+    await this.peerConnection.setRemoteDescription(
+      new RTCSessionDescription(sdp),
+    );
+    await this.flushPendingCandidates();
+
+    const answer = await this.peerConnection.createAnswer();
+    await this.peerConnection.setLocalDescription(answer);
+    this.options.socket.emit("call_answer", {
+      peerId: this.options.peerId,
+      sdp: answer,
+    });
   }
 
   private handleOffer = async (payload: {
@@ -90,15 +142,12 @@ export class CallSession {
       return;
     }
 
-    await this.peerConnection.setRemoteDescription(
-      new RTCSessionDescription(payload.sdp),
-    );
-    const answer = await this.peerConnection.createAnswer();
-    await this.peerConnection.setLocalDescription(answer);
-    this.options.socket.emit("call:answer", {
-      peerId: this.options.peerId,
-      sdp: answer,
-    });
+    try {
+      await this.applyOffer(payload.sdp);
+    } catch {
+      this.options.onError("Could not connect the call.");
+      this.end(false);
+    }
   };
 
   private handleAnswer = async (payload: {
@@ -109,51 +158,105 @@ export class CallSession {
       return;
     }
 
-    await this.peerConnection.setRemoteDescription(
-      new RTCSessionDescription(payload.sdp),
-    );
+    try {
+      await this.peerConnection.setRemoteDescription(
+        new RTCSessionDescription(payload.sdp),
+      );
+      await this.flushPendingCandidates();
+      this.options.onConnected();
+    } catch {
+      this.options.onError("Could not connect the call.");
+      this.end(false);
+    }
   };
 
   private handleIceCandidate = async (payload: {
     fromUserId: string;
     candidate: RTCIceCandidateInit;
   }) => {
-    if (payload.fromUserId !== this.options.peerId || !this.peerConnection) {
+    if (payload.fromUserId !== this.options.peerId) {
       return;
     }
 
-    await this.peerConnection.addIceCandidate(
-      new RTCIceCandidate(payload.candidate),
-    );
+    if (!this.peerConnection?.remoteDescription) {
+      this.pendingCandidates.push(payload.candidate);
+      return;
+    }
+
+    try {
+      await this.peerConnection.addIceCandidate(
+        new RTCIceCandidate(payload.candidate),
+      );
+    } catch {
+      // Ignore stale candidates after reconnect.
+    }
   };
+
+  private async flushPendingCandidates() {
+    if (!this.peerConnection) {
+      return;
+    }
+
+    while (this.pendingCandidates.length > 0) {
+      const candidate = this.pendingCandidates.shift();
+      if (!candidate) {
+        continue;
+      }
+      try {
+        await this.peerConnection.addIceCandidate(
+          new RTCIceCandidate(candidate),
+        );
+      } catch {
+        // Ignore invalid queued candidates.
+      }
+    }
+  }
 
   private handleRemoteEnd = (payload: { fromUserId: string }) => {
     if (payload.fromUserId !== this.options.peerId) {
       return;
     }
-    this.end();
+    this.end(false);
   };
 
-  decline() {
-    this.options.socket.emit("call:decline", { peerId: this.options.peerId });
-    this.end();
+  toggleAudio(): boolean {
+    this.audioEnabled = !this.audioEnabled;
+    this.localStream?.getAudioTracks().forEach((track) => {
+      track.enabled = this.audioEnabled;
+    });
+    return this.audioEnabled;
   }
 
-  end() {
+  toggleVideo(): boolean {
+    this.videoEnabled = !this.videoEnabled;
+    this.localStream?.getVideoTracks().forEach((track) => {
+      track.enabled = this.videoEnabled;
+    });
+    return this.videoEnabled;
+  }
+
+  isAudioEnabled() {
+    return this.audioEnabled;
+  }
+
+  isVideoEnabled() {
+    return this.videoEnabled;
+  }
+
+  end(notifyPeer = true) {
     if (this.ended) {
       return;
     }
     this.ended = true;
 
-    this.options.socket.off("call:offer", this.handleOffer);
-    this.options.socket.off("call:answer", this.handleAnswer);
-    this.options.socket.off("call:ice-candidate", this.handleIceCandidate);
-    this.options.socket.off("call:end", this.handleRemoteEnd);
-    this.options.socket.off("call:decline", this.handleRemoteEnd);
-
-    if (this.options.isInitiator) {
-      this.options.socket.emit("call:end", { peerId: this.options.peerId });
+    if (notifyPeer) {
+      this.options.socket.emit("call_end", { peerId: this.options.peerId });
     }
+
+    this.options.socket.off("call_offer", this.handleOffer);
+    this.options.socket.off("call_answer", this.handleAnswer);
+    this.options.socket.off("ice_candidate", this.handleIceCandidate);
+    this.options.socket.off("call_end", this.handleRemoteEnd);
 
     this.localStream?.getTracks().forEach((track) => track.stop());
     this.peerConnection?.close();
@@ -162,3 +265,9 @@ export class CallSession {
     this.options.onEnded();
   }
 }
+
+export type IncomingCallPayload = {
+  fromUserId: string;
+  sdp: RTCSessionDescriptionInit;
+  callType: CallType;
+};

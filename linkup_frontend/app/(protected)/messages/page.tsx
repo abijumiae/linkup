@@ -42,7 +42,14 @@ import {
   sendMessage,
 } from "@/src/lib/messages";
 import { formatTimeAgo } from "@/src/lib/posts";
+import {
+  CallSession,
+  CallType,
+  IncomingCallPayload,
+  isWebRTCSupported,
+} from "@/src/lib/webrtc";
 import AuthLoadingScreen from "../../components/AuthLoadingScreen";
+import CallOverlay from "../../components/CallOverlay";
 import ChatListItem from "../../components/ChatListItem";
 import EmojiPicker from "../../components/EmojiPicker";
 import LiveRoomCard from "../../components/LiveRoomCard";
@@ -114,6 +121,18 @@ export default function MessagesPage() {
   const [typingGroupId, setTypingGroupId] = useState<string | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<Record<string, boolean>>({});
   const [socketConnected, setSocketConnected] = useState(false);
+  const [callType, setCallType] = useState<CallType | null>(null);
+  const [callStatus, setCallStatus] = useState<
+    "connecting" | "active" | "incoming" | null
+  >(null);
+  const [callPeerId, setCallPeerId] = useState<string | null>(null);
+  const [callPeerName, setCallPeerName] = useState<string>("");
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const [callAudioEnabled, setCallAudioEnabled] = useState(true);
+  const [callVideoEnabled, setCallVideoEnabled] = useState(true);
+  const callSessionRef = useRef<CallSession | null>(null);
+  const incomingCallRef = useRef<IncomingCallPayload | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -129,6 +148,35 @@ export default function MessagesPage() {
     }
     noticeTimeoutRef.current = setTimeout(() => setNotice(null), 4000);
   }, []);
+
+  const resolvePeerName = useCallback(
+    (userId: string) => {
+      if (activeUser?.id === userId) {
+        return activeUser.name;
+      }
+      const conversation = conversations.find((item) => item.user.id === userId);
+      return conversation?.user.name ?? "LinkUp user";
+    },
+    [activeUser, conversations],
+  );
+
+  const resetCallState = useCallback(() => {
+    callSessionRef.current = null;
+    incomingCallRef.current = null;
+    setCallType(null);
+    setCallStatus(null);
+    setCallPeerId(null);
+    setCallPeerName("");
+    setLocalStream(null);
+    setRemoteStream(null);
+    setCallAudioEnabled(true);
+    setCallVideoEnabled(true);
+  }, []);
+
+  const endCall = useCallback(() => {
+    callSessionRef.current?.end(true);
+    resetCallState();
+  }, [resetCallState]);
 
   const loadConversations = useCallback(async () => {
     try {
@@ -411,6 +459,37 @@ export default function MessagesPage() {
       }));
     };
 
+    const onCallOffer = (payload: {
+      fromUserId: string;
+      sdp: RTCSessionDescriptionInit;
+      callType?: CallType;
+    }) => {
+      if (callSessionRef.current || incomingCallRef.current) {
+        getSocket()?.emit("call_end", { peerId: payload.fromUserId });
+        return;
+      }
+
+      incomingCallRef.current = {
+        fromUserId: payload.fromUserId,
+        sdp: payload.sdp,
+        callType: payload.callType ?? "video",
+      };
+      setCallPeerId(payload.fromUserId);
+      setCallPeerName(resolvePeerName(payload.fromUserId));
+      setCallType(payload.callType ?? "video");
+      setCallStatus("incoming");
+    };
+
+    const onCallEnd = (payload: { fromUserId: string }) => {
+      if (
+        callPeerId === payload.fromUserId ||
+        incomingCallRef.current?.fromUserId === payload.fromUserId
+      ) {
+        callSessionRef.current?.end(false);
+        resetCallState();
+      }
+    };
+
     setSocketConnected(socket.connected);
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
@@ -419,6 +498,8 @@ export default function MessagesPage() {
     socket.on("message:read", onRead);
     socket.on("typing", onTyping);
     socket.on("presence:update", onPresence);
+    socket.on("call_offer", onCallOffer);
+    socket.on("call_end", onCallEnd);
 
     return () => {
       socket.off("connect", onConnect);
@@ -428,17 +509,23 @@ export default function MessagesPage() {
       socket.off("message:read", onRead);
       socket.off("typing", onTyping);
       socket.off("presence:update", onPresence);
+      socket.off("call_offer", onCallOffer);
+      socket.off("call_end", onCallEnd);
     };
   }, [
     activeGroup?.id,
     activeUser?.id,
+    callPeerId,
     currentUserId,
     loadConversations,
     loadGroupChats,
+    resetCallState,
+    resolvePeerName,
   ]);
 
   useEffect(() => {
     return () => {
+      callSessionRef.current?.end(false);
       disconnectSocket();
       if (noticeTimeoutRef.current) {
         clearTimeout(noticeTimeoutRef.current);
@@ -643,25 +730,153 @@ export default function MessagesPage() {
     }
   }
 
+  async function beginCall(type: CallType, peerId: string, peerName: string) {
+    if (!currentUserId) {
+      return;
+    }
+
+    if (!isWebRTCSupported()) {
+      showFeatureNotice("Calls are not supported on this device or browser.");
+      return;
+    }
+
+    const socket = getSocket();
+    if (!socket?.connected) {
+      showFeatureNotice("Connect to live chat before starting a call.");
+      return;
+    }
+
+    if (callSessionRef.current || callStatus) {
+      showFeatureNotice("You are already in a call.");
+      return;
+    }
+
+    setCallType(type);
+    setCallStatus("connecting");
+    setCallPeerId(peerId);
+    setCallPeerName(peerName);
+    setCallVideoEnabled(type === "video");
+
+    const session = new CallSession({
+      socket,
+      localUserId: currentUserId,
+      peerId,
+      callType: type,
+      isInitiator: true,
+      onLocalStream: setLocalStream,
+      onRemoteStream: setRemoteStream,
+      onConnected: () => setCallStatus("active"),
+      onEnded: resetCallState,
+      onError: (message) => {
+        showFeatureNotice(message);
+        resetCallState();
+      },
+    });
+
+    callSessionRef.current = session;
+    await session.start();
+  }
+
+  async function acceptIncomingCall() {
+    if (!currentUserId || !incomingCallRef.current || !callPeerId) {
+      return;
+    }
+
+    const socket = getSocket();
+    if (!socket?.connected) {
+      showFeatureNotice("Live connection unavailable. Try again.");
+      resetCallState();
+      return;
+    }
+
+    const incoming = incomingCallRef.current;
+    setCallStatus("connecting");
+    setCallType(incoming.callType);
+    setCallVideoEnabled(incoming.callType === "video");
+
+    const session = new CallSession({
+      socket,
+      localUserId: currentUserId,
+      peerId: incoming.fromUserId,
+      callType: incoming.callType,
+      isInitiator: false,
+      pendingOffer: incoming.sdp,
+      onLocalStream: setLocalStream,
+      onRemoteStream: setRemoteStream,
+      onConnected: () => setCallStatus("active"),
+      onEnded: resetCallState,
+      onError: (message) => {
+        showFeatureNotice(message);
+        resetCallState();
+      },
+    });
+
+    incomingCallRef.current = null;
+    callSessionRef.current = session;
+    await session.start();
+  }
+
+  function declineIncomingCall() {
+    if (callPeerId) {
+      getSocket()?.emit("call_end", { peerId: callPeerId });
+    }
+    resetCallState();
+  }
+
+  async function startDirectCall(type: CallType) {
+    if (chatTab !== "direct" || !activeUser) {
+      showFeatureNotice("Select a direct chat to start a call.");
+      return;
+    }
+
+    await beginCall(type, activeUser.id, activeUser.name);
+  }
+
+  function handleToggleCallAudio() {
+    const enabled = callSessionRef.current?.toggleAudio();
+    if (typeof enabled === "boolean") {
+      setCallAudioEnabled(enabled);
+    }
+  }
+
+  function handleToggleCallVideo() {
+    const enabled = callSessionRef.current?.toggleVideo();
+    if (typeof enabled === "boolean") {
+      setCallVideoEnabled(enabled);
+    }
+  }
+
   function renderCallActions() {
+    const isDirectChat = chatTab === "direct" && Boolean(activeUser);
+
     return (
       <>
         <button
           type="button"
-          onClick={() =>
-            showFeatureNotice("Audio call feature is coming soon.")
-          }
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-700 transition hover:border-brand-primary/30 hover:bg-brand-primary/5 dark:border-white/10 dark:bg-brand-dark dark:text-slate-200 dark:hover:bg-white/10"
+          onClick={() => {
+            if (isDirectChat) {
+              void startDirectCall("audio");
+              return;
+            }
+            showFeatureNotice("Group calls are coming soon.");
+          }}
+          disabled={!isDirectChat && chatTab !== "group"}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-700 transition hover:border-brand-primary/30 hover:bg-brand-primary/5 disabled:opacity-40 dark:border-white/10 dark:bg-brand-dark dark:text-slate-200 dark:hover:bg-white/10"
           aria-label="Audio call"
         >
           <Phone className="h-4 w-4" />
         </button>
         <button
           type="button"
-          onClick={() =>
-            showFeatureNotice("Video call feature is coming soon.")
-          }
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-700 transition hover:border-brand-primary/30 hover:bg-brand-primary/5 dark:border-white/10 dark:bg-brand-dark dark:text-slate-200 dark:hover:bg-white/10"
+          onClick={() => {
+            if (isDirectChat) {
+              void startDirectCall("video");
+              return;
+            }
+            showFeatureNotice("Group calls are coming soon.");
+          }}
+          disabled={!isDirectChat && chatTab !== "group"}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-700 transition hover:border-brand-primary/30 hover:bg-brand-primary/5 disabled:opacity-40 dark:border-white/10 dark:bg-brand-dark dark:text-slate-200 dark:hover:bg-white/10"
           aria-label="Video call"
         >
           <Video className="h-4 w-4" />
@@ -1113,6 +1328,23 @@ export default function MessagesPage() {
           </main>
         </div>
       </div>
+
+      {callType && callStatus ? (
+        <CallOverlay
+          callType={callType}
+          peerName={callPeerName}
+          localStream={localStream}
+          remoteStream={remoteStream}
+          status={callStatus}
+          audioEnabled={callAudioEnabled}
+          videoEnabled={callVideoEnabled}
+          onAccept={() => void acceptIncomingCall()}
+          onDecline={declineIncomingCall}
+          onEnd={endCall}
+          onToggleAudio={handleToggleCallAudio}
+          onToggleVideo={handleToggleCallVideo}
+        />
+      ) : null}
     </div>
   );
 }
