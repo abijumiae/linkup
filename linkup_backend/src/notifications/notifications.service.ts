@@ -2,6 +2,10 @@ import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/commo
 import { NotificationType, Prisma } from '../generated/prisma/client';
 import { RealtimeEmitter } from '../chat/realtime.emitter';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  buildChatAlertPayload,
+  buildRealtimeAlertPayload,
+} from './alert.util';
 
 const actorSelect = {
   id: true,
@@ -42,7 +46,7 @@ export class NotificationsService {
       recipientId: post.authorId,
       actorId,
       postId,
-      message: `${actor.name} liked your post`,
+      message: `${actor.name} boosted your Spark`,
     });
   }
 
@@ -81,7 +85,7 @@ export class NotificationsService {
       recipientId: post.authorId,
       actorId,
       postId,
-      message: `${actor.name} commented on your post`,
+      message: `${actor.name} replied to your Spark`,
     });
   }
 
@@ -202,7 +206,7 @@ export class NotificationsService {
       recipientId,
       actorId,
       postId: null,
-      message: `${actor.name} started following you`,
+      message: `${actor.name} connected with you`,
     });
   }
 
@@ -257,6 +261,80 @@ export class NotificationsService {
     return { message: 'All notifications marked as read' };
   }
 
+  emitDirectMessageAlert(message: {
+    id: string;
+    senderId: string;
+    receiverId: string;
+    sender: {
+      id: string;
+      name: string;
+      username: string;
+      avatarUrl: string | null;
+    };
+  }) {
+    const payload = buildChatAlertPayload({
+      messageId: message.id,
+      sender: message.sender,
+      recipientId: message.receiverId,
+    });
+    this.realtimeEmitter.emitAlert(message.receiverId, payload);
+    return payload;
+  }
+
+  async createAndEmitNotification(params: {
+    type: NotificationType;
+    recipientId: string;
+    actorId: string;
+    message: string;
+    postId?: string | null;
+    groupId?: string;
+    marketplaceItemId?: string;
+    jobId?: string;
+    eventId?: string;
+  }) {
+    const data: Prisma.NotificationCreateInput = {
+      type: params.type,
+      message: params.message,
+      recipient: { connect: { id: params.recipientId } },
+      actor: { connect: { id: params.actorId } },
+    };
+
+    if (params.postId) {
+      data.post = { connect: { id: params.postId } };
+    }
+    if (params.groupId) {
+      data.group = { connect: { id: params.groupId } };
+    }
+    if (params.marketplaceItemId) {
+      data.marketplaceItem = { connect: { id: params.marketplaceItemId } };
+    }
+    if (params.jobId) {
+      data.job = { connect: { id: params.jobId } };
+    }
+    if (params.eventId) {
+      data.event = { connect: { id: params.eventId } };
+    }
+
+    const created = await this.prisma.notification.create({
+      data,
+      include: notificationInclude,
+    });
+
+    this.emitSavedNotification(params.recipientId, created);
+    return created;
+  }
+
+  private emitSavedNotification(
+    recipientId: string,
+    notification: Prisma.NotificationGetPayload<{
+      include: typeof notificationInclude;
+    }>,
+  ) {
+    const payload = buildRealtimeAlertPayload(notification);
+    this.realtimeEmitter.emitAlert(recipientId, payload);
+    return payload;
+  }
+
   private async upsertNotification(params: {
     type: NotificationType;
     recipientId: string;
@@ -283,7 +361,7 @@ export class NotificationsService {
         },
         include: notificationInclude,
       });
-      this.realtimeEmitter.emitNotification(params.recipientId, updated);
+      this.emitSavedNotification(params.recipientId, updated);
       return updated;
     }
 
@@ -297,7 +375,7 @@ export class NotificationsService {
       },
       include: notificationInclude,
     });
-    this.realtimeEmitter.emitNotification(params.recipientId, created);
+    this.emitSavedNotification(params.recipientId, created);
     return created;
   }
 
@@ -318,17 +396,20 @@ export class NotificationsService {
     });
 
     if (existing) {
-      return this.prisma.notification.update({
+      const updated = await this.prisma.notification.update({
         where: { id: existing.id },
         data: {
           message: params.message,
           read: false,
           createdAt: new Date(),
         },
+        include: notificationInclude,
       });
+      this.emitSavedNotification(params.recipientId, updated);
+      return updated;
     }
 
-    return this.prisma.notification.create({
+    const created = await this.prisma.notification.create({
       data: {
         type: params.type,
         message: params.message,
@@ -336,7 +417,10 @@ export class NotificationsService {
         actorId: params.actorId,
         marketplaceItemId: params.marketplaceItemId,
       },
+      include: notificationInclude,
     });
+    this.emitSavedNotification(params.recipientId, created);
+    return created;
   }
 
   private async upsertGroupNotification(params: {
@@ -356,17 +440,20 @@ export class NotificationsService {
     });
 
     if (existing) {
-      return this.prisma.notification.update({
+      const updated = await this.prisma.notification.update({
         where: { id: existing.id },
         data: {
           message: params.message,
           read: false,
           createdAt: new Date(),
         },
+        include: notificationInclude,
       });
+      this.emitSavedNotification(params.recipientId, updated);
+      return updated;
     }
 
-    return this.prisma.notification.create({
+    const created = await this.prisma.notification.create({
       data: {
         type: params.type,
         message: params.message,
@@ -374,7 +461,10 @@ export class NotificationsService {
         actorId: params.actorId,
         groupId: params.groupId,
       },
+      include: notificationInclude,
     });
+    this.emitSavedNotification(params.recipientId, created);
+    return created;
   }
 
   private async upsertEventNotification(params: {
@@ -394,17 +484,20 @@ export class NotificationsService {
     });
 
     if (existing) {
-      return this.prisma.notification.update({
+      const updated = await this.prisma.notification.update({
         where: { id: existing.id },
         data: {
           message: params.message,
           read: false,
           createdAt: new Date(),
         },
+        include: notificationInclude,
       });
+      this.emitSavedNotification(params.recipientId, updated);
+      return updated;
     }
 
-    return this.prisma.notification.create({
+    const created = await this.prisma.notification.create({
       data: {
         type: params.type,
         message: params.message,
@@ -412,7 +505,10 @@ export class NotificationsService {
         actorId: params.actorId,
         eventId: params.eventId,
       },
+      include: notificationInclude,
     });
+    this.emitSavedNotification(params.recipientId, created);
+    return created;
   }
 
   private async upsertJobNotification(params: {
@@ -432,17 +528,20 @@ export class NotificationsService {
     });
 
     if (existing) {
-      return this.prisma.notification.update({
+      const updated = await this.prisma.notification.update({
         where: { id: existing.id },
         data: {
           message: params.message,
           read: false,
           createdAt: new Date(),
         },
+        include: notificationInclude,
       });
+      this.emitSavedNotification(params.recipientId, updated);
+      return updated;
     }
 
-    return this.prisma.notification.create({
+    const created = await this.prisma.notification.create({
       data: {
         type: params.type,
         message: params.message,
@@ -450,6 +549,9 @@ export class NotificationsService {
         actorId: params.actorId,
         jobId: params.jobId,
       },
+      include: notificationInclude,
     });
+    this.emitSavedNotification(params.recipientId, created);
+    return created;
   }
 }

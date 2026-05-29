@@ -21,6 +21,10 @@ export class RealtimeEmitter {
     this.emitToUser(recipientId, 'notification_received', notification);
   }
 
+  emitAlert(recipientId: string, alert: unknown) {
+    this.emitNotification(recipientId, alert);
+  }
+
   emitSparkCreated(post: unknown) {
     this.emitToRoom('pulse', 'spark_created', post);
   }

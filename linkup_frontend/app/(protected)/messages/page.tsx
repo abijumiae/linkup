@@ -25,6 +25,7 @@ import {
   TypingPayload,
 } from "@/src/lib/socket";
 import { useSocket } from "@/src/components/SocketProvider";
+import { useActiveChat } from "@/src/lib/ActiveChatContext";
 import {
   GroupChatMessage,
   GroupChatSummary,
@@ -124,6 +125,7 @@ export default function MessagesPage() {
   const [typingGroupId, setTypingGroupId] = useState<string | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<Record<string, boolean>>({});
   const { socket, status: socketStatus } = useSocket();
+  const { setActiveChatPeerId } = useActiveChat();
   const [callType, setCallType] = useState<CallType | null>(null);
   const [callStatus, setCallStatus] = useState<
     "connecting" | "active" | "incoming" | null
@@ -676,6 +678,15 @@ export default function MessagesPage() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (chatTab === "direct" && activeUser?.id) {
+      setActiveChatPeerId(activeUser.id);
+      return;
+    }
+
+    setActiveChatPeerId(null);
+  }, [activeUser?.id, chatTab, setActiveChatPeerId]);
 
   useEffect(() => {
     marketplaceInquirySentRef.current = false;

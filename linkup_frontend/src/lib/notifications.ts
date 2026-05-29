@@ -10,6 +10,15 @@ export type NotificationType =
   | "JOB_APPLICATION"
   | "EVENT_JOIN";
 
+export type AlertCategory =
+  | "chat"
+  | "boost"
+  | "reply"
+  | "connect"
+  | "hub"
+  | "work"
+  | "happening";
+
 export interface NotificationActor {
   id: string;
   name: string;
@@ -27,6 +36,8 @@ export interface Notification {
   read: boolean;
   createdAt: string;
   actor: NotificationActor;
+  alertCategory?: AlertCategory;
+  peerId?: string;
 }
 
 export interface NotificationsResponse {

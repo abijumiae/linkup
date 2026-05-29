@@ -512,11 +512,6 @@ export class ChatGateway
     this.server.to(room).emit('direct_message_received', { message });
     this.server.to(room).emit('message:new', { type: 'direct', message });
 
-    this.realtimeEmitter.emitNewMessageNotification(message.receiverId, {
-      peerId: message.senderId,
-      message,
-    });
-
     this.server
       .to(this.userRoom(message.receiverId))
       .emit('conversation:update', { peerId: message.senderId });

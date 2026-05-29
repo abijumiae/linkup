@@ -27,6 +27,13 @@ import {
   updateUserProfile,
   UpdateProfilePayload,
 } from "@/src/lib/users";
+import {
+  getBrowserAlertStatus,
+  isBrowserAlertsEnabled,
+  requestBrowserAlertPermission,
+  setBrowserAlertsEnabled,
+  type BrowserAlertStatus,
+} from "@/src/lib/browserNotifications";
 import SettingsSection from "../../components/SettingsSection";
 import { ThemeToggle } from "../../components/ThemeToggle";
 
@@ -46,6 +53,7 @@ type LocalUiPrefs = {
   notifyLikesComments: boolean;
   notifyFollows: boolean;
   notifyUpdates: boolean;
+  browserAlertsEnabled: boolean;
 };
 
 function ToggleRow({
@@ -121,6 +129,12 @@ export default function SettingsPage() {
   const [notifyLikesComments, setNotifyLikesComments] = useState(true);
   const [notifyFollows, setNotifyFollows] = useState(true);
   const [notifyUpdates, setNotifyUpdates] = useState(false);
+  const [browserAlertsEnabled, setBrowserAlertsEnabledState] = useState(false);
+  const [browserAlertStatus, setBrowserAlertStatus] =
+    useState<BrowserAlertStatus>("default");
+  const [browserAlertMessage, setBrowserAlertMessage] = useState<string | null>(
+    null,
+  );
   const [uiPrefsReady, setUiPrefsReady] = useState(false);
 
   const handleAuthFailure = useCallback(() => {
@@ -158,6 +172,11 @@ export default function SettingsPage() {
   }, [load]);
 
   useEffect(() => {
+    setBrowserAlertStatus(getBrowserAlertStatus());
+    setBrowserAlertsEnabledState(isBrowserAlertsEnabled());
+  }, []);
+
+  useEffect(() => {
     try {
       const stored = localStorage.getItem(LOCAL_PREFS_KEY);
       if (!stored) {
@@ -191,6 +210,9 @@ export default function SettingsPage() {
       }
       if (typeof parsed.notifyFollows === "boolean") setNotifyFollows(parsed.notifyFollows);
       if (typeof parsed.notifyUpdates === "boolean") setNotifyUpdates(parsed.notifyUpdates);
+      if (typeof parsed.browserAlertsEnabled === "boolean") {
+        setBrowserAlertsEnabledState(parsed.browserAlertsEnabled);
+      }
     } catch {
       // Ignore malformed local prefs and continue with defaults.
     } finally {
@@ -237,6 +259,7 @@ export default function SettingsPage() {
         notifyLikesComments,
         notifyFollows,
         notifyUpdates,
+        browserAlertsEnabled,
       };
       localStorage.setItem(LOCAL_PREFS_KEY, JSON.stringify(localPrefs));
       setSuccess("Settings saved successfully.");
@@ -254,6 +277,49 @@ export default function SettingsPage() {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function handleEnableBrowserAlerts() {
+    setBrowserAlertMessage(null);
+
+    if (browserAlertStatus === "unsupported") {
+      setBrowserAlertMessage("Browser notifications are not supported on this device.");
+      return;
+    }
+
+    if (browserAlertStatus === "denied") {
+      setBrowserAlertMessage(
+        "Browser alerts are blocked. You can enable them in browser settings.",
+      );
+      return;
+    }
+
+    const permission = await requestBrowserAlertPermission();
+    setBrowserAlertStatus(permission);
+
+    if (permission === "granted") {
+      setBrowserAlertsEnabledState(true);
+      setBrowserAlertsEnabled(true);
+      setBrowserAlertMessage("Browser alerts enabled.");
+      return;
+    }
+
+    if (permission === "denied") {
+      setBrowserAlertsEnabledState(false);
+      setBrowserAlertsEnabled(false);
+      setBrowserAlertMessage(
+        "Browser alerts are blocked. You can enable them in browser settings.",
+      );
+      return;
+    }
+
+    setBrowserAlertMessage("Browser alerts remain off.");
+  }
+
+  function handleDisableBrowserAlerts() {
+    setBrowserAlertsEnabledState(false);
+    setBrowserAlertsEnabled(false);
+    setBrowserAlertMessage("Browser alerts turned off.");
   }
 
   if (isLoading) {
@@ -587,6 +653,62 @@ export default function SettingsPage() {
                 onChange={setNotifyUpdates}
                 disabled={isSaving}
               />
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-brand-dark/70">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                    Browser notifications
+                  </p>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                    Get ready for push alerts later. This only requests browser
+                    permission on this device.
+                  </p>
+                  <p className="mt-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+                    Status:{" "}
+                    {browserAlertStatus === "unsupported"
+                      ? "Not supported"
+                      : browserAlertsEnabled && browserAlertStatus === "granted"
+                        ? "Browser alerts enabled"
+                        : browserAlertStatus === "denied"
+                          ? "Blocked by browser"
+                          : "Off"}
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void handleEnableBrowserAlerts()}
+                    disabled={
+                      isSaving ||
+                      browserAlertStatus === "unsupported" ||
+                      browserAlertStatus === "denied"
+                    }
+                    className="rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-4 py-2 text-sm font-semibold text-white shadow-md shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Enable
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDisableBrowserAlerts}
+                    disabled={isSaving || !browserAlertsEnabled}
+                    className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:hover:bg-white/10"
+                  >
+                    Off
+                  </button>
+                </div>
+              </div>
+              {browserAlertMessage ? (
+                <p className="mt-3 text-sm text-brand-primary dark:text-brand-secondary">
+                  {browserAlertMessage}
+                </p>
+              ) : null}
+              {browserAlertStatus === "denied" ? (
+                <p className="mt-2 text-sm text-amber-700 dark:text-amber-200">
+                  Browser alerts are blocked. You can enable them in browser settings.
+                </p>
+              ) : null}
             </div>
           </SettingsSection>
 

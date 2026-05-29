@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Bell, CheckCircle2 } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import { useNotifications } from "@/src/lib/NotificationsContext";
+import { isChatAlert } from "@/src/lib/alertUtils";
 import {
   fetchNotifications,
   markAllNotificationsRead,
@@ -58,6 +59,12 @@ function filterAlerts(
 ): Notification[] {
   if (filter === "all") return alerts;
   if (filter === "unread") return alerts.filter((alert) => !alert.read);
+  if (filter === "chats") {
+    return alerts.filter(
+      (alert) =>
+        isChatAlert(alert) || FILTER_TYPE_MAP.chats.includes(alert.type),
+    );
+  }
   return alerts.filter((alert) => FILTER_TYPE_MAP[filter].includes(alert.type));
 }
 

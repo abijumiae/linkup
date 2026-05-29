@@ -7,10 +7,19 @@ import {
   useEffect,
   useState,
 } from "react";
+import { usePathname } from "next/navigation";
 import { ApiError } from "./api";
+import { normalizeRealtimeAlert, RealtimeAlertPayload } from "./alertUtils";
 import { useAuth } from "./AuthProvider";
+import { useOptionalActiveChat } from "./ActiveChatContext";
+import {
+  getBrowserAlertStatus,
+  isBrowserAlertsEnabled,
+  showBrowserAlert,
+} from "./browserNotifications";
 import { fetchNotifications, Notification } from "./notifications";
 import { useSocket } from "@/src/components/SocketProvider";
+import AlertToast from "@/app/components/AlertToast";
 
 type NotificationsContextValue = {
   unreadCount: number;
@@ -31,9 +40,12 @@ export function NotificationsProvider({
 }) {
   const { isAuthenticated } = useAuth();
   const { socket } = useSocket();
+  const activeChat = useOptionalActiveChat();
+  const pathname = usePathname();
   const [unreadCount, setUnreadCount] = useState(0);
   const [latestNotification, setLatestNotification] =
     useState<Notification | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const refreshUnreadCount = useCallback(async () => {
     if (!isAuthenticated) {
@@ -55,6 +67,42 @@ export function NotificationsProvider({
     setLatestNotification(null);
   }, []);
 
+  const handleIncomingAlert = useCallback(
+    (raw: RealtimeAlertPayload | Notification) => {
+      const notification =
+        "actor" in raw && raw.actor && "type" in raw && !("notificationType" in raw)
+          ? (raw as Notification)
+          : normalizeRealtimeAlert(raw as RealtimeAlertPayload);
+
+      setLatestNotification(notification);
+
+      if (!notification.read) {
+        setUnreadCount((current) => current + 1);
+      }
+
+      const isOnAlertsPage = pathname === "/notifications";
+      const isInActiveChat =
+        pathname.startsWith("/messages") &&
+        activeChat?.activeChatPeerId === notification.peerId;
+
+      if (!isOnAlertsPage && !isInActiveChat) {
+        setToastMessage(notification.message);
+      }
+
+      if (
+        getBrowserAlertStatus() === "granted" &&
+        isBrowserAlertsEnabled() &&
+        !isInActiveChat
+      ) {
+        showBrowserAlert("New alert from LinkUp", {
+          body: notification.message,
+          tag: notification.id,
+        });
+      }
+    },
+    [activeChat?.activeChatPeerId, pathname],
+  );
+
   useEffect(() => {
     void refreshUnreadCount();
   }, [refreshUnreadCount]);
@@ -64,19 +112,21 @@ export function NotificationsProvider({
       return;
     }
 
-    const onNotification = (notification: Notification) => {
-      setLatestNotification(notification);
-      if (!notification.read) {
-        setUnreadCount((current) => current + 1);
-      }
-    };
-
-    socket.on("notification_received", onNotification);
+    socket.on("notification_received", handleIncomingAlert);
 
     return () => {
-      socket.off("notification_received", onNotification);
+      socket.off("notification_received", handleIncomingAlert);
     };
-  }, [socket]);
+  }, [handleIncomingAlert, socket]);
+
+  useEffect(() => {
+    if (!toastMessage) {
+      return;
+    }
+
+    const timer = setTimeout(() => setToastMessage(null), 4500);
+    return () => clearTimeout(timer);
+  }, [toastMessage]);
 
   return (
     <NotificationsContext.Provider
@@ -89,6 +139,12 @@ export function NotificationsProvider({
       }}
     >
       {children}
+      {toastMessage ? (
+        <AlertToast
+          message={toastMessage}
+          onDismiss={() => setToastMessage(null)}
+        />
+      ) : null}
     </NotificationsContext.Provider>
   );
 }

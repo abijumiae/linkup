@@ -177,6 +177,7 @@ export class MessagesService {
     }
 
     this.chatGateway.emitDirectMessage(message);
+    this.notificationsService.emitDirectMessageAlert(message);
 
     return message;
   }
