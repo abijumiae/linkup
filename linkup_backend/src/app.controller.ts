@@ -11,7 +11,11 @@ export class AppController {
   }
 
   @Get('health')
-  getHealth(): object {
-    return this.appService.getHealth();
+  health() {
+    return {
+      status: 'ok',
+      service: 'linkup-backend',
+      time: new Date().toISOString(),
+    };
   }
 }
