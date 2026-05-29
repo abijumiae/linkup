@@ -29,6 +29,7 @@ type ProfileHeaderProps = {
   interests?: string[];
   openToConnect?: string;
   profession?: string;
+  hasActiveMoment?: boolean;
 };
 
 function getInitials(user: AuthUser): string {
@@ -59,6 +60,7 @@ export default function ProfileHeader({
   interests = [],
   openToConnect,
   profession,
+  hasActiveMoment = false,
 }: ProfileHeaderProps) {
   const avatarLabel = getInitials(user);
   const locationLabel = user.country ?? "Not set";
@@ -88,18 +90,26 @@ export default function ProfileHeader({
 
           <div className="mt-4 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-              {user.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={user.avatarUrl}
-                  alt={user.name}
-                  className="h-24 w-24 rounded-2xl border-4 border-white object-cover shadow-lg ring-2 ring-brand-primary/20 dark:border-brand-dark sm:h-28 sm:w-28"
-                />
-              ) : (
-                <div className="flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-white bg-gradient-to-br from-brand-primary to-brand-secondary text-2xl font-semibold text-white shadow-lg dark:border-brand-dark sm:h-28 sm:w-28 sm:text-3xl">
-                  {avatarLabel}
-                </div>
-              )}
+              <div
+                className={
+                  hasActiveMoment
+                    ? "rounded-[1.35rem] bg-gradient-to-tr from-brand-primary via-violet-500 to-brand-secondary p-[3px]"
+                    : undefined
+                }
+              >
+                {user.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.name}
+                    className="h-24 w-24 rounded-2xl border-4 border-white object-cover shadow-lg ring-2 ring-brand-primary/20 dark:border-brand-dark sm:h-28 sm:w-28"
+                  />
+                ) : (
+                  <div className="flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-white bg-gradient-to-br from-brand-primary to-brand-secondary text-2xl font-semibold text-white shadow-lg dark:border-brand-dark sm:h-28 sm:w-28 sm:text-3xl">
+                    {avatarLabel}
+                  </div>
+                )}
+              </div>
 
               <div className="min-w-0 pt-1">
                 <div className="flex flex-wrap items-center gap-2">

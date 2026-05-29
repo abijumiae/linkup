@@ -29,6 +29,10 @@ export class RealtimeEmitter {
     this.emitToRoom('pulse', 'spark_created', post);
   }
 
+  emitMomentCreated(moment: unknown) {
+    this.emitToRoom('pulse', 'moment_created', moment);
+  }
+
   emitNewMessageNotification(
     recipientId: string,
     payload: { peerId: string; message: unknown },

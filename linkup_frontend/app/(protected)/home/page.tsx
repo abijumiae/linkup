@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useSocket } from "@/src/components/SocketProvider";
 import {
   Briefcase,
@@ -33,6 +33,14 @@ import OpportunityBoard from "../../components/linkup/OpportunityBoard";
 import PulseMeter from "../../components/linkup/PulseMeter";
 import QuickConnectPanel from "../../components/linkup/QuickConnectPanel";
 import FeedPostCard from "../../components/FeedPostCard";
+import MomentsStrip from "@/src/components/MomentsStrip";
+import DropMomentModal from "@/src/components/DropMomentModal";
+import MomentViewer from "@/src/components/MomentViewer";
+import {
+  fetchMomentsFeed,
+  Moment,
+  MomentGroup,
+} from "@/src/lib/moments";
 import { UploadMediaType } from "@/src/lib/uploads";
 
 type FeedComment = {
@@ -137,6 +145,18 @@ export default function HomeDashboardPage() {
     happenings: 0,
   });
   const [showLocalPulse, setShowLocalPulse] = useState(true);
+  const [momentGroups, setMomentGroups] = useState<MomentGroup[]>([]);
+  const [momentsLoading, setMomentsLoading] = useState(true);
+  const [dropMomentOpen, setDropMomentOpen] = useState(false);
+  const [viewerGroupIndex, setViewerGroupIndex] = useState<number | null>(null);
+
+  const loadMoments = () => {
+    setMomentsLoading(true);
+    fetchMomentsFeed()
+      .then((data) => setMomentGroups(data.groups))
+      .catch(() => setMomentGroups([]))
+      .finally(() => setMomentsLoading(false));
+  };
 
   useEffect(() => {
     setShowLocalPulse(getLocalProfilePrefs().showLocalPulse);
@@ -177,6 +197,7 @@ export default function HomeDashboardPage() {
     }
 
     void loadPulseCounts();
+    loadMoments();
   }, []);
 
   useEffect(() => {
@@ -209,10 +230,61 @@ export default function HomeDashboardPage() {
 
     socket.on("spark_created", onSparkCreated);
 
+    const onMomentCreated = (moment: Moment) => {
+      if (!moment?.id || !moment.user) {
+        loadMoments();
+        return;
+      }
+
+      setMomentGroups((current) => {
+        const next = [...current];
+        const groupIndex = next.findIndex(
+          (group) => group.user.id === moment.userId,
+        );
+
+        if (groupIndex >= 0) {
+          const group = next[groupIndex];
+          const withoutDuplicate = group.moments.filter(
+            (item) => item.id !== moment.id,
+          );
+          next[groupIndex] = {
+            ...group,
+            moments: [...withoutDuplicate, moment].sort(
+              (a, b) =>
+                new Date(a.createdAt).getTime() -
+                new Date(b.createdAt).getTime(),
+            ),
+          };
+        } else {
+          next.unshift({
+            user: moment.user,
+            moments: [moment],
+          });
+        }
+
+        if (currentUserId) {
+          next.sort((a, b) => {
+            if (a.user.id === currentUserId) return -1;
+            if (b.user.id === currentUserId) return 1;
+            const aLatest = a.moments[a.moments.length - 1]?.createdAt ?? "";
+            const bLatest = b.moments[b.moments.length - 1]?.createdAt ?? "";
+            return (
+              new Date(bLatest).getTime() - new Date(aLatest).getTime()
+            );
+          });
+        }
+
+        return next;
+      });
+    };
+
+    socket.on("moment_created", onMomentCreated);
+
     return () => {
       socket.off("spark_created", onSparkCreated);
+      socket.off("moment_created", onMomentCreated);
     };
-  }, [socket]);
+  }, [socket, currentUserId]);
 
   useEffect(() => {
     if (!sparkNotice) {
@@ -290,6 +362,18 @@ export default function HomeDashboardPage() {
     sparkInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     sparkInputRef.current?.focus();
   }
+
+  const activeMomentGroups = useMemo(
+    () => momentGroups.filter((group) => group.moments.length > 0),
+    [momentGroups],
+  );
+
+  const viewerInitialIndex =
+    viewerGroupIndex !== null && momentGroups[viewerGroupIndex]
+      ? activeMomentGroups.findIndex(
+          (group) => group.user.id === momentGroups[viewerGroupIndex]?.user.id,
+        )
+      : -1;
 
   const pulseMeterStats = [
     {
@@ -369,6 +453,30 @@ export default function HomeDashboardPage() {
               <p className="rounded-3xl border border-brand-primary/25 bg-brand-primary/10 px-4 py-3 text-sm text-brand-primary dark:text-brand-secondary">
                 {sparkNotice}
               </p>
+            ) : null}
+
+            <MomentsStrip
+              groups={momentGroups}
+              currentUserId={currentUserId}
+              isLoading={momentsLoading}
+              onDropMoment={() => setDropMomentOpen(true)}
+              onOpenGroup={(index) => setViewerGroupIndex(index)}
+            />
+
+            <DropMomentModal
+              open={dropMomentOpen}
+              onClose={() => setDropMomentOpen(false)}
+              onCreated={loadMoments}
+            />
+
+            {viewerGroupIndex !== null && viewerInitialIndex >= 0 ? (
+              <MomentViewer
+                groups={activeMomentGroups}
+                initialGroupIndex={viewerInitialIndex}
+                currentUserId={currentUserId}
+                onClose={() => setViewerGroupIndex(null)}
+                onDeleted={loadMoments}
+              />
             ) : null}
 
             <PulseMeter stats={pulseMeterStats} />

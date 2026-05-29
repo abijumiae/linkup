@@ -23,6 +23,7 @@ import {
   UpdateProfilePayload,
   UserPost,
 } from "@/src/lib/users";
+import { fetchUserMoments } from "@/src/lib/moments";
 import AuthLoadingScreen from "./AuthLoadingScreen";
 import ActivityBadges from "./linkup/ActivityBadges";
 import ProfileEditForm from "./ProfileEditForm";
@@ -77,6 +78,7 @@ export default function ProfilePageClient() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [localPrefs, setLocalPrefs] = useState(getLocalProfilePrefs);
+  const [hasActiveMoment, setHasActiveMoment] = useState(false);
 
   useEffect(() => {
     setLocalPrefs(getLocalProfilePrefs());
@@ -91,12 +93,14 @@ export default function ProfilePageClient() {
     setError(null);
 
     try {
-      const [user, posts] = await Promise.all([
-        fetchUserProfile(),
+      const user = await fetchUserProfile();
+      const [posts, moments] = await Promise.all([
         fetchMyPosts(),
+        fetchUserMoments(user.id).catch(() => []),
       ]);
       setProfileUser(user);
       setUserPosts(posts);
+      setHasActiveMoment(moments.length > 0);
       setUser(user);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -267,6 +271,7 @@ export default function ProfilePageClient() {
           interests={localPrefs.interests}
           openToConnect={localPrefs.openToConnect}
           profession={localPrefs.profession}
+          hasActiveMoment={hasActiveMoment}
           onEditProfile={() => {
             setSuccess(null);
             setIsEditing(true);
