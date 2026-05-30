@@ -25,7 +25,6 @@ export class MomentsController {
   @Post()
   @HttpCode(201)
   create(@Req() req: { user: SafeUser }, @Body() dto: CreateMomentDto) {
-    console.log('Moment create request received');
     this.logger.log(`Creating moment for user ${req.user.id}`);
     return this.momentsService.create(req.user.id, dto);
   }

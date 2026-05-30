@@ -96,51 +96,59 @@ export class MomentsService {
   }
 
   async findActiveFeed(viewerId: string) {
-    const following = await this.prisma.follow.findMany({
-      where: { followerId: viewerId },
-      select: { followingId: true },
-    });
+    try {
+      const following = await this.prisma.follow.findMany({
+        where: { followerId: viewerId },
+        select: { followingId: true },
+      });
 
-    const networkIds = [
-      viewerId,
-      ...following.map((row) => row.followingId),
-    ];
+      const networkIds = [
+        viewerId,
+        ...following.map((row) => row.followingId),
+      ];
 
-    const moments = await this.prisma.moment.findMany({
-      where: {
-        ...this.activeWhere(),
-        userId: { in: networkIds },
-      },
-      include: { user: { select: momentUserSelect } },
-      orderBy: { createdAt: 'desc' },
-      take: MOMENT_FEED_LIMIT,
-    });
-
-    if (moments.length === 0) {
-      const fallback = await this.prisma.moment.findMany({
-        where: this.activeWhere(),
+      const moments = await this.prisma.moment.findMany({
+        where: {
+          ...this.activeWhere(),
+          userId: { in: networkIds },
+        },
         include: { user: { select: momentUserSelect } },
         orderBy: { createdAt: 'desc' },
-        take: 40,
+        take: MOMENT_FEED_LIMIT,
       });
-      return this.groupByUser(fallback, viewerId);
-    }
 
-    return this.groupByUser(moments, viewerId);
+      if (moments.length === 0) {
+        const fallback = await this.prisma.moment.findMany({
+          where: this.activeWhere(),
+          include: { user: { select: momentUserSelect } },
+          orderBy: { createdAt: 'desc' },
+          take: 40,
+        });
+        return this.groupByUser(fallback, viewerId);
+      }
+
+      return this.groupByUser(moments, viewerId);
+    } catch {
+      return { groups: [] };
+    }
   }
 
   async findActiveByUser(userId: string) {
-    const moments = await this.prisma.moment.findMany({
-      where: {
-        userId,
-        ...this.activeWhere(),
-      },
-      include: { user: { select: momentUserSelect } },
-      orderBy: { createdAt: 'asc' },
-      take: MOMENT_FEED_LIMIT,
-    });
+    try {
+      const moments = await this.prisma.moment.findMany({
+        where: {
+          userId,
+          ...this.activeWhere(),
+        },
+        include: { user: { select: momentUserSelect } },
+        orderBy: { createdAt: 'asc' },
+        take: MOMENT_FEED_LIMIT,
+      });
 
-    return moments.map((moment) => this.serializeMoment(moment));
+      return moments.map((moment) => this.serializeMoment(moment));
+    } catch {
+      return [];
+    }
   }
 
   async userHasActiveMoment(userId: string) {

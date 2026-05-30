@@ -70,9 +70,13 @@ export default function WatchPageClient() {
         fetchMomentsFeedSafe(),
       ]);
 
-      const merged = mergeWithDemoVideos(fetchedResult.items);
-      setVideos(merged);
-      setUsingDemo(fetchedResult.items.length === 0 && merged.length > 0);
+      const usePreview = !fetchedResult.live;
+      const displayVideos = usePreview
+        ? mergeWithDemoVideos(fetchedResult.items)
+        : fetchedResult.items;
+
+      setVideos(displayVideos);
+      setUsingDemo(usePreview && displayVideos.length > 0);
       setContinueWatching(progressResult.items);
       setMomentGroups(momentsResult.groups);
       setVisibleCount(PAGE_SIZE);
@@ -83,7 +87,7 @@ export default function WatchPageClient() {
         momentsResult.warning;
 
       setWarning(
-        apiWarning && fetchedResult.items.length === 0 && merged.length > 0
+        apiWarning && usePreview && displayVideos.length > 0
           ? `${apiWarning} Preview picks are available below.`
           : apiWarning,
       );
@@ -92,13 +96,13 @@ export default function WatchPageClient() {
         router.replace("/login");
         return;
       }
-      const merged = mergeWithDemoVideos([]);
-      setVideos(merged);
-      setUsingDemo(merged.length > 0);
+      const previewVideos = mergeWithDemoVideos([]);
+      setVideos(previewVideos);
+      setUsingDemo(previewVideos.length > 0);
       setContinueWatching([]);
       setMomentGroups([]);
       setWarning(
-        merged.length > 0
+        previewVideos.length > 0
           ? "Live catalog unavailable. Preview picks are available below."
           : watchWarningFromError(err),
       );

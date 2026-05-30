@@ -1,4 +1,4 @@
-import { apiRequest, ApiError } from "./api";
+import { apiRequest, ApiError, getApiBaseUrl } from "./api";
 
 export type WatchCreator = {
   id: string;
@@ -248,12 +248,25 @@ export function mergeWithDemoVideos(videos: WatchVideo[]): WatchVideo[] {
   return DEMO_WATCH_VIDEOS;
 }
 
+export type WatchVideosResult = {
+  items: WatchVideo[];
+  warning: string | null;
+  live: boolean;
+};
+
 export function watchWarningFromError(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 404) {
-      return "Watch API is not live yet. Redeploy Render or restart the local backend.";
+      const api = getApiBaseUrl();
+      if (api.includes("onrender.com")) {
+        return "Watch API is not deployed on Render yet. Redeploy linkup-backend (clear build cache), then refresh.";
+      }
+      return `Watch API returned 404 from ${api}. Run: cd linkup_backend && npm run start:dev`;
     }
     if (error.status === 0) {
+      if (error.message.includes("timed out")) {
+        return "Backend or database timed out. Check Neon connection and restart the backend.";
+      }
       return error.message;
     }
   }
@@ -263,10 +276,10 @@ export function watchWarningFromError(error: unknown): string {
 
 export async function fetchWatchVideosSafe(
   filters: WatchFilters = {},
-): Promise<{ items: WatchVideo[]; warning: string | null }> {
+): Promise<WatchVideosResult> {
   try {
     const items = await fetchWatchVideos(filters);
-    return { items, warning: null };
+    return { items, warning: null, live: true };
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
       throw error;
@@ -274,6 +287,7 @@ export async function fetchWatchVideosSafe(
     return {
       items: [],
       warning: watchWarningFromError(error),
+      live: false,
     };
   }
 }

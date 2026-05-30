@@ -14,10 +14,10 @@ export default function WatchEmptyState({ onDropMoment }: WatchEmptyStateProps) 
         <Play className="h-5 w-5" />
       </div>
       <h3 className="mt-4 text-base font-semibold text-slate-900 dark:text-white">
-        No videos to show
+        No videos yet
       </h3>
       <p className="mx-auto mt-2 max-w-md text-sm text-slate-600 dark:text-slate-400">
-        Explore Discover or drop your own Moments.
+        Watch drops will appear here soon. Explore Discover or drop your own Moments.
       </p>
       <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
         <Link

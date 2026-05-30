@@ -88,68 +88,74 @@ export class WatchService {
     search?: string;
     userId?: string;
   }) {
-    const where: {
-      isPublished: boolean;
-      category?: string;
-      type?: string;
-      OR?: Array<{
-        title?: { contains: string; mode: 'insensitive' };
-        description?: { contains: string; mode: 'insensitive' };
-      }>;
-    } = { isPublished: true };
+    try {
+      const where: {
+        isPublished: boolean;
+        category?: string;
+        type?: string;
+        OR?: Array<{
+          title?: { contains: string; mode: 'insensitive' };
+          description?: { contains: string; mode: 'insensitive' };
+        }>;
+      } = { isPublished: true };
 
-    if (filters.category && filters.category !== 'All') {
-      where.category = filters.category;
-    }
+      if (filters.category && filters.category !== 'All') {
+        where.category = filters.category;
+      }
 
-    if (filters.type) {
-      where.type = filters.type;
-    }
+      if (filters.type) {
+        where.type = filters.type;
+      }
 
-    if (filters.search?.trim()) {
-      const term = filters.search.trim();
-      where.OR = [
-        { title: { contains: term, mode: 'insensitive' } },
-        { description: { contains: term, mode: 'insensitive' } },
-      ];
-    }
+      if (filters.search?.trim()) {
+        const term = filters.search.trim();
+        where.OR = [
+          { title: { contains: term, mode: 'insensitive' } },
+          { description: { contains: term, mode: 'insensitive' } },
+        ];
+      }
 
-    const videos = await this.prisma.watchVideo.findMany({
-      where,
-      include: { creator: { select: creatorSelect } },
-      orderBy: { createdAt: 'desc' },
-      take: WATCH_LIST_LIMIT,
-    });
+      const videos = await this.prisma.watchVideo.findMany({
+        where,
+        include: { creator: { select: creatorSelect } },
+        orderBy: { createdAt: 'desc' },
+        take: WATCH_LIST_LIMIT,
+      });
 
-    const viewCounts = await this.getViewCounts(videos.map((video) => video.id));
+      const viewCounts = await this.getViewCounts(
+        videos.map((video) => video.id),
+      );
 
-    if (!filters.userId) {
+      if (!filters.userId) {
+        return videos.map((video) =>
+          this.serializeVideo(video, null, {
+            viewsCount: viewCounts.get(video.id) ?? 0,
+          }),
+        );
+      }
+
+      const progressRows = await this.prisma.watchProgress.findMany({
+        where: {
+          userId: filters.userId,
+          videoId: { in: videos.map((video) => video.id) },
+        },
+      });
+
+      const progressMap = new Map(
+        progressRows.map((row) => [
+          row.videoId,
+          { progress: row.progress, completed: row.completed },
+        ]),
+      );
+
       return videos.map((video) =>
-        this.serializeVideo(video, null, {
+        this.serializeVideo(video, progressMap.get(video.id), {
           viewsCount: viewCounts.get(video.id) ?? 0,
         }),
       );
+    } catch {
+      return [];
     }
-
-    const progressRows = await this.prisma.watchProgress.findMany({
-      where: {
-        userId: filters.userId,
-        videoId: { in: videos.map((video) => video.id) },
-      },
-    });
-
-    const progressMap = new Map(
-      progressRows.map((row) => [
-        row.videoId,
-        { progress: row.progress, completed: row.completed },
-      ]),
-    );
-
-    return videos.map((video) =>
-      this.serializeVideo(video, progressMap.get(video.id), {
-        viewsCount: viewCounts.get(video.id) ?? 0,
-      }),
-    );
   }
 
   async findOne(id: string, userId?: string) {
@@ -242,31 +248,35 @@ export class WatchService {
   }
 
   async getMyProgress(userId: string) {
-    const rows = await this.prisma.watchProgress.findMany({
-      where: {
-        userId,
-        completed: false,
-        progress: { gt: 0 },
-      },
-      include: {
-        video: {
-          include: { creator: { select: creatorSelect } },
+    try {
+      const rows = await this.prisma.watchProgress.findMany({
+        where: {
+          userId,
+          completed: false,
+          progress: { gt: 0 },
         },
-      },
-      orderBy: { updatedAt: 'desc' },
-      take: 20,
-    });
+        include: {
+          video: {
+            include: { creator: { select: creatorSelect } },
+          },
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 20,
+      });
 
-    return rows
-      .filter((row) => row.video.isPublished)
-      .map((row) => ({
-        ...this.serializeVideo(row.video, {
-          progress: row.progress,
-          completed: row.completed,
-        }),
-        watchProgress: row.progress,
-        watchCompleted: row.completed,
-        lastWatchedAt: row.updatedAt.toISOString(),
-      }));
+      return rows
+        .filter((row) => row.video.isPublished)
+        .map((row) => ({
+          ...this.serializeVideo(row.video, {
+            progress: row.progress,
+            completed: row.completed,
+          }),
+          watchProgress: row.progress,
+          watchCompleted: row.completed,
+          lastWatchedAt: row.updatedAt.toISOString(),
+        }));
+    } catch {
+      return [];
+    }
   }
 }
