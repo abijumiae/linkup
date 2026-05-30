@@ -249,7 +249,7 @@ export default function VoiceNoteRecorder({
           Math.round((Date.now() - startedAtRef.current) / 1000),
         );
         const extension = fileExtensionForMime(normalizedMime);
-        const file = new File([blob], `voice-note.${extension}`, {
+        const file = new File([blob], `voice-${Date.now()}.${extension}`, {
           type: normalizedMime,
         });
         const objectUrl = URL.createObjectURL(blob);

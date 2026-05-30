@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Pause, Play } from "lucide-react";
+import { resolveMediaUrl } from "@/src/lib/messages";
 
 type MessageBubbleProps = {
   text?: string;
@@ -46,7 +47,7 @@ export default function MessageBubble({
   audioUrl,
   duration,
 }: MessageBubbleProps) {
-  const audioSrc = mediaUrl ?? audioUrl ?? undefined;
+  const audioSrc = resolveMediaUrl(mediaUrl ?? audioUrl ?? undefined);
   const isVoice = isAudioMessage(type, mediaUrl, audioUrl);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);

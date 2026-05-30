@@ -232,6 +232,14 @@ export class MessagesService {
       const messageType = this.normalizeMessageType(dto.type);
 
       if (messageType === 'voice') {
+        console.log('Voice message request:', {
+          senderId,
+          receiverId,
+          type: messageType,
+          hasMediaUrl: Boolean(dto.mediaUrl ?? dto.audioUrl),
+          duration: dto.duration ?? dto.audioDuration ?? null,
+        });
+
         const mediaUrl = dto.mediaUrl ?? dto.audioUrl;
         const duration = dto.duration ?? dto.audioDuration;
         if (!mediaUrl) {
@@ -271,7 +279,7 @@ export class MessagesService {
         );
       }
 
-      this.realtimeEmitter.emitDirectMessage(message);
+      this.realtimeEmitter.emitDirectMessage(this.serializeMessage(message));
       this.notificationsService.emitDirectMessageAlert(message);
 
       return this.serializeMessage(message);

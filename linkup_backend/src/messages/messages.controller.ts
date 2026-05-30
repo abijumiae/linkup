@@ -3,15 +3,16 @@ import {
   Body,
   Controller,
   Get,
+  Logger,
   Param,
   Post,
   Req,
   UnauthorizedException,
-  UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { memoryStorage } from 'multer';
@@ -26,6 +27,8 @@ const AUDIO_UPLOAD_LIMIT = 10 * 1024 * 1024;
 @Controller('messages')
 @UseGuards(JwtAuthGuard)
 export class MessagesController {
+  private readonly logger = new Logger(MessagesController.name);
+
   constructor(
     private readonly messagesService: MessagesService,
     private readonly uploadsService: UploadsService,
@@ -38,15 +41,38 @@ export class MessagesController {
 
   @Post('upload-audio')
   @UseInterceptors(
-    FileInterceptor('audio', {
-      storage: memoryStorage(),
-      limits: { fileSize: AUDIO_UPLOAD_LIMIT },
-    }),
+    FileFieldsInterceptor(
+      [
+        { name: 'audio', maxCount: 1 },
+        { name: 'file', maxCount: 1 },
+        { name: 'audioFile', maxCount: 1 },
+      ],
+      {
+        storage: memoryStorage(),
+        limits: { fileSize: AUDIO_UPLOAD_LIMIT },
+      },
+    ),
   )
   uploadAudio(
     @Req() _req: { user: SafeUser },
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFiles()
+    files: {
+      audio?: Express.Multer.File[];
+      file?: Express.Multer.File[];
+      audioFile?: Express.Multer.File[];
+    },
   ) {
+    const file =
+      files.audio?.[0] ?? files.file?.[0] ?? files.audioFile?.[0];
+    this.logger.log('Upload-audio request received');
+    this.logger.log(
+      `File received: ${file?.originalname ?? 'none'} ${file?.mimetype ?? 'none'} ${file?.size ?? 0}`,
+    );
+
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
     return this.uploadsService.uploadFile(file);
   }
 
@@ -58,46 +84,88 @@ export class MessagesController {
     return this.messagesService.getConversation(req.user.id, userId);
   }
 
-  @Post(':userId')
+  @Post(':userId/voice')
   @UseInterceptors(
-    FileInterceptor('audioFile', {
-      storage: memoryStorage(),
-      limits: { fileSize: AUDIO_UPLOAD_LIMIT },
-    }),
+    FileFieldsInterceptor(
+      [
+        { name: 'audioFile', maxCount: 1 },
+        { name: 'file', maxCount: 1 },
+        { name: 'audio', maxCount: 1 },
+      ],
+      {
+        storage: memoryStorage(),
+        limits: { fileSize: AUDIO_UPLOAD_LIMIT },
+      },
+    ),
   )
-  async sendMessage(
+  async sendVoiceMessage(
     @Param('userId') userId: string,
     @Req() req: { user: SafeUser },
     @Body() body: Record<string, unknown>,
-    @UploadedFile() audioFile?: Express.Multer.File,
+    @UploadedFiles()
+    files: {
+      audioFile?: Express.Multer.File[];
+      file?: Express.Multer.File[];
+      audio?: Express.Multer.File[];
+    },
   ) {
     if (!req.user?.id) {
       throw new UnauthorizedException('Unauthorized');
     }
 
-    if (audioFile) {
-      const uploaded = await this.uploadsService.uploadFile(audioFile);
-      const duration = Number(body.duration ?? body.audioDuration ?? 0);
+    const audioFile =
+      files.audioFile?.[0] ?? files.file?.[0] ?? files.audio?.[0];
 
-      if (!Number.isFinite(duration) || duration < 1) {
-        throw new BadRequestException('Voice note duration is required');
-      }
+    this.logger.log('Voice multipart request received');
+    this.logger.log(
+      `File received: ${audioFile?.originalname ?? 'none'} ${audioFile?.mimetype ?? 'none'} ${audioFile?.size ?? 0}`,
+    );
 
-      return this.messagesService.sendMessage(req.user.id, userId, {
-        type: 'voice',
-        mediaUrl: uploaded.url,
-        audioUrl: uploaded.url,
-        mediaType: 'audio',
-        duration: Math.floor(duration),
-        content: typeof body.content === 'string' ? body.content : '',
-        marketplaceItemId:
-          typeof body.marketplaceItemId === 'string'
-            ? body.marketplaceItemId
-            : undefined,
-      });
+    if (!audioFile || audioFile.size < 1) {
+      throw new BadRequestException('Voice note file is required');
+    }
+
+    const uploaded = await this.uploadsService.uploadFile(audioFile);
+    const duration = Number(body.duration ?? body.audioDuration ?? 0);
+
+    if (!Number.isFinite(duration) || duration < 1) {
+      throw new BadRequestException('Voice note duration is required');
+    }
+
+    return this.messagesService.sendMessage(req.user.id, userId, {
+      type: 'voice',
+      mediaUrl: uploaded.url,
+      audioUrl: uploaded.url,
+      mediaType: 'audio',
+      duration: Math.floor(duration),
+      content: typeof body.content === 'string' ? body.content : '',
+      marketplaceItemId:
+        typeof body.marketplaceItemId === 'string'
+          ? body.marketplaceItemId
+          : undefined,
+    });
+  }
+
+  @Post(':userId')
+  async sendMessage(
+    @Param('userId') userId: string,
+    @Req() req: { user: SafeUser },
+    @Body() body: Record<string, unknown>,
+  ) {
+    if (!req.user?.id) {
+      throw new UnauthorizedException('Unauthorized');
     }
 
     const dto = await this.validateCreateMessageDto(body);
+    this.logger.log(
+      `Voice message request: ${JSON.stringify({
+        senderId: req.user.id,
+        receiverId: userId,
+        type: dto.type ?? 'text',
+        hasMediaUrl: Boolean(dto.mediaUrl ?? dto.audioUrl),
+        duration: dto.duration ?? dto.audioDuration ?? null,
+      })}`,
+    );
     return this.messagesService.sendMessage(req.user.id, userId, dto);
   }
 

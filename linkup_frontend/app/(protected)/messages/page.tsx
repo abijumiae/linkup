@@ -17,7 +17,7 @@ import {
   Users,
   Video,
 } from "lucide-react";
-import { ApiError } from "@/src/lib/api";
+import { ApiError, getApiBaseUrl } from "@/src/lib/api";
 import { getCurrentUser, getToken } from "@/src/lib/auth";
 import {
   getSocket,
@@ -429,15 +429,12 @@ export default function MessagesPage() {
   }, [socket, activeUser?.id, currentUserId]);
 
   useEffect(() => {
-    if (
-      socketStatus === "connected" ||
-      chatTab !== "direct" ||
-      !activeUser?.id
-    ) {
+    if (chatTab !== "direct" || !activeUser?.id) {
       return;
     }
 
     let cancelled = false;
+    const pollIntervalMs = socketStatus === "connected" ? 12000 : 3000;
 
     const pollMessages = async () => {
       if (cancelled || document.hidden) {
@@ -460,7 +457,7 @@ export default function MessagesPage() {
     };
 
     void pollMessages();
-    const intervalId = window.setInterval(pollMessages, 3000);
+    const intervalId = window.setInterval(pollMessages, pollIntervalMs);
 
     return () => {
       cancelled = true;
@@ -905,6 +902,16 @@ export default function MessagesPage() {
   }
 
   async function handleSendVoiceNote(file: File, durationSeconds: number) {
+    const token = getToken();
+    const receiverId = activeUser?.id ?? selectedUserId;
+
+    console.log("Voice note send started");
+    console.log("Audio blob exists:", Boolean(file));
+    console.log("Audio blob size:", file?.size);
+    console.log("Selected user id:", receiverId);
+    console.log("Token exists:", Boolean(token));
+    console.log("Upload endpoint:", `${getApiBaseUrl()}/uploads`);
+
     if (!activeUser?.id || chatTab !== "direct" || isSending) {
       if (!activeUser?.id) {
         showFeatureNotice("Select a chat first");
@@ -1052,22 +1059,9 @@ export default function MessagesPage() {
     emitTypingStop();
 
     try {
-      if (
-        chatTab === "direct" &&
-        activeUser?.id &&
-        socket?.connected
-      ) {
-        socket.emit("send_direct_message", {
-          receiverId: activeUser.id,
-          content: trimmed,
-        });
-        setMessageInput("");
-        setTimeout(scrollToBottom, 50);
-      } else {
-        await sendViaRest(trimmed);
-        setMessageInput("");
-        setTimeout(scrollToBottom, 50);
-      }
+      await sendViaRest(trimmed);
+      setMessageInput("");
+      setTimeout(scrollToBottom, 50);
     } catch (err) {
       console.error("Send message failed:", err);
 

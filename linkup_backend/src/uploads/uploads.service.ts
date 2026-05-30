@@ -29,9 +29,22 @@ const AUDIO_MIME_TYPES = new Set([
   'audio/webm',
   'audio/mpeg',
   'audio/mp4',
+  'audio/aac',
+  'audio/x-m4a',
+  'audio/x-caf',
   'audio/wav',
   'audio/ogg',
   'audio/x-wav',
+]);
+
+const AUDIO_EXTENSIONS = new Set([
+  '.webm',
+  '.mp3',
+  '.m4a',
+  '.aac',
+  '.wav',
+  '.ogg',
+  '.caf',
 ]);
 
 /** Strip codec parameters (e.g. audio/webm;codecs=opus → audio/webm). */
@@ -73,7 +86,10 @@ export class UploadsService {
       throw new BadRequestException('No file uploaded');
     }
 
-    const mediaType = this.resolveMediaType(normalizeMimeType(file.mimetype));
+    const mediaType = this.resolveMediaType(
+      normalizeMimeType(file.mimetype),
+      file.originalname,
+    );
     this.validateSize(file.size, mediaType);
 
     if (this.useCloudinary) {
@@ -83,7 +99,10 @@ export class UploadsService {
     return this.uploadToLocal(file, mediaType);
   }
 
-  private resolveMediaType(mimetype: string): UploadMediaType {
+  private resolveMediaType(
+    mimetype: string,
+    originalname?: string,
+  ): UploadMediaType {
     if (IMAGE_MIME_TYPES.has(mimetype)) {
       return 'image';
     }
@@ -94,6 +113,22 @@ export class UploadsService {
 
     if (AUDIO_MIME_TYPES.has(mimetype)) {
       return 'audio';
+    }
+
+    if (
+      (mimetype === 'application/octet-stream' || !mimetype) &&
+      originalname
+    ) {
+      const extension = extname(originalname).toLowerCase();
+      if (AUDIO_EXTENSIONS.has(extension)) {
+        return 'audio';
+      }
+      if (['.jpg', '.jpeg', '.png', '.webp'].includes(extension)) {
+        return 'image';
+      }
+      if (['.mp4', '.webm', '.mov'].includes(extension)) {
+        return 'video';
+      }
     }
 
     throw new BadRequestException(
@@ -130,6 +165,8 @@ export class UploadsService {
       '.wav',
       '.ogg',
       '.m4a',
+      '.aac',
+      '.caf',
     ]);
 
     if (allowed.has(fromName)) {
@@ -157,7 +194,11 @@ export class UploadsService {
       case 'audio/ogg':
         return '.ogg';
       case 'audio/mp4':
+      case 'audio/aac':
+      case 'audio/x-m4a':
         return '.m4a';
+      case 'audio/x-caf':
+        return '.caf';
       case 'audio/webm':
         return '.webm';
       default:

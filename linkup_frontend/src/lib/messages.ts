@@ -1,4 +1,4 @@
-import { apiRequest, ApiError, getApiBaseUrl } from "./api";
+import { apiRequest, ApiError, extractErrorMessage, getApiBaseUrl } from "./api";
 import { clearAuth, getToken } from "./auth";
 
 export interface MessageUser {
@@ -33,6 +33,22 @@ export interface ChatMessage {
   createdAt: string;
   updatedAt: string;
   sender: MessageUser;
+}
+
+export function resolveMediaUrl(url: string | null | undefined): string | undefined {
+  if (!url) {
+    return undefined;
+  }
+
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
+
+  if (url.startsWith("/")) {
+    return `${getApiBaseUrl()}${url}`;
+  }
+
+  return url;
 }
 
 export function getMessagePreview(message: Pick<ChatMessage, "type" | "content">) {
@@ -124,45 +140,163 @@ export async function sendMessage(
   );
 }
 
-export async function uploadVoiceNote(file: File): Promise<{
+type UploadVoiceResult = {
   url: string;
   type: string;
   filename: string;
-}> {
+};
+
+export async function uploadVoiceNote(file: File): Promise<UploadVoiceResult> {
   const token = getToken();
+  const apiUrl = getApiBaseUrl();
 
   if (!token) {
     throw new ApiError("Not authenticated", 401);
   }
 
+  if (file.size < 1) {
+    throw new ApiError("Voice note recording is empty", 400);
+  }
+
   const formData = new FormData();
-  formData.append("audio", file);
+  formData.append("file", file, file.name || `voice-${Date.now()}.webm`);
 
-  const response = await fetch(`${getApiBaseUrl()}/messages/upload-audio`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
-  });
+  let response: Response | undefined;
+  let responseBody: unknown = null;
 
-  let data: unknown = null;
   try {
-    data = await response.json();
-  } catch {
-    data = null;
-  }
+    response = await fetch(`${apiUrl}/uploads`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
 
-  if (!response.ok) {
-    if (response.status === 401) {
-      clearAuth();
+    try {
+      responseBody = await response.json();
+    } catch {
+      responseBody = null;
     }
-    throw new ApiError("Could not send voice note. Please try again.", response.status);
-  }
 
-  return data as { url: string; type: string; filename: string };
+    if (!response.ok) {
+      if (response.status === 401) {
+        clearAuth();
+      }
+
+      console.error("Voice upload failed:", extractErrorMessage(responseBody, "Upload failed"));
+      console.error("Upload response status:", response.status);
+      console.error("Upload response body:", responseBody);
+
+      throw new ApiError(
+        extractErrorMessage(
+          responseBody,
+          "Could not send voice note. Please try again.",
+        ),
+        response.status,
+      );
+    }
+
+    const uploaded = responseBody as Partial<UploadVoiceResult>;
+    if (!uploaded.url) {
+      console.error("Upload response missing url:", responseBody);
+      throw new ApiError("Upload response missing audio URL", 500);
+    }
+
+    return uploaded as UploadVoiceResult;
+  } catch (error) {
+    if (!(error instanceof ApiError)) {
+      console.error("Voice upload failed:", error);
+      console.error("Upload response status:", response?.status);
+      console.error("Upload response body:", responseBody);
+    }
+    throw error;
+  }
 }
 
+export async function sendVoiceMessageByUrl(
+  userId: string,
+  payload: {
+    mediaUrl: string;
+    duration: number;
+    content?: string;
+  },
+): Promise<ChatMessage> {
+  const receiverId = userId.trim();
+
+  if (!receiverId) {
+    throw new ApiError("Select a chat first", 400);
+  }
+
+  if (payload.duration < 1) {
+    throw new ApiError("Voice note duration is required", 400);
+  }
+
+  const token = getToken();
+  const apiUrl = getApiBaseUrl();
+
+  if (!token) {
+    throw new ApiError("Not authenticated", 401);
+  }
+
+  let response: Response | undefined;
+  let responseBody: unknown = null;
+
+  try {
+    response = await fetch(`${apiUrl}/messages/${encodeURIComponent(receiverId)}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        type: "voice",
+        mediaUrl: payload.mediaUrl,
+        mediaType: "audio",
+        duration: Math.floor(payload.duration),
+        content: payload.content ?? "",
+      }),
+    });
+
+    try {
+      responseBody = await response.json();
+    } catch {
+      responseBody = null;
+    }
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        clearAuth();
+      }
+
+      console.error(
+        "Voice message send failed:",
+        extractErrorMessage(responseBody, "Send failed"),
+      );
+      console.error("Message send response status:", response.status);
+      console.error("Message send response body:", responseBody);
+
+      throw new ApiError(
+        extractErrorMessage(
+          responseBody,
+          "Could not send voice note. Please try again.",
+        ),
+        response.status,
+      );
+    }
+
+    return responseBody as ChatMessage;
+  } catch (error) {
+    if (!(error instanceof ApiError)) {
+      console.error("Voice message send failed:", error);
+      console.error("Message send response status:", response?.status);
+      console.error("Message send response body:", responseBody);
+    }
+    throw error;
+  }
+}
+
+/** Upload audio to /uploads, then create a voice message via JSON POST. */
 export async function sendVoiceMessage(
   userId: string,
   file: File,
@@ -178,72 +312,14 @@ export async function sendVoiceMessage(
     throw new ApiError("Voice note duration is required", 400);
   }
 
-  const token = getToken();
-
-  if (!token) {
-    throw new ApiError("Not authenticated", 401);
+  if (file.size < 1) {
+    throw new ApiError("Voice note recording is empty", 400);
   }
 
-  const formData = new FormData();
-  formData.append("type", "AUDIO");
-  formData.append("audioFile", file);
-  formData.append("duration", String(Math.floor(duration)));
+  const uploaded = await uploadVoiceNote(file);
 
-  const response = await fetch(
-    `${getApiBaseUrl()}/messages/${encodeURIComponent(receiverId)}`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    },
-  );
-
-  let data: unknown = null;
-  try {
-    data = await response.json();
-  } catch {
-    data = null;
-  }
-
-  if (!response.ok) {
-    if (response.status === 401) {
-      clearAuth();
-    }
-    throw new ApiError(
-      "Could not send voice note. Please try again.",
-      response.status,
-    );
-  }
-
-  return data as ChatMessage;
-}
-
-/** @deprecated Use sendVoiceMessage(userId, file, duration) */
-export async function sendVoiceMessageByUrl(
-  userId: string,
-  payload: {
-    mediaUrl: string;
-    duration: number;
-    content?: string;
-  },
-): Promise<ChatMessage> {
-  return withAuth(() =>
-    apiRequest<ChatMessage>(`/messages/${userId}`, {
-      method: "POST",
-      headers: {
-        ...authHeaders(),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        type: "AUDIO",
-        content: payload.content ?? "",
-        mediaUrl: payload.mediaUrl,
-        audioUrl: payload.mediaUrl,
-        mediaType: "audio",
-        duration: payload.duration,
-      }),
-    }),
-  );
+  return sendVoiceMessageByUrl(receiverId, {
+    mediaUrl: uploaded.url,
+    duration: Math.floor(duration),
+  });
 }

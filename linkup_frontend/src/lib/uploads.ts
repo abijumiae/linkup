@@ -62,10 +62,34 @@ export function validateMediaFile(file: File): string | null {
   return null;
 }
 
+const AUDIO_EXTENSIONS = new Set([
+  ".webm",
+  ".mp3",
+  ".m4a",
+  ".aac",
+  ".wav",
+  ".ogg",
+  ".caf",
+]);
+
+function inferAudioFromFilename(filename: string): boolean {
+  const lower = filename.toLowerCase();
+  for (const extension of AUDIO_EXTENSIONS) {
+    if (lower.endsWith(extension)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function validateUploadFile(file: File): string | null {
+  const normalizedType = normalizeMimeType(file.type);
   const isImage = isAllowedMime(file.type, IMAGE_TYPES);
   const isVideo = isAllowedMime(file.type, VIDEO_TYPES);
-  const isAudio = isAllowedMime(file.type, AUDIO_TYPES);
+  const isAudio =
+    isAllowedMime(file.type, AUDIO_TYPES) ||
+    normalizedType === "application/octet-stream" ||
+    (!normalizedType && inferAudioFromFilename(file.name));
 
   if (!isImage && !isVideo && !isAudio) {
     return "Unsupported file type.";

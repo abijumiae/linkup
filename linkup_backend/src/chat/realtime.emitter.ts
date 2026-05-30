@@ -7,6 +7,7 @@ export type RealtimeDirectMessage = {
   type?: string;
   content: string;
   mediaUrl?: string | null;
+  audioUrl?: string | null;
   mediaType?: string | null;
   duration?: number | null;
   senderId: string;
@@ -74,8 +75,10 @@ export class RealtimeEmitter {
       return;
     }
 
+    const isVoice = message.type === 'voice' || message.type === 'audio';
     const serialized = {
       ...message,
+      audioUrl: isVoice ? message.mediaUrl ?? null : null,
       createdAt:
         message.createdAt instanceof Date
           ? message.createdAt.toISOString()

@@ -50,16 +50,16 @@ export async function apiRequest<T>(
   }
 
   if (!response.ok) {
-    const message = extractErrorMessage(data);
+    const message = extractErrorMessage(data, "Request failed");
     throw new ApiError(message, response.status);
   }
 
   return data as T;
 }
 
-function extractErrorMessage(data: unknown): string {
+export function extractErrorMessage(data: unknown, fallback: string): string {
   if (!data || typeof data !== "object") {
-    return "Request failed";
+    return fallback;
   }
 
   const record = data as Record<string, unknown>;
@@ -69,9 +69,9 @@ function extractErrorMessage(data: unknown): string {
     return message.join(", ");
   }
 
-  if (typeof message === "string") {
+  if (typeof message === "string" && message.trim()) {
     return message;
   }
 
-  return "Request failed";
+  return fallback;
 }
