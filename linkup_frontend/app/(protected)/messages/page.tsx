@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -56,12 +57,18 @@ import {
   GroupCallSession,
 } from "@/src/lib/groupWebrtc";
 import AuthLoadingScreen from "../../components/AuthLoadingScreen";
-import CallOverlay from "../../components/CallOverlay";
-import GroupCallOverlay from "../../components/GroupCallOverlay";
 import ChatListItem from "../../components/ChatListItem";
 import EmojiPicker from "../../components/EmojiPicker";
 import LiveRoomCard from "../../components/LiveRoomCard";
 import MessageBubble from "../../components/MessageBubble";
+
+const CallOverlay = dynamic(() => import("../../components/CallOverlay"), {
+  ssr: false,
+});
+const GroupCallOverlay = dynamic(
+  () => import("../../components/GroupCallOverlay"),
+  { ssr: false },
+);
 
 type ChatTab = "direct" | "group" | "live";
 
@@ -352,10 +359,6 @@ export default function MessagesPage() {
         await openGroupConversation(selectedGroupId);
       } else if (selectedUserId) {
         await openConversation(selectedUserId);
-      } else if (list[0]?.user.id) {
-        await openConversation(list[0].user.id);
-      } else if (groups[0]?.group.id) {
-        setChatTab("group");
       }
 
       if (!cancelled) {

@@ -16,6 +16,13 @@ import { NotificationsService } from './notifications.service';
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
+  @Get('unread-count')
+  getUnreadCount(@Req() req: { user: SafeUser }) {
+    return this.notificationsService
+      .getUnreadCount(req.user.id)
+      .then((unreadCount) => ({ unreadCount }));
+  }
+
   @Get()
   getNotifications(
     @Req() req: { user: SafeUser },

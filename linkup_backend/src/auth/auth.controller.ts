@@ -19,6 +19,7 @@ import {
   VerifyEmailDto,
 } from './dto/verify-email.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { GoogleConfiguredGuard } from './guards/google-configured.guard';
 import { GoogleProfilePayload } from './strategies/google.strategy';
 import { SafeUser } from '../users/users.service';
 
@@ -28,16 +29,11 @@ export class AuthController {
 
   @Post('signup')
   signup(@Body() dto: SignupDto) {
-    console.log('Signup request received:', {
-      email: dto.email,
-      username: dto.username,
-    });
     return this.authService.signup(dto);
   }
 
   @Post('login')
   login(@Body() dto: LoginDto) {
-    console.log('Login attempt:', { email: dto.email.toLowerCase() });
     return this.authService.login(dto);
   }
 
@@ -63,18 +59,22 @@ export class AuthController {
     @Req() req: { user: SafeUser },
     @Body() dto: CompleteOnboardingDto,
   ) {
-    console.log('Onboarding request received for user:', req.user.id);
     return this.authService.completeOnboarding(req.user.id, dto);
   }
 
+  @Get('google/status')
+  googleStatus() {
+    return { enabled: this.authService.isGoogleConfigured() };
+  }
+
   @Get('google')
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(GoogleConfiguredGuard, AuthGuard('google'))
   googleAuth() {
     return;
   }
 
   @Get('google/callback')
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(GoogleConfiguredGuard, AuthGuard('google'))
   async googleCallback(
     @Req() req: { user: GoogleProfilePayload },
     @Res() res: Response,

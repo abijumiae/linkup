@@ -17,7 +17,7 @@ import {
   isBrowserAlertsEnabled,
   showBrowserAlert,
 } from "./browserNotifications";
-import { fetchNotifications, Notification } from "./notifications";
+import { fetchUnreadCount, Notification } from "./notifications";
 import { useSocket } from "@/src/components/SocketProvider";
 import AlertToast from "@/app/components/AlertToast";
 
@@ -54,7 +54,7 @@ export function NotificationsProvider({
     }
 
     try {
-      const data = await fetchNotifications();
+      const data = await fetchUnreadCount();
       setUnreadCount(data.unreadCount);
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {

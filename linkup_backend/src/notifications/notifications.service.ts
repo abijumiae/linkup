@@ -224,6 +224,12 @@ export class NotificationsService {
     });
   }
 
+  async getUnreadCount(recipientId: string): Promise<number> {
+    return this.prisma.notification.count({
+      where: { recipientId, read: false },
+    });
+  }
+
   async getForUser(
     recipientId: string,
     query?: { page?: string; limit?: string },

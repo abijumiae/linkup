@@ -156,6 +156,10 @@ export function connectSocket(token?: string | null): Socket | null {
   }
 
   if (socket?.connected) {
+    const authToken = token ?? getToken();
+    if (authToken) {
+      socket.auth = { token: authToken };
+    }
     return socket;
   }
 

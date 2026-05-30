@@ -71,6 +71,14 @@ async function withAuth<T>(request: () => Promise<T>): Promise<T> {
   }
 }
 
+export async function fetchUnreadCount(): Promise<{ unreadCount: number }> {
+  return withAuth(() =>
+    apiRequest<{ unreadCount: number }>("/notifications/unread-count", {
+      headers: authHeaders(),
+    }),
+  );
+}
+
 export async function fetchNotifications(
   page = 1,
   limit = 20,

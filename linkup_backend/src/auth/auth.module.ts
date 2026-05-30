@@ -5,6 +5,7 @@ import { EmailModule } from '../email/email.module';
 import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { GoogleConfiguredGuard } from './guards/google-configured.guard';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
@@ -26,6 +27,6 @@ const googleProviders =
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, ...googleProviders],
+  providers: [AuthService, JwtStrategy, GoogleConfiguredGuard, ...googleProviders],
 })
 export class AuthModule {}

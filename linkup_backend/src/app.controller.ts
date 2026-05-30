@@ -1,7 +1,10 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
+import { PrismaService } from './prisma/prisma.service';
 
 @Controller()
 export class AppController {
+  constructor(private readonly prisma: PrismaService) {}
+
   @Get()
   root() {
     return {
@@ -12,11 +15,22 @@ export class AppController {
   }
 
   @Get('health')
-  health() {
-    return {
-      status: 'ok',
-      service: 'linkup-backend',
-      time: new Date().toISOString(),
-    };
+  async health() {
+    try {
+      await this.prisma.$queryRaw`SELECT 1`;
+      return {
+        status: 'ok',
+        service: 'linkup-backend',
+        database: 'connected',
+        time: new Date().toISOString(),
+      };
+    } catch {
+      throw new ServiceUnavailableException({
+        status: 'degraded',
+        service: 'linkup-backend',
+        database: 'disconnected',
+        time: new Date().toISOString(),
+      });
+    }
   }
 }

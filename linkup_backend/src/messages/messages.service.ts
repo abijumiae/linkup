@@ -279,28 +279,41 @@ export class MessagesService {
       },
     });
 
-    const results = await Promise.all(
-      memberships.map(async (membership) => {
-        const lastMessage = await this.prisma.groupMessage.findFirst({
-          where: { groupId: membership.groupId },
-          orderBy: { createdAt: 'desc' },
-          include: groupMessageInclude,
-        });
+    if (memberships.length === 0) {
+      return [];
+    }
+
+    const groupIds = memberships.map((membership) => membership.groupId);
+
+    const lastMessages = await this.prisma.groupMessage.findMany({
+      where: { groupId: { in: groupIds } },
+      orderBy: { createdAt: 'desc' },
+      distinct: ['groupId'],
+      include: groupMessageInclude,
+    });
+
+    const lastMessageByGroupId = new Map(
+      lastMessages.map((message) => [message.groupId, message]),
+    );
+
+    return memberships
+      .map((membership) => {
+        const lastMessage = lastMessageByGroupId.get(membership.groupId);
+
+        if (!lastMessage) {
+          return null;
+        }
 
         return {
           group: membership.group,
           membersCount: membership.group._count.members,
           lastMessage,
         };
-      }),
-    );
-
-    return results
-      .filter((item) => item.lastMessage)
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null)
       .sort(
         (a, b) =>
-          (b.lastMessage?.createdAt.getTime() ?? 0) -
-          (a.lastMessage?.createdAt.getTime() ?? 0),
+          b.lastMessage.createdAt.getTime() - a.lastMessage.createdAt.getTime(),
       );
   }
 

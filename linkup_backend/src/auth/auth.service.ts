@@ -50,8 +50,6 @@ export class AuthService {
   async signup(dto: SignupDto) {
     const email = dto.email.toLowerCase();
 
-    console.log('Processing signup:', { email, username: dto.username });
-
     try {
       if (await this.usersService.findByEmail(email)) {
         throw new ConflictException('Email already exists');
@@ -88,8 +86,6 @@ export class AuthService {
         name: dto.name,
         code: verification.plainCode,
       });
-
-      console.log('Signup successful:', { email, username: dto.username });
 
       return {
         message:
@@ -242,11 +238,6 @@ export class AuthService {
   }
 
   async handleGoogleUser(profile: GoogleProfilePayload) {
-    console.log('Google sign-in received:', {
-      email: profile.email,
-      googleId: profile.googleId,
-    });
-
     try {
       let user =
         (await this.usersService.findByGoogleId(profile.googleId)) ??
@@ -288,12 +279,6 @@ export class AuthService {
   }
 
   async completeOnboarding(userId: string, dto: CompleteOnboardingDto) {
-    console.log('Onboarding submit:', {
-      userId,
-      username: dto.username,
-      accountType: dto.accountType,
-    });
-
     const existingUser = await this.usersService.findById(userId);
 
     if (!existingUser) {
