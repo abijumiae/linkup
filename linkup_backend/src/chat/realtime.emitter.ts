@@ -102,6 +102,7 @@ export class RealtimeEmitter {
 
     for (const target of targets) {
       this.logger.log(`emitting direct_message_received to: ${target}`);
+      console.log('direct_message_received emitted to:', target);
       this.server.to(target).emit('message_received', payload);
       this.server.to(target).emit('direct_message_received', directPayload);
     }

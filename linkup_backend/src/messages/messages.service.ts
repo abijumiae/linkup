@@ -289,10 +289,20 @@ export class MessagesService {
         );
       }
 
-      this.realtimeEmitter.emitDirectMessage(this.serializeMessage(message));
+      const serialized = this.serializeMessage(message);
+      if (messageType === 'voice') {
+        console.log('Voice message saved:', {
+          id: serialized.id,
+          senderId: serialized.senderId,
+          receiverId: serialized.receiverId,
+          mediaUrl: serialized.mediaUrl,
+        });
+      }
+
+      this.realtimeEmitter.emitDirectMessage(serialized);
       this.notificationsService.emitDirectMessageAlert(message);
 
-      return this.serializeMessage(message);
+      return serialized;
     } catch (error) {
       if (
         error instanceof BadRequestException ||

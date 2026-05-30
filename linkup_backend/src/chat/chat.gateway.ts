@@ -44,6 +44,7 @@ type AuthedSocket = Socket & {
 type ChatType = 'direct' | 'group';
 
 @WebSocketGateway({
+  path: '/socket.io',
   cors: {
     origin: true,
     credentials: true,

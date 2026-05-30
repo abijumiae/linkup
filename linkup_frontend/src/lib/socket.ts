@@ -48,9 +48,7 @@ function attachStatusListeners(activeSocket: Socket) {
 
   activeSocket.on("connect", () => {
     lastConnectErrorLogAt = 0;
-    if (process.env.NODE_ENV === "development") {
-      console.log("Socket connected:", activeSocket.id);
-    }
+    console.log("Socket connected:", activeSocket.id);
     notifyStatus("connected");
   });
 
@@ -252,6 +250,7 @@ export function connectSocket(token?: string | null): Socket | null {
   }
 
   socket = io(apiUrl, {
+    path: "/socket.io",
     auth: { token: authToken },
     transports: ["websocket", "polling"],
     autoConnect: true,
