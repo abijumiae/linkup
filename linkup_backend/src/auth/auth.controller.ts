@@ -37,6 +37,7 @@ export class AuthController {
 
   @Post('login')
   login(@Body() dto: LoginDto) {
+    console.log('Login attempt:', { email: dto.email.toLowerCase() });
     return this.authService.login(dto);
   }
 

@@ -1,8 +1,10 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import { Prisma, User } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -35,6 +37,7 @@ export type UserPost = {
 export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => NotificationsService))
     private readonly notificationsService: NotificationsService,
   ) {}
 

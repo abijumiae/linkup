@@ -190,37 +190,55 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     const email = dto.email.toLowerCase();
-    const user = await this.usersService.findByEmail(email);
 
-    if (!user) {
-      throw new UnauthorizedException('Invalid email or password');
-    }
+    try {
+      const user = await this.usersService.findByEmail(email);
 
-    if (!user.passwordHash) {
-      throw new UnauthorizedException('This account uses Google sign-in');
-    }
+      if (!user) {
+        throw new UnauthorizedException('Invalid email or password');
+      }
 
-    const passwordMatches = await bcrypt.compare(
-      dto.password,
-      user.passwordHash,
-    );
+      if (!user.passwordHash) {
+        throw new UnauthorizedException('This account uses Google sign-in');
+      }
 
-    if (!passwordMatches) {
-      throw new UnauthorizedException('Invalid email or password');
-    }
+      const passwordMatches = await bcrypt.compare(
+        dto.password,
+        user.passwordHash,
+      );
 
-    if (!user.isEmailVerified) {
-      throw new ForbiddenException(
-        'Please verify your email before logging in.',
+      if (!passwordMatches) {
+        throw new UnauthorizedException('Invalid email or password');
+      }
+
+      if (!user.isEmailVerified) {
+        throw new ForbiddenException(
+          'Please verify your email before logging in.',
+        );
+      }
+
+      const accessToken = await this.createAccessToken(user);
+
+      return {
+        accessToken,
+        user: this.usersService.sanitize(user),
+      };
+    } catch (error) {
+      if (
+        error instanceof UnauthorizedException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+
+      console.error(
+        'Login error:',
+        error instanceof Error ? error.message : error,
+      );
+      throw new InternalServerErrorException(
+        'Unable to sign in right now. Please try again.',
       );
     }
-
-    const accessToken = await this.createAccessToken(user);
-
-    return {
-      accessToken,
-      user: this.usersService.sanitize(user),
-    };
   }
 
   async handleGoogleUser(profile: GoogleProfilePayload) {
@@ -307,6 +325,12 @@ export class AuthService {
   }
 
   private async createAccessToken(user: User): Promise<string> {
+    if (!process.env.JWT_SECRET?.trim()) {
+      throw new InternalServerErrorException(
+        'Authentication is temporarily unavailable.',
+      );
+    }
+
     return this.jwtService.signAsync({
       sub: user.id,
       email: user.email,
