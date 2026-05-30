@@ -9,6 +9,7 @@ import {
   Home,
   LogOut,
   MessageCircle,
+  Play,
   Search,
   UserCircle,
   Users,
@@ -20,6 +21,7 @@ import { ThemeToggle } from "./ThemeToggle";
 const mobileNavItems = [
   { label: "Pulse", href: "/home", icon: Home },
   { label: "Discover", href: "/explore", icon: Compass },
+  { label: "Watch", href: "/watch", icon: Play },
   { label: "Chats", href: "/messages", icon: MessageCircle },
   { label: "Hubs", href: "/groups", icon: Users },
   { label: "Profile", href: "/profile", icon: UserCircle },
@@ -160,7 +162,9 @@ export default function LinkupNavigation() {
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/90 px-2 py-1.5 shadow-[0_-10px_60px_rgba(15,23,42,0.12)] backdrop-blur-xl md:hidden dark:border-white/10 dark:bg-brand-dark/95 dark:shadow-[0_-10px_60px_rgba(15,23,42,0.35)]">
         <div className="mx-auto flex max-w-md items-center justify-between gap-0.5">
           {mobileNavItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive =
+              pathname === item.href ||
+              (item.href === "/watch" && pathname.startsWith("/watch/"));
             return (
               <Link
                 key={item.href}

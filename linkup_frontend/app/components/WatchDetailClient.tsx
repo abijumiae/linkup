@@ -7,6 +7,7 @@ import {
   MessageCircle,
   Share2,
   Sparkles,
+  Users,
 } from "lucide-react";
 import {
   fetchWatchVideo,
@@ -281,16 +282,41 @@ export default function WatchDetailClient({ videoId }: WatchDetailClientProps) {
             </div>
           </div>
 
-          <div className="mt-8 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 dark:border-white/15 dark:bg-brand-dark/60">
-            <div className="flex items-start gap-3">
-              <MessageCircle className="mt-0.5 h-5 w-5 text-brand-primary dark:text-brand-secondary" />
-              <div>
-                <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
-                  Replies
-                </h2>
-                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                  Watch replies and live reactions are coming soon. Drop a Boost for now.
-                </p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-2xl border border-dashed border-brand-primary/30 bg-gradient-to-br from-brand-primary/5 to-brand-secondary/5 p-5 dark:from-brand-primary/10 dark:to-brand-secondary/10">
+              <div className="flex items-start gap-3">
+                <Users className="mt-0.5 h-5 w-5 shrink-0 text-brand-primary dark:text-brand-secondary" />
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+                    Watch Together
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                    Co-watch rooms with friends are coming soon. Start solo for now
+                    and invite your crew when live drops land.
+                  </p>
+                  <button
+                    type="button"
+                    disabled
+                    className="mt-3 inline-flex rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-500 dark:border-white/10 dark:text-slate-400"
+                  >
+                    Coming Soon
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 dark:border-white/15 dark:bg-brand-dark/60">
+              <div className="flex items-start gap-3">
+                <MessageCircle className="mt-0.5 h-5 w-5 text-brand-primary dark:text-brand-secondary" />
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+                    Replies
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                    Watch replies and live reactions are coming soon. Drop a Boost
+                    for now.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
