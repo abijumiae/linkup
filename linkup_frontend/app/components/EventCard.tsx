@@ -1,16 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { memo } from "react";
+import { memo, useState } from "react";
 import {
   CalendarDays,
   CheckCircle2,
   MapPin,
-  Tag,
+  Radio,
+  Share2,
+  Star,
   User,
-  Users,
+  Video,
 } from "lucide-react";
 import { Event, formatEventDate } from "@/src/lib/events";
+import {
+  getEventTimingStatus,
+  isOnlineLocation,
+} from "@/src/lib/happeningsConstants";
+import {
+  isEventInterested,
+  toggleEventInterested,
+} from "@/src/lib/happeningsInterests";
 
 type EventCardProps = {
   event: Event;
@@ -25,6 +35,12 @@ function EventCard({
   onLeave,
   isUpdating = false,
 }: EventCardProps) {
+  const [interested, setInterested] = useState(() =>
+    isEventInterested(event.id),
+  );
+  const timing = getEventTimingStatus(event);
+  const online = isOnlineLocation(event.location);
+
   const handleAttendance = () => {
     if (event.isOrganizer) return;
     if (event.isGoing) {
@@ -34,110 +50,160 @@ function EventCard({
     }
   };
 
+  const handleInterested = () => {
+    setInterested(toggleEventInterested(event.id));
+  };
+
+  const handleShare = async () => {
+    const url =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/events/${event.id}`
+        : `/events/${event.id}`;
+
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ title: event.title, url });
+        return;
+      } catch {
+        // User cancelled or share failed — fall through to clipboard.
+      }
+    }
+
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      await navigator.clipboard.writeText(url);
+    }
+  };
+
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-950/5 transition duration-300 hover:-translate-y-1 hover:border-brand-primary/30 hover:shadow-brand-primary/10 dark:border-white/10 dark:bg-brand-dark/80 dark:shadow-slate-950/20">
-      {event.imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={event.imageUrl}
-          alt=""
-          loading="lazy"
-          className="h-44 w-full object-cover"
-        />
-      ) : (
-        <div className="flex h-44 items-end bg-gradient-to-br from-brand-primary/15 via-slate-100 to-brand-secondary/10 p-5 dark:from-brand-primary/20 dark:via-brand-dark dark:to-brand-dark">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-brand-primary dark:text-brand-secondary">
-              {event.category ?? "Happening"}
-            </p>
-            <h3 className="mt-1 line-clamp-2 text-lg font-semibold text-slate-900 dark:text-white">
+    <article className="group linkup-panel flex h-full flex-col overflow-hidden p-0 transition duration-300 hover:-translate-y-1 hover:border-brand-primary/30 hover:shadow-brand-primary/10">
+      <Link href={`/events/${event.id}`} className="relative block">
+        {event.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={event.imageUrl}
+            alt=""
+            loading="lazy"
+            className="aspect-[16/10] w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+          />
+        ) : (
+          <div className="flex aspect-[16/10] items-end bg-gradient-to-br from-brand-primary/15 via-slate-100 to-brand-secondary/10 p-5 dark:from-brand-primary/20 dark:via-brand-dark dark:to-brand-dark">
+            <h3 className="line-clamp-2 text-lg font-semibold text-slate-900 dark:text-white">
               {event.title}
             </h3>
           </div>
+        )}
+        <div className="absolute left-3 top-3 flex flex-wrap gap-2">
+          {timing === "live" ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/90 px-2.5 py-1 text-xs font-semibold text-white shadow">
+              <Radio className="h-3 w-3" />
+              Live
+            </span>
+          ) : null}
+          <span className="rounded-full bg-brand-primary/90 px-2.5 py-1 text-xs font-semibold text-white shadow">
+            {event.category ?? "Happening"}
+          </span>
         </div>
-      )}
+      </Link>
 
       <div className="flex flex-1 flex-col p-5">
         {event.imageUrl ? (
-          <>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-brand-primary/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-brand-primary dark:text-brand-secondary">
-                {event.category ?? "Happening"}
-              </span>
-            </div>
-            <h3 className="mt-2 line-clamp-2 text-lg font-semibold text-slate-900 dark:text-white">
+          <Link href={`/events/${event.id}`}>
+            <h3 className="line-clamp-2 text-lg font-semibold text-slate-900 transition group-hover:text-brand-primary dark:text-white dark:group-hover:text-brand-secondary">
               {event.title}
             </h3>
-          </>
+          </Link>
         ) : null}
 
-        <p className="mt-3 line-clamp-2 flex-1 text-sm leading-6 text-slate-600 dark:text-slate-400">
-          {event.description}
-        </p>
+        <div className="mt-3 flex items-center gap-2.5">
+          {event.organizer.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={event.organizer.avatarUrl}
+              alt=""
+              className="h-8 w-8 rounded-full object-cover ring-2 ring-white dark:ring-brand-dark"
+            />
+          ) : (
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary dark:text-brand-secondary">
+              <User className="h-4 w-4" />
+            </span>
+          )}
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-200">
+              {event.organizer.name}
+            </p>
+            <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+              @{event.organizer.username}
+            </p>
+          </div>
+        </div>
 
-        <div className="mt-4 space-y-2">
-          <p className="inline-flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300">
+        <div className="mt-4 space-y-2 text-sm text-slate-700 dark:text-slate-300">
+          <p className="inline-flex items-center gap-1.5">
             <CalendarDays className="h-4 w-4 shrink-0 text-brand-primary dark:text-brand-secondary" />
             {formatEventDate(event.startDate)}
           </p>
-          <p className="inline-flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300">
-            <MapPin className="h-4 w-4 shrink-0 text-slate-400" />
-            {event.location}
-          </p>
-          {event.category ? (
-            <p className="inline-flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-400">
-              <Tag className="h-3.5 w-3.5" />
-              {event.category}
-            </p>
-          ) : null}
-        </div>
-
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm">
-          <p className="inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
-            <User className="h-3.5 w-3.5" />
-            Organizer:{" "}
-            <span className="font-medium text-slate-700 dark:text-slate-200">
-              {event.organizer.name}
-            </span>
-          </p>
-          <p className="inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
-            <Users className="h-3.5 w-3.5 text-brand-primary dark:text-brand-secondary" />
-            {event.attendeesCount}{" "}
-            {event.attendeesCount === 1 ? "person" : "people"} going
+          <p className="inline-flex items-center gap-1.5">
+            {online ? (
+              <Video className="h-4 w-4 shrink-0 text-brand-primary dark:text-brand-secondary" />
+            ) : (
+              <MapPin className="h-4 w-4 shrink-0 text-slate-400" />
+            )}
+            {online ? "Online" : event.location}
           </p>
         </div>
 
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-          <Link
-            href={`/events/${event.id}`}
-            className="inline-flex flex-1 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-slate-700 transition hover:border-brand-primary/40 hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
-          >
-            View Details
-          </Link>
+        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+          {event.attendeesCount}{" "}
+          {event.attendeesCount === 1 ? "person" : "people"} going
+        </p>
+
+        <div className="mt-auto flex flex-wrap gap-2 pt-4">
           {event.isOrganizer ? (
-            <span className="inline-flex flex-1 items-center justify-center rounded-full border border-brand-primary/30 bg-brand-primary/10 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-brand-primary dark:text-brand-secondary">
-              Your happening
+            <span className="linkup-btn-secondary flex-1 min-h-[44px] cursor-default text-xs uppercase tracking-wide">
+              Your event
             </span>
           ) : event.isGoing ? (
             <button
               type="button"
               disabled={isUpdating}
               onClick={handleAttendance}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-emerald-700 transition hover:bg-emerald-500/15 disabled:opacity-50 dark:text-emerald-200"
+              className="linkup-btn-secondary flex min-h-[44px] flex-1 items-center justify-center gap-1.5 border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200"
             >
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              {isUpdating ? "Updating…" : "Going"}
+              <CheckCircle2 className="h-4 w-4" />
+              {isUpdating ? "Updating…" : "Joined"}
             </button>
           ) : (
             <button
               type="button"
               disabled={isUpdating}
               onClick={handleAttendance}
-              className="inline-flex flex-1 items-center justify-center rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-white shadow-md shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover disabled:opacity-50"
+              className="linkup-btn-primary min-h-[44px] flex-1"
             >
-              {isUpdating ? "Joining…" : "I'm Going"}
+              {isUpdating ? "Joining…" : "Join"}
             </button>
           )}
+          {!event.isOrganizer ? (
+            <button
+              type="button"
+              onClick={handleInterested}
+              className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full border px-4 text-sm font-medium transition ${
+                interested
+                  ? "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200"
+                  : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
+              }`}
+            >
+              <Star className={`h-4 w-4 ${interested ? "fill-current" : ""}`} />
+              Interested
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => void handleShare()}
+            aria-label="Share event"
+            className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
+          >
+            <Share2 className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </article>

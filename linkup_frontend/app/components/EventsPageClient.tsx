@@ -1,74 +1,30 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Image, MapPin, Plus, Search, X } from "lucide-react";
+import { MapPin, Plus, Search } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import {
-  createEvent,
   Event,
   EventsFilters,
-  fetchEvents,
+  fetchEventsSafe,
   joinEvent,
   leaveEvent,
 } from "@/src/lib/events";
-import { eventFilterOptions } from "../data/linkupData";
-import AuthLoadingScreen from "./AuthLoadingScreen";
+import {
+  getEventTimeframeParam,
+  HAPPENINGS_CATEGORIES,
+  HAPPENINGS_TIME_TABS,
+  HappeningsTimeTab,
+} from "@/src/lib/happeningsConstants";
 import EventCard from "./EventCard";
-
-const categoryOptions = eventFilterOptions.filter(
-  (option) => option !== "Date",
-);
-
-const inputClass =
-  "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-brand-primary/60 dark:border-white/10 dark:bg-brand-dark dark:text-white dark:placeholder:text-slate-500 dark:focus:border-brand-primary/50";
-
-function HappeningsEmptyState({
-  title,
-  description,
-  showCreateButton,
-  onCreate,
-}: {
-  title: string;
-  description: string;
-  showCreateButton?: boolean;
-  onCreate?: () => void;
-}) {
-  return (
-    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center dark:border-white/15 dark:bg-brand-dark/60">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary dark:text-brand-secondary">
-        <CalendarDays className="h-5 w-5" />
-      </div>
-      <h3 className="mt-4 text-base font-semibold text-slate-900 dark:text-white">
-        {title}
-      </h3>
-      <p className="mx-auto mt-2 max-w-md text-sm text-slate-600 dark:text-slate-400">
-        {description}
-      </p>
-      {showCreateButton && onCreate ? (
-        <button
-          type="button"
-          onClick={onCreate}
-          className="mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover"
-        >
-          <Plus className="h-4 w-4" />
-          Create Happening
-        </button>
-      ) : null}
-    </div>
-  );
-}
-
-function EventSkeleton() {
-  return (
-    <div className="animate-pulse rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-brand-dark/80">
-      <div className="h-36 rounded-xl bg-slate-200 dark:bg-white/10" />
-      <div className="mt-4 h-4 w-3/4 rounded bg-slate-200 dark:bg-white/10" />
-      <div className="mt-2 h-3 w-1/2 rounded bg-slate-200 dark:bg-white/10" />
-      <div className="mt-4 h-9 w-full rounded-full bg-slate-200 dark:bg-white/10" />
-    </div>
-  );
-}
+import CreateEventModal from "./happenings/CreateEventModal";
+import HappeningsEmptyState from "./happenings/HappeningsEmptyState";
+import HappeningsSidebar from "./happenings/HappeningsSidebar";
+import {
+  HappeningsCardSkeleton,
+  HappeningsHeaderSkeleton,
+} from "./happenings/HappeningsSkeleton";
 
 export default function EventsPageClient() {
   const router = useRouter();
@@ -78,58 +34,52 @@ export default function EventsPageClient() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [locationInput, setLocationInput] = useState("");
+  const [activeTimeTab, setActiveTimeTab] = useState<HappeningsTimeTab>("All");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
   const [updatingEventId, setUpdatingEventId] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    title: "",
-    description: "",
-    location: "",
-    startDate: "",
-    endDate: "",
-    category: categoryOptions[0] ?? "Online",
-    imageUrl: "",
-  });
 
-  function buildFilters(overrides?: Partial<EventsFilters>): EventsFilters {
+  function buildFilters(): EventsFilters {
     return {
       q: searchInput.trim() || undefined,
       location: locationInput.trim() || undefined,
       category: activeCategory ?? undefined,
-      ...overrides,
+      timeframe: getEventTimeframeParam(activeTimeTab),
     };
   }
 
-  const loadEvents = useCallback(async (filters: EventsFilters, page = 1, append = false) => {
-    try {
-      const data = await fetchEvents({ ...filters, page, limit: 20 });
-      setEvents((current) =>
-        append ? [...current, ...data.items] : data.items,
-      );
-      setListPage(page);
-      setHasMore(data.hasMore);
-      setError(null);
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        router.replace("/login");
-        return;
+  const loadEvents = useCallback(
+    async (filters: EventsFilters, page = 1, append = false) => {
+      try {
+        const data = await fetchEventsSafe({ ...filters, page, limit: 20 });
+        setEvents((current) =>
+          append ? [...current, ...data.items] : data.items,
+        );
+        setListPage(page);
+        setHasMore(data.hasMore);
+        setWarning(data.warning);
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          router.replace("/login");
+          return;
+        }
+        setWarning("Happenings are warming up. Try again shortly.");
       }
-      setError("Unable to load happenings. Please try again.");
-    }
-  }, [router]);
+    },
+    [router],
+  );
 
   useEffect(() => {
     async function init() {
       setIsLoading(true);
-      await loadEvents({});
+      await loadEvents(buildFilters());
       setIsLoading(false);
     }
     void init();
-  }, [loadEvents]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTimeTab, activeCategory, loadEvents]);
 
   const handleSearch = async (event: FormEvent) => {
     event.preventDefault();
@@ -138,11 +88,12 @@ export default function EventsPageClient() {
     setIsLoading(false);
   };
 
-  const handleCategoryFilter = async (category: string | null) => {
+  const handleTimeTab = (tab: HappeningsTimeTab) => {
+    setActiveTimeTab(tab);
+  };
+
+  const handleCategoryFilter = (category: string | null) => {
     setActiveCategory(category);
-    setIsLoading(true);
-    await loadEvents(buildFilters({ category: category ?? undefined }));
-    setIsLoading(false);
   };
 
   const updateEventInList = (updated: Event) => {
@@ -157,8 +108,8 @@ export default function EventsPageClient() {
       const updated = await joinEvent(eventId);
       updateEventInList(updated);
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Unable to join happening.",
+      setWarning(
+        err instanceof ApiError ? err.message : "Unable to join event.",
       );
     } finally {
       setUpdatingEventId(null);
@@ -171,56 +122,49 @@ export default function EventsPageClient() {
       const updated = await leaveEvent(eventId);
       updateEventInList(updated);
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Unable to leave happening.",
+      setWarning(
+        err instanceof ApiError ? err.message : "Unable to leave event.",
       );
     } finally {
       setUpdatingEventId(null);
     }
   };
 
-  const handleCreate = async (event: FormEvent) => {
-    event.preventDefault();
-    setCreateError(null);
-    setIsCreating(true);
-
-    try {
-      const created = await createEvent({
-        title: form.title.trim(),
-        description: form.description.trim(),
-        location: form.location.trim(),
-        startDate: new Date(form.startDate).toISOString(),
-        endDate: form.endDate
-          ? new Date(form.endDate).toISOString()
-          : undefined,
-        category: form.category.trim() || undefined,
-        imageUrl: form.imageUrl.trim() || undefined,
-      });
-      setEvents((prev) => [
-        created,
-        ...prev.filter((item) => item.id !== created.id),
-      ]);
-      setShowCreateModal(false);
-      setForm({
-        title: "",
-        description: "",
-        location: "",
-        startDate: "",
-        endDate: "",
-        category: categoryOptions[0] ?? "Online",
-        imageUrl: "",
-      });
-    } catch (err) {
-      setCreateError(
-        err instanceof ApiError ? err.message : "Unable to create happening.",
+  const sidebarData = useMemo(() => {
+    const sortedByAttendees = [...events].sort(
+      (a, b) => b.attendeesCount - a.attendeesCount,
+    );
+    const upcoming = [...events]
+      .filter((event) => new Date(event.startDate).getTime() > Date.now())
+      .sort(
+        (a, b) =>
+          new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
       );
-    } finally {
-      setIsCreating(false);
-    }
-  };
+
+    return {
+      trending: sortedByAttendees.slice(0, 5),
+      upcoming: upcoming.slice(0, 5),
+    };
+  }, [events]);
 
   if (isLoading && events.length === 0) {
-    return <AuthLoadingScreen message="Loading happenings..." />;
+    return (
+      <div className="linkup-page">
+        <div className="linkup-container-wide">
+          <HappeningsHeaderSkeleton />
+          <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-2">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <HappeningsCardSkeleton key={index} />
+              ))}
+            </div>
+            <div className="hidden lg:block">
+              <HappeningsHeaderSkeleton />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -229,23 +173,19 @@ export default function EventsPageClient() {
         <header className="mb-8 linkup-panel p-6 sm:p-7">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-primary dark:text-brand-secondary/80">
-                LinkUp Happenings
-              </p>
-              <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">
-                Happenings
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-                Discover what&apos;s happening around your network.
+              <p className="linkup-eyebrow">LinkUp Community</p>
+              <h1 className="linkup-title mt-2">Happenings</h1>
+              <p className="linkup-subtitle mt-2 max-w-2xl">
+                Explore what&apos;s trending, live, and upcoming across LinkUp.
               </p>
             </div>
             <button
               type="button"
               onClick={() => setShowCreateModal(true)}
-              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover"
+              className="linkup-btn-primary inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2"
             >
               <Plus className="h-4 w-4" />
-              Create Happening
+              Create Event
             </button>
           </div>
 
@@ -257,7 +197,7 @@ export default function EventsPageClient() {
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   className="w-full bg-transparent pl-10 text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
-                  placeholder="Search happenings..."
+                  placeholder="Search events, hosts, topics…"
                 />
               </div>
               <div className="relative flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-brand-dark/80">
@@ -272,33 +212,50 @@ export default function EventsPageClient() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="h-11 rounded-full border border-slate-200 bg-slate-100 px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-200 disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+                className="linkup-btn-secondary min-h-[44px] disabled:opacity-60"
               >
                 {isLoading ? "Searching…" : "Search"}
               </button>
             </div>
           </form>
 
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="linkup-chip-row mt-4 -mx-1 overflow-x-auto px-1 pb-1">
+            {HAPPENINGS_TIME_TABS.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => handleTimeTab(tab)}
+                className={`shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition ${
+                  activeTimeTab === tab
+                    ? "border-brand-primary/50 bg-brand-primary text-white shadow-md shadow-brand-primary/20"
+                    : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          <div className="linkup-chip-row mt-3 -mx-1 overflow-x-auto px-1 pb-1">
             <button
               type="button"
               onClick={() => handleCategoryFilter(null)}
-              className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+              className={`shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition ${
                 activeCategory === null
-                  ? "border-brand-primary/50 bg-brand-primary text-white shadow-md shadow-brand-primary/20 dark:bg-brand-primary"
+                  ? "border-brand-primary/50 bg-brand-primary text-white shadow-md shadow-brand-primary/20"
                   : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
               }`}
             >
-              All
+              All categories
             </button>
-            {categoryOptions.map((category) => (
+            {HAPPENINGS_CATEGORIES.map((category) => (
               <button
                 key={category}
                 type="button"
                 onClick={() => handleCategoryFilter(category)}
-                className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+                className={`shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition ${
                   activeCategory === category
-                    ? "border-brand-primary/50 bg-brand-primary text-white shadow-md shadow-brand-primary/20 dark:bg-brand-primary"
+                    ? "border-brand-primary/50 bg-brand-primary text-white shadow-md shadow-brand-primary/20"
                     : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
                 }`}
               >
@@ -308,201 +265,77 @@ export default function EventsPageClient() {
           </div>
         </header>
 
-        {error ? (
-          <p className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">
-            {error}
+        {warning ? (
+          <p className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+            {warning}
           </p>
         ) : null}
 
-        {isLoading && events.length > 0 ? (
-          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <EventSkeleton key={index} />
-            ))}
-          </div>
-        ) : events.length === 0 ? (
-          <HappeningsEmptyState
-            title="No happenings yet"
-            description="Create the first happening and bring people together."
-            showCreateButton
-            onCreate={() => setShowCreateModal(true)}
-          />
-        ) : (
-          <>
-            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-              {events.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  onJoin={handleJoin}
-                  onLeave={handleLeave}
-                  isUpdating={updatingEventId === event.id}
-                />
-              ))}
-            </div>
-            {hasMore ? (
-              <div className="mt-8 text-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLoadingMore(true);
-                    void loadEvents(buildFilters(), listPage + 1, true).finally(
-                      () => setLoadingMore(false),
-                    );
-                  }}
-                  disabled={loadingMore}
-                  className="linkup-btn-secondary min-h-[44px] transition-all duration-200 ease-out disabled:opacity-60"
-                >
-                  {loadingMore ? "Loading..." : "Load more happenings"}
-                </button>
+        <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
+          <div>
+            {isLoading && events.length > 0 ? (
+              <div className="grid gap-6 sm:grid-cols-2">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <HappeningsCardSkeleton key={index} />
+                ))}
               </div>
-            ) : null}
-          </>
-        )}
-      </div>
-
-      {showCreateModal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-brand-dark/80 p-4 backdrop-blur-sm">
-          <div className="my-8 w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-brand-dark">
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
-                  Create Happening
-                </h2>
-                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                  Bring people together with a new gathering on LinkUp.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowCreateModal(false)}
-                className="rounded-full p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <label className="block space-y-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  Title
-                </span>
-                <input
-                  required
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  placeholder="Happening title"
-                  className={inputClass}
-                />
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  Description
-                </span>
-                <textarea
-                  required
-                  value={form.description}
-                  onChange={(e) =>
-                    setForm({ ...form, description: e.target.value })
-                  }
-                  rows={4}
-                  placeholder="What is this happening about?"
-                  className={`${inputClass} resize-none`}
-                />
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  Location
-                </span>
-                <input
-                  required
-                  value={form.location}
-                  onChange={(e) =>
-                    setForm({ ...form, location: e.target.value })
-                  }
-                  placeholder="Venue, city, or Online"
-                  className={inputClass}
-                />
-              </label>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block space-y-1.5">
-                  <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Start date
-                  </span>
-                  <input
-                    required
-                    type="datetime-local"
-                    value={form.startDate}
-                    onChange={(e) =>
-                      setForm({ ...form, startDate: e.target.value })
-                    }
-                    className={inputClass}
-                  />
-                </label>
-                <label className="block space-y-1.5">
-                  <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    End date (optional)
-                  </span>
-                  <input
-                    type="datetime-local"
-                    value={form.endDate}
-                    onChange={(e) =>
-                      setForm({ ...form, endDate: e.target.value })
-                    }
-                    className={inputClass}
-                  />
-                </label>
-              </div>
-              <label className="block space-y-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  Category
-                </span>
-                <select
-                  value={form.category}
-                  onChange={(e) =>
-                    setForm({ ...form, category: e.target.value })
-                  }
-                  className={inputClass}
-                >
-                  {categoryOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
+            ) : events.length === 0 ? (
+              <HappeningsEmptyState onCreate={() => setShowCreateModal(true)} />
+            ) : (
+              <>
+                <div className="grid gap-6 sm:grid-cols-2">
+                  {events.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      onJoin={handleJoin}
+                      onLeave={handleLeave}
+                      isUpdating={updatingEventId === event.id}
+                    />
                   ))}
-                </select>
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  Image URL (optional)
-                </span>
-                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-white/10 dark:bg-brand-dark">
-                  <Image className="h-4 w-4 shrink-0 text-slate-500" />
-                  <input
-                    value={form.imageUrl}
-                    onChange={(e) =>
-                      setForm({ ...form, imageUrl: e.target.value })
-                    }
-                    type="url"
-                    placeholder="https://example.com/event.jpg"
-                    className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
-                  />
                 </div>
-              </label>
-              {createError ? (
-                <p className="text-sm text-red-600 dark:text-red-300">
-                  {createError}
-                </p>
-              ) : null}
-              <button
-                type="submit"
-                disabled={isCreating}
-                className="w-full rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary py-3 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover disabled:opacity-50"
-              >
-                {isCreating ? "Creating…" : "Create Happening"}
-              </button>
-            </form>
+                {hasMore ? (
+                  <div className="mt-8 text-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLoadingMore(true);
+                        void loadEvents(
+                          buildFilters(),
+                          listPage + 1,
+                          true,
+                        ).finally(() => setLoadingMore(false));
+                      }}
+                      disabled={loadingMore}
+                      className="linkup-btn-secondary min-h-[44px] disabled:opacity-60"
+                    >
+                      {loadingMore ? "Loading…" : "Load more events"}
+                    </button>
+                  </div>
+                ) : null}
+              </>
+            )}
+          </div>
+
+          <div className="lg:order-none order-last">
+            <HappeningsSidebar
+              trending={sidebarData.trending}
+              upcoming={sidebarData.upcoming}
+            />
           </div>
         </div>
-      ) : null}
+      </div>
+
+      <CreateEventModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreated={(created) => {
+          setEvents((prev) => [
+            created,
+            ...prev.filter((item) => item.id !== created.id),
+          ]);
+        }}
+      />
     </div>
   );
 }

@@ -42,6 +42,7 @@ export class EventsController {
     @Query('q') q?: string,
     @Query('location') location?: string,
     @Query('category') category?: string,
+    @Query('timeframe') timeframe?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
@@ -49,6 +50,7 @@ export class EventsController {
       q,
       location,
       category,
+      timeframe,
       page,
       limit,
     });

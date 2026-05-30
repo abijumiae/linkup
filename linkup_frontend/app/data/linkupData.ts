@@ -168,7 +168,13 @@ export const jobsList = [
   },
 ];
 
-export const eventFilterOptions = ["Online", "Offline", "Date"];
+export const eventFilterOptions = [
+  "Tech",
+  "Creators",
+  "Business",
+  "Local",
+  "Online",
+];
 export const eventsList = [
   {
     title: "LinkUp Launch Mixer",

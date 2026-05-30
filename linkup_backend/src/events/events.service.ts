@@ -50,6 +50,7 @@ export type EventsQuery = {
   q?: string;
   location?: string;
   category?: string;
+  timeframe?: string;
   page?: string;
   limit?: string;
 };
@@ -86,16 +87,37 @@ export class EventsService {
   ): Promise<PaginatedResult<EventResponse>> {
     const pagination = parsePaginationQuery(query);
     const now = new Date();
+    const filters: Prisma.EventWhereInput[] = [{ status: 'ACTIVE' }];
 
-    const filters: Prisma.EventWhereInput[] = [
-      {
-        status: 'ACTIVE',
-        OR: [
-          { startDate: { gte: now } },
-          { endDate: { gte: now } },
-        ],
-      },
-    ];
+    switch (query.timeframe) {
+      case 'live':
+        filters.push({
+          startDate: { lte: now },
+          OR: [{ endDate: { gte: now } }, { endDate: null }],
+        });
+        break;
+      case 'upcoming':
+        filters.push({ startDate: { gt: now } });
+        break;
+      case 'past':
+        filters.push({
+          OR: [
+            { endDate: { lt: now } },
+            { endDate: null, startDate: { lt: now } },
+          ],
+        });
+        break;
+      case 'all':
+        break;
+      default:
+        filters.push({
+          OR: [
+            { startDate: { gte: now } },
+            { endDate: { gte: now } },
+          ],
+        });
+        break;
+    }
 
     if (query.location?.trim()) {
       filters.push({
@@ -128,7 +150,10 @@ export class EventsService {
 
     const events = await this.prisma.event.findMany({
       where: { AND: filters },
-      orderBy: { startDate: 'asc' },
+      orderBy:
+        query.timeframe === 'past'
+          ? { startDate: 'desc' }
+          : { startDate: 'asc' },
       skip: pagination.skip,
       take: pagination.limit + 1,
       include: eventInclude,

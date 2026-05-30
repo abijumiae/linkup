@@ -61,6 +61,7 @@ export interface EventsFilters {
   q?: string;
   location?: string;
   category?: string;
+  timeframe?: "all" | "live" | "upcoming" | "past";
   page?: number;
   limit?: number;
 }
@@ -99,6 +100,28 @@ export function formatEventDate(dateStr: string): string {
   });
 }
 
+export async function fetchEventsSafe(
+  filters: EventsFilters = {},
+): Promise<{
+  items: Event[];
+  hasMore: boolean;
+  warning: string | null;
+}> {
+  try {
+    const data = await fetchEvents(filters);
+    return { items: data.items, hasMore: data.hasMore, warning: null };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      throw error;
+    }
+    return {
+      items: [],
+      hasMore: false,
+      warning: "Happenings are warming up. Try again shortly.",
+    };
+  }
+}
+
 export async function fetchEvents(
   filters: EventsFilters = {},
 ): Promise<PaginatedResponse<Event>> {
@@ -106,6 +129,7 @@ export async function fetchEvents(
   if (filters.q?.trim()) params.set("q", filters.q.trim());
   if (filters.location?.trim()) params.set("location", filters.location.trim());
   if (filters.category?.trim()) params.set("category", filters.category.trim());
+  if (filters.timeframe) params.set("timeframe", filters.timeframe);
   if (filters.page) params.set("page", String(filters.page));
   if (filters.limit) params.set("limit", String(filters.limit));
 
@@ -117,6 +141,20 @@ export async function fetchEvents(
       headers: authHeaders(),
     }).then(unwrapPaginated),
   );
+}
+
+export async function fetchEventAttendeesSafe(
+  eventId: string,
+): Promise<{ attendees: EventAttendee[]; warning: string | null }> {
+  try {
+    const attendees = await fetchEventAttendees(eventId);
+    return { attendees, warning: null };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      throw error;
+    }
+    return { attendees: [], warning: null };
+  }
 }
 
 export async function fetchEvent(id: string): Promise<Event> {
