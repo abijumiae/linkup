@@ -14,6 +14,8 @@ async function bootstrap() {
 
   app.use(compression());
 
+  // Serves voice/media files from linkup_backend/uploads (ephemeral on Render).
+  // TODO: Move uploaded voice/media files to Cloudinary/S3/Supabase Storage for permanent production storage.
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads/',

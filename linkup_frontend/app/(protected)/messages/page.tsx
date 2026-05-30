@@ -912,6 +912,7 @@ export default function MessagesPage() {
     console.log("VOICE STEP 4: audioBlob exists", Boolean(file));
     console.log("VOICE STEP 5: audioBlob size", file?.size);
     console.log("VOICE STEP 6: API_URL", apiUrl);
+    console.log("VOICE STEP 6b: upload endpoint", `${apiUrl}/messages/upload-audio`);
 
     if (!activeUser?.id || chatTab !== "direct" || isSending) {
       if (!activeUser?.id) {

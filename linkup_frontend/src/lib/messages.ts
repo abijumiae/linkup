@@ -173,6 +173,7 @@ export async function uploadVoiceNote(file: File): Promise<UploadVoiceResult> {
   const formData = new FormData();
   formData.append("file", file, file.name || `voice-${Date.now()}.webm`);
 
+  // Production + local: always POST /messages/upload-audio (never /uploads).
   const response = await fetch(`${apiUrl}/messages/upload-audio`, {
     method: "POST",
     headers: {

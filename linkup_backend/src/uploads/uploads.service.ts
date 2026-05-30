@@ -210,6 +210,8 @@ export class UploadsService {
     file: Express.Multer.File,
     mediaType: UploadMediaType,
   ): Promise<UploadResult> {
+    // TODO: Move uploaded voice/media files to Cloudinary/S3/Supabase Storage for permanent production storage.
+    // Render local filesystem is temporary; files may disappear after restart/redeploy.
     await mkdir(this.uploadDir, { recursive: true });
 
     const extension = this.safeExtension(
