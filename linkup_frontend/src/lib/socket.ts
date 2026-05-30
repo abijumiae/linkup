@@ -253,8 +253,7 @@ export function connectSocket(token?: string | null): Socket | null {
 
   socket = io(apiUrl, {
     auth: { token: authToken },
-    path: "/socket.io",
-    transports: ["polling", "websocket"],
+    transports: ["websocket", "polling"],
     autoConnect: true,
     reconnection: true,
     reconnectionAttempts: Infinity,

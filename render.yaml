@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: linkup-backend
+    runtime: node
+    rootDir: linkup_backend
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production

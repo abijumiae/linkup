@@ -22,6 +22,8 @@ export class AppController {
         status: 'ok',
         service: 'linkup-backend',
         database: 'connected',
+        realtime: 'socket.io',
+        socketPath: '/socket.io',
         time: new Date().toISOString(),
       };
     } catch {

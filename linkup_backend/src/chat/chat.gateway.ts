@@ -48,6 +48,7 @@ type ChatType = 'direct' | 'group';
     origin: true,
     credentials: true,
   },
+  transports: ['websocket', 'polling'],
 })
 export class ChatGateway
   implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit
@@ -70,10 +71,13 @@ export class ChatGateway
 
   afterInit() {
     this.realtimeEmitter.bindServer(this.server);
+    console.log('Socket.io gateway initialized');
+    this.logger.log('Socket.io gateway initialized');
   }
 
   async handleConnection(client: AuthedSocket) {
     this.logger.log('Socket connection attempt');
+    console.log('Socket connected:', client.id);
     try {
       const token =
         (client.handshake.auth?.token as string | undefined) ??
@@ -111,6 +115,7 @@ export class ChatGateway
   }
 
   handleDisconnect(client: AuthedSocket) {
+    console.log('Socket disconnected:', client.id);
     this.leaveActiveGroupCall(client);
     this.leaveActiveLiveRoom(client);
 
