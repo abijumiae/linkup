@@ -8,6 +8,11 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
 import { RealtimeEmitter } from '../chat/realtime.emitter';
+import {
+  buildPaginatedResult,
+  parsePaginationQuery,
+  PaginatedResult,
+} from '../common/pagination.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
@@ -35,6 +40,7 @@ const commentInclude = {
 } satisfies Prisma.CommentInclude;
 
 const FEED_LIMIT = 20;
+const COMMENTS_LIMIT = 30;
 
 type PostWithAuthor = Prisma.PostGetPayload<{ include: typeof postInclude }>;
 
@@ -96,11 +102,17 @@ export class PostsService {
     return post;
   }
 
-  async getFeed(userId: string): Promise<FeedPost[]> {
+  async getFeed(
+    userId: string,
+    query: { page?: string; limit?: string } = {},
+  ): Promise<PaginatedResult<FeedPost>> {
+    const pagination = parsePaginationQuery(query);
+
     const posts = await this.prisma.post.findMany({
       where: { groupId: null },
       orderBy: { createdAt: 'desc' },
-      take: FEED_LIMIT,
+      skip: pagination.skip,
+      take: pagination.limit + 1,
       include: {
         ...postInclude,
         _count: {
@@ -129,7 +141,7 @@ export class PostsService {
 
     const followingSet = new Set(following.map((row) => row.followingId));
 
-    return posts.map((post) => ({
+    const mapped = posts.map((post) => ({
       id: post.id,
       authorId: post.authorId,
       groupId: post.groupId,
@@ -146,12 +158,15 @@ export class PostsService {
       liked: post.likes.length > 0,
       isFollowingAuthor: followingSet.has(post.authorId),
     }));
+
+    return buildPaginatedResult(mapped, pagination);
   }
 
   getMyPosts(authorId: string) {
     return this.prisma.post.findMany({
       where: { authorId, groupId: null },
       orderBy: { createdAt: 'desc' },
+      take: FEED_LIMIT,
       include: postInclude,
     });
   }
@@ -234,6 +249,7 @@ export class PostsService {
     return this.prisma.comment.findMany({
       where: { postId },
       orderBy: { createdAt: 'asc' },
+      take: COMMENTS_LIMIT,
       include: commentInclude,
     });
   }

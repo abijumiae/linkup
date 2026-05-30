@@ -6,6 +6,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
+import {
+  buildPaginatedResult,
+  PaginatedResult,
+  parsePaginationQuery,
+} from '../common/pagination.util';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ApplyJobDto } from './dto/apply-job.dto';
@@ -47,6 +52,8 @@ export type JobsQuery = {
   q?: string;
   location?: string;
   jobType?: string;
+  page?: string;
+  limit?: string;
 };
 
 @Injectable()
@@ -76,7 +83,11 @@ export class JobsService {
     return this.mapJob(job, posterId);
   }
 
-  async findAll(userId: string, query: JobsQuery): Promise<JobResponse[]> {
+  async findAll(
+    userId: string,
+    query: JobsQuery,
+  ): Promise<PaginatedResult<JobResponse>> {
+    const pagination = parsePaginationQuery(query);
     const where: Prisma.JobWhereInput = { status: 'ACTIVE' };
 
     if (query.location?.trim()) {
@@ -99,10 +110,13 @@ export class JobsService {
     const jobs = await this.prisma.job.findMany({
       where,
       orderBy: { createdAt: 'desc' },
+      skip: pagination.skip,
+      take: pagination.limit + 1,
       include: jobInclude,
     });
 
-    return jobs.map((job) => this.mapJob(job, userId));
+    const mapped = jobs.map((job) => this.mapJob(job, userId));
+    return buildPaginatedResult(mapped, pagination);
   }
 
   async findOne(id: string, userId: string): Promise<JobResponse> {

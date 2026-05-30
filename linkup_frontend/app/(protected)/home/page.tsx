@@ -132,6 +132,10 @@ export default function HomeDashboardPage() {
     type: UploadMediaType;
   } | null>(null);
   const [posts, setPosts] = useState<FeedPost[]>([]);
+  const [feedLoading, setFeedLoading] = useState(true);
+  const [feedPage, setFeedPage] = useState(1);
+  const [feedHasMore, setFeedHasMore] = useState(false);
+  const [feedLoadingMore, setFeedLoadingMore] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -166,30 +170,31 @@ export default function HomeDashboardPage() {
   const displaySparkCount = posts.length;
 
   useEffect(() => {
-    fetchFeed()
+    setFeedLoading(true);
+    fetchFeed(1)
       .then((data) => {
-        if (data.length > 0) {
-          setPosts(data.map(mapPostToFeedPost));
-        } else {
-          setPosts([]);
-        }
+        setPosts(data.items.map(mapPostToFeedPost));
+        setFeedPage(1);
+        setFeedHasMore(data.hasMore);
       })
       .catch(() => {
         setPosts(mapStaticPosts());
-      });
+        setFeedHasMore(false);
+      })
+      .finally(() => setFeedLoading(false));
 
     async function loadPulseCounts() {
       try {
         const [groups, jobs, events] = await Promise.all([
-          fetchGroups().catch(() => []),
-          fetchJobs().catch(() => []),
-          fetchEvents().catch(() => []),
+          fetchGroups(1, 50).catch(() => ({ items: [], hasMore: false })),
+          fetchJobs({ page: 1, limit: 50 }).catch(() => ({ items: [], hasMore: false })),
+          fetchEvents({ page: 1, limit: 50 }).catch(() => ({ items: [], hasMore: false })),
         ]);
         setPulseCounts((current) => ({
           ...current,
-          hubs: groups.length,
-          work: jobs.length,
-          happenings: events.length,
+          hubs: groups.items.length,
+          work: jobs.items.length,
+          happenings: events.items.length,
         }));
       } catch {
         // Placeholder counts remain at zero.
@@ -199,6 +204,29 @@ export default function HomeDashboardPage() {
     void loadPulseCounts();
     loadMoments();
   }, []);
+
+  async function loadMoreFeed() {
+    if (feedLoadingMore || !feedHasMore) {
+      return;
+    }
+
+    setFeedLoadingMore(true);
+    const nextPage = feedPage + 1;
+
+    try {
+      const data = await fetchFeed(nextPage);
+      setPosts((current) => [
+        ...current,
+        ...data.items.map(mapPostToFeedPost),
+      ]);
+      setFeedPage(nextPage);
+      setFeedHasMore(data.hasMore);
+    } catch {
+      // Keep existing feed on load-more failure.
+    } finally {
+      setFeedLoadingMore(false);
+    }
+  }
 
   useEffect(() => {
     if (!socket) {
@@ -342,15 +370,6 @@ export default function HomeDashboardPage() {
         const withoutDuplicate = current.filter((post) => post.id !== mapped.id);
         return [mapped, ...withoutDuplicate.filter((post) => !post.isStatic)];
       });
-
-      try {
-        const refreshed = await fetchFeed();
-        if (refreshed.length > 0) {
-          setPosts(refreshed.map(mapPostToFeedPost));
-        }
-      } catch {
-        // Optimistic update above is enough if refresh fails.
-      }
     } catch {
       setError("Could not drop your Spark. Please try again.");
     } finally {
@@ -512,7 +531,28 @@ export default function HomeDashboardPage() {
               </h2>
 
               <div className="mt-6 space-y-4">
-                {posts.length === 0 ? (
+                {feedLoading ? (
+                  <>
+                    {[0, 1, 2].map((key) => (
+                      <div
+                        key={key}
+                        className="animate-pulse linkup-card p-5"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="h-12 w-12 rounded-3xl bg-slate-200 dark:bg-white/10" />
+                          <div className="space-y-2">
+                            <div className="h-4 w-32 rounded bg-slate-200 dark:bg-white/10" />
+                            <div className="h-3 w-24 rounded bg-slate-200 dark:bg-white/10" />
+                          </div>
+                        </div>
+                        <div className="mt-5 space-y-2">
+                          <div className="h-3 w-full rounded bg-slate-200 dark:bg-white/10" />
+                          <div className="h-3 w-5/6 rounded bg-slate-200 dark:bg-white/10" />
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                ) : posts.length === 0 ? (
                   <div className="linkup-empty p-10 text-center">
                     <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary dark:text-brand-secondary">
                       <Sparkles className="h-5 w-5" />
@@ -578,6 +618,18 @@ export default function HomeDashboardPage() {
                     ),
                   )
                 )}
+                {!feedLoading && feedHasMore ? (
+                  <div className="pt-2 text-center">
+                    <button
+                      type="button"
+                      onClick={() => void loadMoreFeed()}
+                      disabled={feedLoadingMore}
+                      className="linkup-btn-secondary min-h-[44px] transition-all duration-200 ease-out disabled:opacity-60"
+                    >
+                      {feedLoadingMore ? "Loading..." : "Load more Sparks"}
+                    </button>
+                  </div>
+                ) : null}
               </div>
             </section>
           </main>

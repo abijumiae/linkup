@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -29,8 +30,12 @@ export class GroupsController {
   }
 
   @Get()
-  findAll(@Req() req: { user: SafeUser }) {
-    return this.groupsService.findAll(req.user.id);
+  findAll(
+    @Req() req: { user: SafeUser },
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.groupsService.findAll(req.user.id, { page, limit });
   }
 
   @Get('chats/list')

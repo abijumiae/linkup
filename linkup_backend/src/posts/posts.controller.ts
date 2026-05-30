@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -25,8 +26,12 @@ export class PostsController {
   }
 
   @Get('feed')
-  getFeed(@Req() req: { user: SafeUser }) {
-    return this.postsService.getFeed(req.user.id);
+  getFeed(
+    @Req() req: { user: SafeUser },
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.postsService.getFeed(req.user.id, { page, limit });
   }
 
   @Get('me')

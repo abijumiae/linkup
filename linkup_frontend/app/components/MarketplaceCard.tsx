@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { memo } from "react";
 import { Mail, MapPin, ShoppingBag, Tag } from "lucide-react";
 import { formatPrice, MarketplaceItem } from "@/src/lib/marketplace";
 
@@ -8,7 +9,7 @@ type MarketplaceCardProps = {
   item: MarketplaceItem;
 };
 
-export default function MarketplaceCard({ item }: MarketplaceCardProps) {
+function MarketplaceCard({ item }: MarketplaceCardProps) {
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-950/5 transition duration-300 hover:-translate-y-1 hover:border-brand-primary/30 hover:shadow-brand-primary/10 dark:border-white/10 dark:bg-brand-dark/80 dark:shadow-slate-950/20">
       {item.imageUrl ? (
@@ -16,6 +17,7 @@ export default function MarketplaceCard({ item }: MarketplaceCardProps) {
         <img
           src={item.imageUrl}
           alt=""
+          loading="lazy"
           className="h-44 w-full object-cover"
         />
       ) : (
@@ -88,3 +90,5 @@ export default function MarketplaceCard({ item }: MarketplaceCardProps) {
     </article>
   );
 }
+
+export default memo(MarketplaceCard);

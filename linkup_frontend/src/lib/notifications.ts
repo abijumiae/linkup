@@ -43,6 +43,9 @@ export interface Notification {
 export interface NotificationsResponse {
   notifications: Notification[];
   unreadCount: number;
+  page?: number;
+  limit?: number;
+  hasMore?: boolean;
 }
 
 function authHeaders(): HeadersInit {
@@ -68,11 +71,17 @@ async function withAuth<T>(request: () => Promise<T>): Promise<T> {
   }
 }
 
-export async function fetchNotifications(): Promise<NotificationsResponse> {
+export async function fetchNotifications(
+  page = 1,
+  limit = 20,
+): Promise<NotificationsResponse> {
   return withAuth(() =>
-    apiRequest<NotificationsResponse>("/notifications", {
-      headers: authHeaders(),
-    }),
+    apiRequest<NotificationsResponse>(
+      `/notifications?page=${page}&limit=${limit}`,
+      {
+        headers: authHeaders(),
+      },
+    ),
   );
 }
 

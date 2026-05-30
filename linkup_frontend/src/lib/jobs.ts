@@ -1,4 +1,5 @@
 import { apiRequest, ApiError } from "./api";
+import { PaginatedResponse, unwrapPaginated } from "./pagination";
 import { clearAuth, getToken } from "./auth";
 
 export interface JobPoster {
@@ -91,6 +92,8 @@ export interface JobsFilters {
   q?: string;
   location?: string;
   jobType?: string;
+  page?: number;
+  limit?: number;
 }
 
 function authHeaders(): HeadersInit {
@@ -116,19 +119,23 @@ async function withAuth<T>(request: () => Promise<T>): Promise<T> {
   }
 }
 
-export async function fetchJobs(filters: JobsFilters = {}): Promise<Job[]> {
+export async function fetchJobs(
+  filters: JobsFilters = {},
+): Promise<PaginatedResponse<Job>> {
   const params = new URLSearchParams();
   if (filters.q?.trim()) params.set("q", filters.q.trim());
   if (filters.location?.trim()) params.set("location", filters.location.trim());
   if (filters.jobType?.trim()) params.set("jobType", filters.jobType.trim());
+  if (filters.page) params.set("page", String(filters.page));
+  if (filters.limit) params.set("limit", String(filters.limit));
 
   const query = params.toString();
   const path = query ? `/jobs?${query}` : "/jobs";
 
   return withAuth(() =>
-    apiRequest<Job[]>(path, {
+    apiRequest<PaginatedResponse<Job> | Job[]>(path, {
       headers: authHeaders(),
-    }),
+    }).then(unwrapPaginated),
   );
 }
 

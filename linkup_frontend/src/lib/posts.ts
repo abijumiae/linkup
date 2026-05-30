@@ -1,4 +1,5 @@
 import { apiRequest, ApiError } from "./api";
+import { PaginatedResponse, unwrapPaginated } from "./pagination";
 import { AccountType, clearAuth, getToken } from "./auth";
 
 export interface PostAuthor {
@@ -95,11 +96,17 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
   );
 }
 
-export async function fetchFeed(): Promise<FeedPost[]> {
+export async function fetchFeed(
+  page = 1,
+  limit = 20,
+): Promise<PaginatedResponse<FeedPost>> {
   return withAuth(() =>
-    apiRequest<FeedPost[]>("/posts/feed", {
-      headers: authHeaders(),
-    }),
+    apiRequest<PaginatedResponse<FeedPost> | FeedPost[]>(
+      `/posts/feed?page=${page}&limit=${limit}`,
+      {
+        headers: authHeaders(),
+      },
+    ).then(unwrapPaginated),
   );
 }
 

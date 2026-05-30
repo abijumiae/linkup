@@ -64,6 +64,9 @@ function JobSkeleton() {
 export default function JobsPageClient() {
   const router = useRouter();
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [listPage, setListPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [locationInput, setLocationInput] = useState("");
   const [activeJobType, setActiveJobType] = useState<string | null>(null);
@@ -94,10 +97,14 @@ export default function JobsPageClient() {
     };
   }
 
-  const loadJobs = useCallback(async (filters: JobsFilters) => {
+  const loadJobs = useCallback(async (filters: JobsFilters, page = 1, append = false) => {
     try {
-      const data = await fetchJobs(filters);
-      setJobs(data);
+      const data = await fetchJobs({ ...filters, page, limit: 20 });
+      setJobs((current) =>
+        append ? [...current, ...data.items] : data.items,
+      );
+      setListPage(page);
+      setHasMore(data.hasMore);
       setError(null);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -290,16 +297,35 @@ export default function JobsPageClient() {
             onPost={() => setShowCreateModal(true)}
           />
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-            {jobs.map((job) => (
-              <JobCard
-                key={job.id}
-                job={job}
-                isApplying={applyingJobId === job.id}
-                onApply={(id) => setApplyJobId(id)}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              {jobs.map((job) => (
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  isApplying={applyingJobId === job.id}
+                  onApply={(id) => setApplyJobId(id)}
+                />
+              ))}
+            </div>
+            {hasMore ? (
+              <div className="mt-8 text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoadingMore(true);
+                    void loadJobs(buildFilters(), listPage + 1, true).finally(
+                      () => setLoadingMore(false),
+                    );
+                  }}
+                  disabled={loadingMore}
+                  className="linkup-btn-secondary min-h-[44px] transition-all duration-200 ease-out disabled:opacity-60"
+                >
+                  {loadingMore ? "Loading..." : "Load more opportunities"}
+                </button>
+              </div>
+            ) : null}
+          </>
         )}
       </div>
 

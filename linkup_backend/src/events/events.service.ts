@@ -6,6 +6,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
+import {
+  buildPaginatedResult,
+  PaginatedResult,
+  parsePaginationQuery,
+} from '../common/pagination.util';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -45,6 +50,8 @@ export type EventsQuery = {
   q?: string;
   location?: string;
   category?: string;
+  page?: string;
+  limit?: string;
 };
 
 @Injectable()
@@ -73,7 +80,11 @@ export class EventsService {
     return this.mapEvent(event, organizerId);
   }
 
-  async findAll(userId: string, query: EventsQuery): Promise<EventResponse[]> {
+  async findAll(
+    userId: string,
+    query: EventsQuery,
+  ): Promise<PaginatedResult<EventResponse>> {
+    const pagination = parsePaginationQuery(query);
     const now = new Date();
 
     const filters: Prisma.EventWhereInput[] = [
@@ -118,10 +129,13 @@ export class EventsService {
     const events = await this.prisma.event.findMany({
       where: { AND: filters },
       orderBy: { startDate: 'asc' },
+      skip: pagination.skip,
+      take: pagination.limit + 1,
       include: eventInclude,
     });
 
-    return events.map((event) => this.mapEvent(event, userId));
+    const mapped = events.map((event) => this.mapEvent(event, userId));
+    return buildPaginatedResult(mapped, pagination);
   }
 
   async findOne(id: string, userId: string): Promise<EventResponse> {

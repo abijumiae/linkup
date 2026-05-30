@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import {
   Bookmark,
   Heart,
@@ -78,7 +78,7 @@ type FeedPostCardProps = {
   pulseLabels?: boolean;
 };
 
-export default function FeedPostCard({
+function FeedPostCard({
   post,
   currentUserId,
   sparkLabels = false,
@@ -254,6 +254,7 @@ export default function FeedPostCard({
           <img
             src={cardPost.imageUrl}
             alt=""
+            loading="lazy"
             className="max-h-[28rem] w-full object-contain bg-slate-100 dark:bg-brand-dark/60"
           />
         </div>
@@ -370,3 +371,5 @@ export default function FeedPostCard({
     </article>
   );
 }
+
+export default memo(FeedPostCard);

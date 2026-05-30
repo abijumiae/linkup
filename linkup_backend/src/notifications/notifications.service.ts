@@ -1,5 +1,9 @@
 import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { NotificationType, Prisma } from '../generated/prisma/client';
+import {
+  buildPaginatedResult,
+  parsePaginationQuery,
+} from '../common/pagination.util';
 import { RealtimeEmitter } from '../chat/realtime.emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -220,12 +224,18 @@ export class NotificationsService {
     });
   }
 
-  async getForUser(recipientId: string) {
+  async getForUser(
+    recipientId: string,
+    query?: { page?: string; limit?: string },
+  ) {
+    const pagination = parsePaginationQuery(query ?? {});
+
     const [notifications, unreadCount] = await Promise.all([
       this.prisma.notification.findMany({
         where: { recipientId },
         orderBy: { createdAt: 'desc' },
-        take: 50,
+        skip: pagination.skip,
+        take: pagination.limit + 1,
         include: notificationInclude,
       }),
       this.prisma.notification.count({
@@ -233,7 +243,15 @@ export class NotificationsService {
       }),
     ]);
 
-    return { notifications, unreadCount };
+    const page = buildPaginatedResult(notifications, pagination);
+
+    return {
+      notifications: page.items,
+      unreadCount,
+      page: page.page,
+      limit: page.limit,
+      hasMore: page.hasMore,
+    };
   }
 
   async markAsRead(notificationId: string, recipientId: string) {

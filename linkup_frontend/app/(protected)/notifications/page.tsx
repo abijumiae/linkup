@@ -72,6 +72,9 @@ export default function NotificationsPage() {
   const router = useRouter();
   const { unreadCount, setUnreadCount, refreshUnreadCount, latestNotification, clearLatestNotification } = useNotifications();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [alertsPage, setAlertsPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [activeFilter, setActiveFilter] = useState<AlertFilter>("all");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,12 +86,23 @@ export default function NotificationsPage() {
     [notifications, activeFilter],
   );
 
-  const loadNotifications = useCallback(async () => {
+  const loadNotifications = useCallback(async (page = 1, append = false) => {
     setError(null);
 
     try {
-      const data = await fetchNotifications();
-      setNotifications(data.notifications);
+      const data = await fetchNotifications(page);
+      setNotifications((current) =>
+        append
+          ? [
+              ...current,
+              ...data.notifications.filter(
+                (item) => !current.some((existing) => existing.id === item.id),
+              ),
+            ]
+          : data.notifications,
+      );
+      setAlertsPage(page);
+      setHasMore(data.hasMore ?? false);
       setUnreadCount(data.unreadCount);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -263,6 +277,24 @@ export default function NotificationsPage() {
             ))
           )}
         </div>
+
+        {hasMore && notifications.length > 0 ? (
+          <div className="mt-6 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setLoadingMore(true);
+                void loadNotifications(alertsPage + 1, true).finally(() =>
+                  setLoadingMore(false),
+                );
+              }}
+              disabled={loadingMore}
+              className="linkup-btn-secondary min-h-[44px] transition-all duration-200 ease-out disabled:opacity-60"
+            >
+              {loadingMore ? "Loading..." : "Load more alerts"}
+            </button>
+          </div>
+        ) : null}
 
         {markingId ? (
           <p className="sr-only" aria-live="polite">

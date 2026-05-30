@@ -36,6 +36,8 @@ export class MarketplaceController {
     @Query('category') category?: string,
     @Query('minPrice') minPrice?: string,
     @Query('maxPrice') maxPrice?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     const parsePrice = (value?: string) => {
       if (value === undefined || value === '') {
@@ -50,6 +52,8 @@ export class MarketplaceController {
       category,
       minPrice: parsePrice(minPrice),
       maxPrice: parsePrice(maxPrice),
+      page,
+      limit,
     });
   }
 

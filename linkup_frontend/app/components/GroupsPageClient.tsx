@@ -69,11 +69,14 @@ export default function GroupsPageClient() {
     "all",
   );
 
-  const loadGroups = useCallback(async () => {
+  const loadGroups = useCallback(async (page = 1, append = false) => {
     try {
-      const data = await fetchGroups();
-      setGroups(data);
+      const data = await fetchGroups(page, 20);
+      setGroups((current) =>
+        append ? [...current, ...data.items] : data.items,
+      );
       setError(null);
+      return data;
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         router.replace("/login");

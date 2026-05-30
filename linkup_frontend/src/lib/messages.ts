@@ -50,6 +50,7 @@ export function formatVoiceDuration(totalSeconds: number) {
 export interface ConversationDetail {
   user: MessageUser;
   messages: ChatMessage[];
+  hasMore?: boolean;
 }
 
 function authHeaders(): HeadersInit {

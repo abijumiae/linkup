@@ -42,8 +42,16 @@ export class EventsController {
     @Query('q') q?: string,
     @Query('location') location?: string,
     @Query('category') category?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.eventsService.findAll(req.user.id, { q, location, category });
+    return this.eventsService.findAll(req.user.id, {
+      q,
+      location,
+      category,
+      page,
+      limit,
+    });
   }
 
   @Get(':id/attendees')

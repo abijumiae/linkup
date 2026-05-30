@@ -1,4 +1,5 @@
 import { apiRequest, ApiError } from "./api";
+import { PaginatedResponse, unwrapPaginated } from "./pagination";
 import { clearAuth, getToken } from "./auth";
 
 export interface EventOrganizer {
@@ -60,6 +61,8 @@ export interface EventsFilters {
   q?: string;
   location?: string;
   category?: string;
+  page?: number;
+  limit?: number;
 }
 
 function authHeaders(): HeadersInit {
@@ -98,19 +101,21 @@ export function formatEventDate(dateStr: string): string {
 
 export async function fetchEvents(
   filters: EventsFilters = {},
-): Promise<Event[]> {
+): Promise<PaginatedResponse<Event>> {
   const params = new URLSearchParams();
   if (filters.q?.trim()) params.set("q", filters.q.trim());
   if (filters.location?.trim()) params.set("location", filters.location.trim());
   if (filters.category?.trim()) params.set("category", filters.category.trim());
+  if (filters.page) params.set("page", String(filters.page));
+  if (filters.limit) params.set("limit", String(filters.limit));
 
   const query = params.toString();
   const path = query ? `/events?${query}` : "/events";
 
   return withAuth(() =>
-    apiRequest<Event[]>(path, {
+    apiRequest<PaginatedResponse<Event> | Event[]>(path, {
       headers: authHeaders(),
-    }),
+    }).then(unwrapPaginated),
   );
 }
 

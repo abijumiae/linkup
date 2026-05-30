@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { memo } from "react";
 import { Briefcase, Building2, CheckCircle2, MapPin } from "lucide-react";
 import type { Job } from "@/src/lib/jobs";
 
@@ -10,7 +11,7 @@ type JobCardProps = {
   isApplying?: boolean;
 };
 
-export default function JobCard({ job, onApply, isApplying = false }: JobCardProps) {
+function JobCard({ job, onApply, isApplying = false }: JobCardProps) {
   return (
     <article className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-lg shadow-slate-950/5 transition duration-300 hover:-translate-y-1 hover:border-brand-primary/30 hover:shadow-brand-primary/10 dark:border-white/10 dark:bg-brand-dark/80 dark:shadow-slate-950/20">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -86,3 +87,5 @@ export default function JobCard({ job, onApply, isApplying = false }: JobCardPro
     </article>
   );
 }
+
+export default memo(JobCard);

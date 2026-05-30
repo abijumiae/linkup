@@ -6,6 +6,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { GroupRole, Prisma } from '../generated/prisma/client';
+import {
+  buildPaginatedResult,
+  PaginatedResult,
+  parsePaginationQuery,
+} from '../common/pagination.util';
 import { NotificationsService } from '../notifications/notifications.service';
 import { FeedPost } from '../posts/posts.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -80,9 +85,16 @@ export class GroupsService {
     return this.mapGroupDetail(group, userId, GroupRole.OWNER);
   }
 
-  async findAll(userId: string): Promise<GroupListItem[]> {
+  async findAll(
+    userId: string,
+    query?: { page?: string; limit?: string },
+  ): Promise<PaginatedResult<GroupListItem>> {
+    const pagination = parsePaginationQuery(query ?? {});
+
     const groups = await this.prisma.group.findMany({
       orderBy: { createdAt: 'desc' },
+      skip: pagination.skip,
+      take: pagination.limit + 1,
       include: {
         _count: { select: { members: true } },
         members: {
@@ -92,9 +104,10 @@ export class GroupsService {
       },
     });
 
-    return groups.map((group) =>
+    const mapped = groups.map((group) =>
       this.mapGroupListItem(group, userId),
     );
+    return buildPaginatedResult(mapped, pagination);
   }
 
   async findOne(groupId: string, userId: string): Promise<GroupDetail> {

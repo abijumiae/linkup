@@ -43,8 +43,16 @@ export class JobsController {
     @Query('q') q?: string,
     @Query('location') location?: string,
     @Query('jobType') jobType?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.jobsService.findAll(req.user.id, { q, location, jobType });
+    return this.jobsService.findAll(req.user.id, {
+      q,
+      location,
+      jobType,
+      page,
+      limit,
+    });
   }
 
   @Get(':id/applications')

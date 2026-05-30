@@ -31,6 +31,9 @@ const groupMessageInclude = {
   },
 } satisfies Prisma.GroupMessageInclude;
 
+const MESSAGE_PAGE_SIZE = 30;
+const CONVERSATION_SCAN_LIMIT = 300;
+
 @Injectable()
 export class MessagesService {
   constructor(
@@ -46,6 +49,7 @@ export class MessagesService {
         OR: [{ senderId: userId }, { receiverId: userId }],
       },
       orderBy: { createdAt: 'desc' },
+      take: CONVERSATION_SCAN_LIMIT,
       include: {
         sender: { select: userSelect },
         receiver: { select: userSelect },
@@ -136,11 +140,19 @@ export class MessagesService {
           { senderId: otherUserId, receiverId: currentUserId },
         ],
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
+      take: MESSAGE_PAGE_SIZE + 1,
       include: messageInclude,
     });
 
-    return { user: otherUser, messages };
+    const hasMore = messages.length > MESSAGE_PAGE_SIZE;
+    const page = hasMore ? messages.slice(0, MESSAGE_PAGE_SIZE) : messages;
+
+    return {
+      user: otherUser,
+      messages: page.reverse(),
+      hasMore,
+    };
   }
 
   async sendMessage(
@@ -219,11 +231,15 @@ export class MessagesService {
 
     const messages = await this.prisma.groupMessage.findMany({
       where: { groupId },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
+      take: MESSAGE_PAGE_SIZE + 1,
       include: groupMessageInclude,
     });
 
-    return { group, messages };
+    const hasMore = messages.length > MESSAGE_PAGE_SIZE;
+    const page = hasMore ? messages.slice(0, MESSAGE_PAGE_SIZE) : messages;
+
+    return { group, messages: page.reverse(), hasMore };
   }
 
   async sendGroupMessage(groupId: string, senderId: string, content: string) {

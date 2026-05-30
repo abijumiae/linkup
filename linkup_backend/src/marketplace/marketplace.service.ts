@@ -4,6 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
+import {
+  buildPaginatedResult,
+  PaginatedResult,
+  parsePaginationQuery,
+} from '../common/pagination.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMarketplaceItemDto } from './dto/create-marketplace-item.dto';
 import { UpdateMarketplaceItemDto } from './dto/update-marketplace-item.dto';
@@ -64,8 +69,9 @@ export class MarketplaceService {
 
   async findAll(
     userId: string,
-    query: MarketplaceQuery,
-  ): Promise<MarketplaceItemResponse[]> {
+    query: MarketplaceQuery & { page?: string; limit?: string },
+  ): Promise<PaginatedResult<MarketplaceItemResponse>> {
+    const pagination = parsePaginationQuery(query);
     const where: Prisma.MarketplaceItemWhereInput = {
       status: 'ACTIVE',
     };
@@ -98,10 +104,13 @@ export class MarketplaceService {
     const items = await this.prisma.marketplaceItem.findMany({
       where,
       orderBy: { createdAt: 'desc' },
+      skip: pagination.skip,
+      take: pagination.limit + 1,
       include: itemInclude,
     });
 
-    return items.map((item) => this.mapItem(item, userId));
+    const mapped = items.map((item) => this.mapItem(item, userId));
+    return buildPaginatedResult(mapped, pagination);
   }
 
   async findOne(id: string, userId: string): Promise<MarketplaceItemResponse> {

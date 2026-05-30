@@ -73,6 +73,9 @@ function EventSkeleton() {
 export default function EventsPageClient() {
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
+  const [listPage, setListPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [locationInput, setLocationInput] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -101,10 +104,14 @@ export default function EventsPageClient() {
     };
   }
 
-  const loadEvents = useCallback(async (filters: EventsFilters) => {
+  const loadEvents = useCallback(async (filters: EventsFilters, page = 1, append = false) => {
     try {
-      const data = await fetchEvents(filters);
-      setEvents(data);
+      const data = await fetchEvents({ ...filters, page, limit: 20 });
+      setEvents((current) =>
+        append ? [...current, ...data.items] : data.items,
+      );
+      setListPage(page);
+      setHasMore(data.hasMore);
       setError(null);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -321,17 +328,36 @@ export default function EventsPageClient() {
             onCreate={() => setShowCreateModal(true)}
           />
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-            {events.map((event) => (
-              <EventCard
-                key={event.id}
-                event={event}
-                onJoin={handleJoin}
-                onLeave={handleLeave}
-                isUpdating={updatingEventId === event.id}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              {events.map((event) => (
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  onJoin={handleJoin}
+                  onLeave={handleLeave}
+                  isUpdating={updatingEventId === event.id}
+                />
+              ))}
+            </div>
+            {hasMore ? (
+              <div className="mt-8 text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoadingMore(true);
+                    void loadEvents(buildFilters(), listPage + 1, true).finally(
+                      () => setLoadingMore(false),
+                    );
+                  }}
+                  disabled={loadingMore}
+                  className="linkup-btn-secondary min-h-[44px] transition-all duration-200 ease-out disabled:opacity-60"
+                >
+                  {loadingMore ? "Loading..." : "Load more happenings"}
+                </button>
+              </div>
+            ) : null}
+          </>
         )}
       </div>
 

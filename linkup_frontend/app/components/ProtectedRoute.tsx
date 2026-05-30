@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchMe, getPostLoginPath, getToken, needsOnboarding } from "@/src/lib/auth";
+import { getToken, needsOnboarding } from "@/src/lib/auth";
 import { useAuth } from "@/src/lib/AuthProvider";
 import AuthLoadingScreen from "./AuthLoadingScreen";
 
@@ -10,60 +10,44 @@ type GuardStatus = "loading" | "authorized" | "redirecting";
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { setUser, logout } = useAuth();
+  const { user, isLoading, logout } = useAuth();
   const [status, setStatus] = useState<GuardStatus>("loading");
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function verifySession() {
-      const token = getToken();
-
-      if (!token) {
-        if (!cancelled) {
-          setStatus("redirecting");
-          router.replace("/login");
-        }
-        return;
-      }
-
-      const user = await fetchMe();
-
-      if (cancelled) {
-        return;
-      }
-
-      if (!user) {
-        logout();
-        setStatus("redirecting");
-        router.replace("/login");
-        return;
-      }
-
-      if (needsOnboarding(user)) {
-        setUser(user);
-        setStatus("redirecting");
-        router.replace("/onboarding");
-        return;
-      }
-
-      setUser(user);
-      setStatus("authorized");
+    if (isLoading) {
+      return;
     }
 
-    void verifySession();
+    const token = getToken();
 
-    return () => {
-      cancelled = true;
-    };
-  }, [router, setUser, logout]);
+    if (!token) {
+      setStatus("redirecting");
+      router.replace("/login");
+      return;
+    }
+
+    if (!user) {
+      logout();
+      setStatus("redirecting");
+      router.replace("/login");
+      return;
+    }
+
+    if (needsOnboarding(user)) {
+      setStatus("redirecting");
+      router.replace("/onboarding");
+      return;
+    }
+
+    setStatus("authorized");
+  }, [isLoading, user, router, logout]);
 
   if (status === "authorized") {
     return <>{children}</>;
   }
 
   if (status === "redirecting") {
-    return <AuthLoadingScreen message="Redirecting to sign in..." />;
+    return <AuthLoadingScreen message="Redirecting..." />;
   }
 
   return <AuthLoadingScreen />;

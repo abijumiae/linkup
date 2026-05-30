@@ -69,6 +69,9 @@ function ListingSkeleton() {
 export default function MarketplacePageClient() {
   const router = useRouter();
   const [items, setItems] = useState<MarketplaceItem[]>([]);
+  const [listPage, setListPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [minPrice, setMinPrice] = useState("");
@@ -114,10 +117,18 @@ export default function MarketplacePageClient() {
   }
 
   const loadItems = useCallback(
-    async (filters: MarketplaceFilters) => {
+    async (filters: MarketplaceFilters, page = 1, append = false) => {
       try {
-        const data = await fetchMarketplaceItems(filters);
-        setItems(data);
+        const data = await fetchMarketplaceItems({
+          ...filters,
+          page,
+          limit: 20,
+        });
+        setItems((current) =>
+          append ? [...current, ...data.items] : data.items,
+        );
+        setListPage(page);
+        setHasMore(data.hasMore);
         setError(null);
       } catch (err) {
         if (err instanceof ApiError && err.status === 401) {
@@ -337,11 +348,30 @@ export default function MarketplacePageClient() {
             onDrop={() => setShowCreateModal(true)}
           />
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-            {items.map((item) => (
-              <MarketplaceCard key={item.id} item={item} />
-            ))}
-          </div>
+          <>
+            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              {items.map((item) => (
+                <MarketplaceCard key={item.id} item={item} />
+              ))}
+            </div>
+            {hasMore ? (
+              <div className="mt-8 text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoadingMore(true);
+                    void loadItems(buildFilters(), listPage + 1, true).finally(
+                      () => setLoadingMore(false),
+                    );
+                  }}
+                  disabled={loadingMore}
+                  className="linkup-btn-secondary min-h-[44px] transition-all duration-200 ease-out disabled:opacity-60"
+                >
+                  {loadingMore ? "Loading..." : "Load more listings"}
+                </button>
+              </div>
+            ) : null}
+          </>
         )}
       </div>
 

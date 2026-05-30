@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { memo } from "react";
 import {
   CalendarDays,
   CheckCircle2,
@@ -18,7 +19,7 @@ type EventCardProps = {
   isUpdating?: boolean;
 };
 
-export default function EventCard({
+function EventCard({
   event,
   onJoin,
   onLeave,
@@ -40,6 +41,7 @@ export default function EventCard({
         <img
           src={event.imageUrl}
           alt=""
+          loading="lazy"
           className="h-44 w-full object-cover"
         />
       ) : (
@@ -141,3 +143,5 @@ export default function EventCard({
     </article>
   );
 }
+
+export default memo(EventCard);

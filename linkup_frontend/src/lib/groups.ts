@@ -1,4 +1,5 @@
 import { apiRequest, ApiError } from "./api";
+import { PaginatedResponse, unwrapPaginated } from "./pagination";
 import { clearAuth, getToken } from "./auth";
 import { FeedPost } from "./posts";
 
@@ -56,11 +57,17 @@ async function withAuth<T>(request: () => Promise<T>): Promise<T> {
   }
 }
 
-export async function fetchGroups(): Promise<Group[]> {
+export async function fetchGroups(
+  page = 1,
+  limit = 20,
+): Promise<PaginatedResponse<Group>> {
   return withAuth(() =>
-    apiRequest<Group[]>("/groups", {
-      headers: authHeaders(),
-    }),
+    apiRequest<PaginatedResponse<Group> | Group[]>(
+      `/groups?page=${page}&limit=${limit}`,
+      {
+        headers: authHeaders(),
+      },
+    ).then(unwrapPaginated),
   );
 }
 

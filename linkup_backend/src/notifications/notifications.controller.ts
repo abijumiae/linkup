@@ -3,6 +3,7 @@ import {
   Get,
   Param,
   Patch,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -16,8 +17,12 @@ export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
   @Get()
-  getNotifications(@Req() req: { user: SafeUser }) {
-    return this.notificationsService.getForUser(req.user.id);
+  getNotifications(
+    @Req() req: { user: SafeUser },
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.notificationsService.getForUser(req.user.id, { page, limit });
   }
 
   @Patch('read-all')

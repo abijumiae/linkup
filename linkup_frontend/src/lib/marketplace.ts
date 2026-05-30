@@ -1,4 +1,5 @@
 import { apiRequest, ApiError } from "./api";
+import { PaginatedResponse, unwrapPaginated } from "./pagination";
 import { clearAuth, getToken } from "./auth";
 
 export interface MarketplaceSeller {
@@ -53,6 +54,8 @@ export interface MarketplaceFilters {
   category?: string;
   minPrice?: number;
   maxPrice?: number;
+  page?: number;
+  limit?: number;
 }
 
 function authHeaders(): HeadersInit {
@@ -91,7 +94,7 @@ export function formatPrice(price: number, currency: string): string {
 
 export async function fetchMarketplaceItems(
   filters: MarketplaceFilters = {},
-): Promise<MarketplaceItem[]> {
+): Promise<PaginatedResponse<MarketplaceItem>> {
   const params = new URLSearchParams();
   if (filters.q?.trim()) params.set("q", filters.q.trim());
   if (filters.category?.trim()) params.set("category", filters.category.trim());
@@ -99,14 +102,19 @@ export async function fetchMarketplaceItems(
     params.set("minPrice", String(filters.minPrice));
   if (filters.maxPrice !== undefined)
     params.set("maxPrice", String(filters.maxPrice));
+  if (filters.page) params.set("page", String(filters.page));
+  if (filters.limit) params.set("limit", String(filters.limit));
 
   const query = params.toString();
   const path = query ? `/marketplace?${query}` : "/marketplace";
 
   return withAuth(() =>
-    apiRequest<MarketplaceItem[]>(path, {
-      headers: authHeaders(),
-    }),
+    apiRequest<PaginatedResponse<MarketplaceItem> | MarketplaceItem[]>(
+      path,
+      {
+        headers: authHeaders(),
+      },
+    ).then(unwrapPaginated),
   );
 }
 
