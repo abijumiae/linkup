@@ -25,7 +25,9 @@ export default function MessageBubble({
   mediaUrl,
   duration,
 }: MessageBubbleProps) {
-  const isVoice = type === "voice" && Boolean(mediaUrl);
+  const isVoice =
+    (type === "voice" || type === "audio" || type === "AUDIO") &&
+    Boolean(mediaUrl);
 
   return (
     <div className={`flex ${fromMe ? "justify-end" : "justify-start"}`}>

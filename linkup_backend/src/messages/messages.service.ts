@@ -46,6 +46,19 @@ export class MessagesService {
     private readonly chatGateway: ChatGateway,
   ) {}
 
+  private normalizeMessageType(type?: string): string {
+    if (!type) {
+      return 'text';
+    }
+
+    const normalized = type.toLowerCase();
+    if (normalized === 'audio') {
+      return 'voice';
+    }
+
+    return normalized;
+  }
+
   async getConversations(userId: string) {
     const messages = await this.prisma.message.findMany({
       where: {
@@ -187,15 +200,19 @@ export class MessagesService {
         throw new NotFoundException('Receiver not found');
       }
 
-      const messageType = dto.type ?? 'text';
+      const messageType = this.normalizeMessageType(dto.type);
 
       if (messageType === 'voice') {
-        if (!dto.mediaUrl) {
+        const mediaUrl = dto.mediaUrl ?? dto.audioUrl;
+        const duration = dto.duration ?? dto.audioDuration;
+        if (!mediaUrl) {
           throw new BadRequestException('Voice note media URL is required');
         }
-        if (!dto.duration || dto.duration < 1) {
+        if (!duration || duration < 1) {
           throw new BadRequestException('Voice note duration is required');
         }
+        dto.mediaUrl = mediaUrl;
+        dto.duration = duration;
       } else if (messageType === 'image' || messageType === 'video') {
         if (!dto.mediaUrl) {
           throw new BadRequestException('Media URL is required');

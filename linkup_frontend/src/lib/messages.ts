@@ -1,4 +1,4 @@
-import { apiRequest, ApiError } from "./api";
+import { apiRequest, ApiError, getApiBaseUrl } from "./api";
 import { clearAuth, getToken } from "./auth";
 
 export interface MessageUser {
@@ -35,7 +35,8 @@ export interface ChatMessage {
 }
 
 export function getMessagePreview(message: Pick<ChatMessage, "type" | "content">) {
-  if (message.type === "voice") {
+  const type = message.type?.toLowerCase();
+  if (type === "voice" || type === "audio") {
     return "Voice note";
   }
   return message.content;
@@ -120,6 +121,45 @@ export async function sendMessage(
       }),
     }),
   );
+}
+
+export async function uploadVoiceNote(file: File): Promise<{
+  url: string;
+  type: string;
+  filename: string;
+}> {
+  const token = getToken();
+
+  if (!token) {
+    throw new ApiError("Not authenticated", 401);
+  }
+
+  const formData = new FormData();
+  formData.append("audio", file);
+
+  const response = await fetch(`${getApiBaseUrl()}/messages/upload-audio`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  let data: unknown = null;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      clearAuth();
+    }
+    throw new ApiError("Could not send voice note. Please try again.", response.status);
+  }
+
+  return data as { url: string; type: string; filename: string };
 }
 
 export async function sendVoiceMessage(

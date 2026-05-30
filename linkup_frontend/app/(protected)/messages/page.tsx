@@ -43,8 +43,8 @@ import {
   getMessagePreview,
   sendMessage,
   sendVoiceMessage,
+  uploadVoiceNote,
 } from "@/src/lib/messages";
-import { uploadFile } from "@/src/lib/uploads";
 import VoiceNoteRecorder, {
   isVoiceRecordingSupported,
 } from "@/src/components/VoiceNoteRecorder";
@@ -141,6 +141,7 @@ export default function MessagesPage() {
   const [showEmoji, setShowEmoji] = useState(false);
   const [typingPeerId, setTypingPeerId] = useState<string | null>(null);
   const [typingGroupId, setTypingGroupId] = useState<string | null>(null);
+  const [isVoiceRecording, setIsVoiceRecording] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<Record<string, boolean>>({});
   const [joinedDirectRoom, setJoinedDirectRoom] = useState<string | null>(null);
   const { socket, status: socketStatus } = useSocket();
@@ -188,8 +189,14 @@ export default function MessagesPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  const showFeatureNotice = useCallback((message: string) => {
+  const showFeatureNotice = useCallback((message: string | null) => {
     setNotice(message);
+    if (!message) {
+      if (noticeTimeoutRef.current) {
+        clearTimeout(noticeTimeoutRef.current);
+      }
+      return;
+    }
     if (noticeTimeoutRef.current) {
       clearTimeout(noticeTimeoutRef.current);
     }
@@ -901,16 +908,15 @@ export default function MessagesPage() {
   async function handleSendVoiceNote(file: File, durationSeconds: number) {
     if (!activeUser?.id || chatTab !== "direct" || isSending) {
       if (!activeUser?.id) {
-        setError("Select a chat first");
+        showFeatureNotice("Select a chat first");
       }
-      return;
+      throw new Error("Voice note send unavailable");
     }
 
     setIsSending(true);
-    setError(null);
 
     try {
-      const uploaded = await uploadFile(file);
+      const uploaded = await uploadVoiceNote(file);
       const created = await sendVoiceMessage(activeUser.id, {
         mediaUrl: uploaded.url,
         duration: durationSeconds,
@@ -944,14 +950,11 @@ export default function MessagesPage() {
 
       if (err instanceof ApiError && err.status === 401) {
         router.replace("/login");
-        return;
+        throw err;
       }
 
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : "Could not send voice note. Please try again.",
-      );
+      showFeatureNotice("Could not send voice note. Please try again.");
+      throw err;
     } finally {
       setIsSending(false);
     }
@@ -1574,7 +1577,7 @@ export default function MessagesPage() {
 
           {/* Right panel — active chat */}
           <main
-            className={`linkup-panel relative min-w-0 overflow-hidden p-0 sm:p-0 ${
+            className={`linkup-panel relative min-w-0 p-0 sm:p-0 ${
               mobileView === "list" ? "hidden lg:block" : "block"
             }`}
           >
@@ -1762,7 +1765,8 @@ export default function MessagesPage() {
                         disabled={!activeUser}
                         isSending={isSending}
                         onSend={handleSendVoiceNote}
-                        onError={setError}
+                        onNotice={showFeatureNotice}
+                        onRecordingChange={setIsVoiceRecording}
                       />
                     ) : null}
                     <input
@@ -1782,7 +1786,9 @@ export default function MessagesPage() {
                     <button
                       type="button"
                       onClick={() => void handleSendMessage()}
-                      disabled={!messageInput.trim() || isSending}
+                      disabled={
+                        !messageInput.trim() || isSending || isVoiceRecording
+                      }
                       className="linkup-btn-primary inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 sm:text-sm"
                     >
                       <Send className="h-4 w-4" />

@@ -3,12 +3,18 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Req,
   UnauthorizedException,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UploadsService } from '../uploads/uploads.service';
 import { SafeUser } from '../users/users.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { MessagesService } from './messages.service';
@@ -16,11 +22,28 @@ import { MessagesService } from './messages.service';
 @Controller('messages')
 @UseGuards(JwtAuthGuard)
 export class MessagesController {
-  constructor(private readonly messagesService: MessagesService) {}
+  constructor(
+    private readonly messagesService: MessagesService,
+    private readonly uploadsService: UploadsService,
+  ) {}
 
   @Get('conversations')
   getConversations(@Req() req: { user: SafeUser }) {
     return this.messagesService.getConversations(req.user.id);
+  }
+
+  @Post('upload-audio')
+  @UseInterceptors(
+    FileInterceptor('audio', {
+      storage: memoryStorage(),
+      limits: { fileSize: 10 * 1024 * 1024 },
+    }),
+  )
+  uploadAudio(
+    @Req() _req: { user: SafeUser },
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.uploadsService.uploadFile(file);
   }
 
   @Get(':userId')
