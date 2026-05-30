@@ -137,6 +137,10 @@ export default function MessagesPage() {
   const [onlineUsers, setOnlineUsers] = useState<Record<string, boolean>>({});
   const { socket, status: socketStatus } = useSocket();
   const { setActiveChatPeerId } = useActiveChat();
+  const activeUserRef = useRef(activeUser);
+  const activeGroupRef = useRef(activeGroup);
+  activeUserRef.current = activeUser;
+  activeGroupRef.current = activeGroup;
   const [callType, setCallType] = useState<CallType | null>(null);
   const [callStatus, setCallStatus] = useState<
     "connecting" | "active" | "incoming" | null
@@ -387,23 +391,38 @@ export default function MessagesPage() {
   }, [selectedUserId, selectedGroupId]);
 
   useEffect(() => {
+    if (!socket?.connected || !activeUser?.id) {
+      return;
+    }
+
+    socket.emit("join_direct_chat", { otherUserId: activeUser.id });
+    socket.emit("join_chat", {
+      chatType: "direct",
+      targetId: activeUser.id,
+    });
+  }, [socket, activeUser?.id]);
+
+  useEffect(() => {
     if (!currentUserId || !socket) {
       return;
     }
 
     const onConnect = () => {
-      if (activeUser?.id) {
-        socket.emit("join_direct_chat", { otherUserId: activeUser.id });
+      const peerId = activeUserRef.current?.id;
+      const groupId = activeGroupRef.current?.id;
+
+      if (peerId) {
+        socket.emit("join_direct_chat", { otherUserId: peerId });
         socket.emit("join_chat", {
           chatType: "direct",
-          targetId: activeUser.id,
+          targetId: peerId,
         });
       }
-      if (activeGroup?.id) {
-        socket.emit("join_group_chat", { groupId: activeGroup.id });
+      if (groupId) {
+        socket.emit("join_group_chat", { groupId });
         socket.emit("join_chat", {
           chatType: "group",
-          targetId: activeGroup.id,
+          targetId: groupId,
         });
       }
       socket.emit("get_online_users");
@@ -421,6 +440,7 @@ export default function MessagesPage() {
           message.senderId === currentUserId
             ? message.receiverId
             : message.senderId;
+        const openPeerId = activeUserRef.current?.id;
 
         setConversations((current) => {
           const existing = current.find((c) => c.user.id === peerId);
@@ -439,7 +459,7 @@ export default function MessagesPage() {
               senderId: message.senderId,
             },
             unreadCount:
-              activeUser?.id === peerId || message.senderId === currentUserId
+              openPeerId === peerId || message.senderId === currentUserId
                 ? 0
                 : (existing?.unreadCount ?? 0) + 1,
           };
@@ -450,18 +470,21 @@ export default function MessagesPage() {
           ];
         });
 
-        if (activeUser?.id === peerId) {
+        if (openPeerId === peerId) {
           setMessages((current) => {
             if (current.some((item) => item.id === message.id)) {
               return current;
             }
             return [...current, message];
           });
+          setTimeout(scrollToBottom, 50);
         }
         return;
       }
 
       const message = normalized.message;
+      const openGroupId = activeGroupRef.current?.id;
+
       setGroupChats((current) => {
         const existing = current.find((c) => c.group.id === message.groupId);
         if (!existing) {
@@ -480,13 +503,14 @@ export default function MessagesPage() {
         ];
       });
 
-      if (activeGroup?.id === message.groupId) {
+      if (openGroupId === message.groupId) {
         setGroupMessages((current) => {
           if (current.some((item) => item.id === message.id)) {
             return current;
           }
           return [...current, message];
         });
+        setTimeout(scrollToBottom, 50);
       }
     };
 
@@ -496,7 +520,7 @@ export default function MessagesPage() {
     };
 
     const onRead = (payload: { readerId: string; peerId: string }) => {
-      if (activeUser?.id !== payload.peerId) {
+      if (activeUserRef.current?.id !== payload.peerId) {
         return;
       }
       setMessages((current) =>
@@ -515,7 +539,7 @@ export default function MessagesPage() {
 
       if (
         payload.chatType === "group" &&
-        activeGroup?.id === payload.targetId
+        activeGroupRef.current?.id === payload.targetId
       ) {
         setTypingGroupId(payload.isTyping ? payload.userId : null);
         return;
@@ -523,7 +547,7 @@ export default function MessagesPage() {
 
       if (
         payload.chatType === "direct" &&
-        activeUser?.id === payload.userId
+        activeUserRef.current?.id === payload.userId
       ) {
         setTypingPeerId(payload.isTyping ? payload.userId : null);
       }
@@ -638,6 +662,7 @@ export default function MessagesPage() {
     socket.on("message_received", applyIncomingMessage);
     socket.on("direct_message_received", applyIncomingMessage);
     socket.on("group_message_received", applyIncomingMessage);
+    socket.on("new_message_notification", applyIncomingMessage);
     socket.on("message_error", onMessageError);
     socket.on("message:read", onRead);
     socket.on("typing", onTyping);
@@ -659,6 +684,7 @@ export default function MessagesPage() {
       socket.off("message_received", applyIncomingMessage);
       socket.off("direct_message_received", applyIncomingMessage);
       socket.off("group_message_received", applyIncomingMessage);
+      socket.off("new_message_notification", applyIncomingMessage);
       socket.off("message_error", onMessageError);
       socket.off("message:read", onRead);
       socket.off("typing", onTyping);
@@ -676,15 +702,13 @@ export default function MessagesPage() {
       socket.off("group_call_ended", onGroupCallEnded);
     };
   }, [
-    activeGroup?.id,
-    activeUser?.id,
-    callPeerId,
     currentUserId,
     loadConversations,
     loadGroupChats,
     resetCallState,
     resetGroupCallState,
     resolvePeerName,
+    scrollToBottom,
     showFeatureNotice,
     socket,
   ]);

@@ -102,6 +102,7 @@ export class ChatGateway
 
       client.join(this.userRoom(user.id));
       client.emit('socket_ready', { userId: user.id });
+      this.logger.log(`Socket connected: ${user.id}`);
       this.broadcastPresence(user.id, true);
       this.server.emit('user_online', {
         userId: user.id,
@@ -532,7 +533,11 @@ export class ChatGateway
 
   emitDirectMessage(message: {
     id: string;
+    type?: string;
     content: string;
+    mediaUrl?: string | null;
+    mediaType?: string | null;
+    duration?: number | null;
     senderId: string;
     receiverId: string;
     read: boolean;
@@ -540,12 +545,44 @@ export class ChatGateway
     updatedAt: Date;
     sender: unknown;
   }) {
-    const room = this.directRoom(message.senderId, message.receiverId);
-    const payload = { chatType: 'direct' as const, message };
+    if (!this.server) {
+      this.logger.warn('Cannot emit direct message: socket server not ready');
+      return;
+    }
 
-    this.server.to(room).emit('message_received', payload);
-    this.server.to(room).emit('direct_message_received', { message });
-    this.server.to(room).emit('message:new', { type: 'direct', message });
+    const serialized = {
+      ...message,
+      createdAt:
+        message.createdAt instanceof Date
+          ? message.createdAt.toISOString()
+          : message.createdAt,
+      updatedAt:
+        message.updatedAt instanceof Date
+          ? message.updatedAt.toISOString()
+          : message.updatedAt,
+    };
+
+    const room = this.directRoom(message.senderId, message.receiverId);
+    const payload = { chatType: 'direct' as const, message: serialized };
+    const directPayload = { message: serialized };
+    const notificationPayload = { type: 'chat' as const, message: serialized };
+
+    this.logger.log(`Message emitted to room: ${room}`);
+
+    const targets = new Set([
+      room,
+      this.userRoom(message.receiverId),
+      this.userRoom(message.senderId),
+    ]);
+
+    for (const target of targets) {
+      this.server.to(target).emit('message_received', payload);
+      this.server.to(target).emit('direct_message_received', directPayload);
+    }
+
+    this.server
+      .to(this.userRoom(message.receiverId))
+      .emit('new_message_notification', notificationPayload);
 
     this.server
       .to(this.userRoom(message.receiverId))

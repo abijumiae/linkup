@@ -122,12 +122,22 @@ export function toMessageReceivedPayload(
     return null;
   }
 
-  if ("chatType" in payload && "message" in payload) {
+  const record = payload as Record<string, unknown>;
+
+  if (
+    record.type === "chat" &&
+    record.message &&
+    typeof record.message === "object"
+  ) {
+    return toMessageReceivedPayload({ message: record.message });
+  }
+
+  if ("chatType" in record && "message" in record) {
     return normalizeReceivedMessage(payload as MessageReceivedPayload);
   }
 
-  if ("message" in payload) {
-    const message = (payload as { message: Record<string, unknown> }).message;
+  if ("message" in record) {
+    const message = (record as { message: Record<string, unknown> }).message;
     if (typeof message.groupId === "string") {
       return normalizeReceivedMessage({
         chatType: "group",
@@ -138,6 +148,18 @@ export function toMessageReceivedPayload(
     return normalizeReceivedMessage({
       chatType: "direct",
       message: message as ReceivedDirectMessage["message"],
+    });
+  }
+
+  if (
+    typeof record.id === "string" &&
+    typeof record.senderId === "string" &&
+    typeof record.receiverId === "string" &&
+    !("groupId" in record)
+  ) {
+    return normalizeReceivedMessage({
+      chatType: "direct",
+      message: record as ReceivedDirectMessage["message"],
     });
   }
 
