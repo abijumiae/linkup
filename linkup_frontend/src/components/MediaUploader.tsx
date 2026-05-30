@@ -25,6 +25,7 @@ type MediaUploaderProps = {
   accept?: "image" | "video" | "both";
   disabled?: boolean;
   compact?: boolean;
+  validateFile?: (file: File) => string | null;
   value?: {
     url: string;
     type: UploadMediaType;
@@ -50,6 +51,7 @@ const MediaUploader = forwardRef<MediaUploaderHandle, MediaUploaderProps>(
       accept = "both",
       disabled = false,
       compact = false,
+      validateFile,
       value = null,
       onChange,
       onError,
@@ -95,7 +97,7 @@ const MediaUploader = forwardRef<MediaUploaderHandle, MediaUploaderProps>(
     async function handleFileSelect(file: File) {
       reportError(null);
 
-      const validationError = validateMediaFile(file);
+      const validationError = validateFile?.(file) ?? validateMediaFile(file);
       if (validationError) {
         reportError(validationError);
         return;

@@ -2,40 +2,46 @@
 
 import {
   Briefcase,
+  ImageIcon,
   Languages,
   MapPin,
   Pencil,
   Share2,
   ShieldCheck,
   Sparkles,
+  UserCircle2,
   Users,
 } from "lucide-react";
 import { ProfileUser } from "@/src/lib/users";
 import { formatAccountType, formatLanguageLabel } from "@/src/lib/profileOptions";
+import {
+  getProfileInitials,
+  resolveProfileImageUrl,
+} from "@/src/lib/profileMedia";
 
 type ProfileHeaderProps = {
   user: ProfileUser;
   onEditProfile: () => void;
+  onEditAvatar?: () => void;
+  onEditCover?: () => void;
   onShareProfile?: () => void;
   isEditing?: boolean;
   hasActiveMoment?: boolean;
 };
 
-function getInitials(user: ProfileUser): string {
-  const parts = user.name?.trim().split(/\s+/).filter(Boolean) ?? [];
-  if (parts.length >= 2) {
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  }
-  return (user.name?.[0] ?? user.username?.[0] ?? "U").toUpperCase();
-}
-
 export default function ProfileHeader({
   user,
   onEditProfile,
+  onEditAvatar,
+  onEditCover,
   onShareProfile,
   isEditing = false,
   hasActiveMoment = false,
 }: ProfileHeaderProps) {
+  const avatarSrc = resolveProfileImageUrl(user.avatarUrl);
+  const coverSrc = resolveProfileImageUrl(user.coverUrl);
+  const initials = getProfileInitials(user);
+
   const stats = [
     { label: "Sparks", value: user.postsCount ?? 0, icon: Sparkles },
     { label: "Connections", value: user.followingCount ?? 0, icon: Users },
@@ -45,40 +51,81 @@ export default function ProfileHeader({
 
   return (
     <section className="linkup-panel overflow-hidden p-0">
-      <div className="relative h-32 bg-gradient-to-r from-brand-primary via-violet-600 to-brand-secondary sm:h-36">
-        {user.coverUrl ? (
+      <div className="relative h-36 overflow-hidden sm:h-44 md:h-48">
+        {coverSrc ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={user.coverUrl}
-            alt=""
+            src={coverSrc}
+            alt={`${user.name} Pulse Cover`}
+            loading="lazy"
             className="absolute inset-0 h-full w-full object-cover"
           />
-        ) : null}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
+        ) : (
+          <>
+            <div className="absolute inset-0 bg-gradient-to-br from-brand-primary via-violet-600 to-brand-secondary" />
+            <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-brand-primary/70 via-violet-500/60 to-brand-secondary/70" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(255,255,255,0.2),transparent_42%),radial-gradient(circle_at_85%_10%,rgba(255,255,255,0.14),transparent_38%)]" />
+          </>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/15 to-transparent" />
+
+        <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-black/30 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-sm sm:left-4 sm:top-4">
+          <Sparkles className="h-3 w-3" />
+          LinkUp Card
+        </span>
+
+        <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4">
+          <div className="max-w-md rounded-2xl border border-white/20 bg-white/10 px-3 py-2 backdrop-blur-md">
+            <p className="text-xs font-medium text-white/95 sm:text-sm">
+              Building my network on LinkUp
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="relative px-4 pb-6 sm:px-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-            <div
-              className={`-mt-12 shrink-0 ${
-                hasActiveMoment
-                  ? "rounded-full bg-gradient-to-tr from-brand-primary via-violet-500 to-brand-secondary p-[3px] shadow-lg shadow-brand-primary/25"
-                  : ""
-              }`}
-            >
-              {user.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={user.avatarUrl}
-                  alt={user.name}
-                  className="h-24 w-24 rounded-full border-4 border-white object-cover shadow-xl dark:border-brand-dark sm:h-28 sm:w-28"
-                />
-              ) : (
-                <div className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-brand-primary to-brand-secondary text-2xl font-semibold text-white shadow-xl dark:border-brand-dark sm:h-28 sm:w-28">
-                  {getInitials(user)}
-                </div>
-              )}
+            <div className="group relative -mt-14 shrink-0 sm:-mt-16">
+              <div
+                className={`rounded-2xl bg-gradient-to-tr from-brand-primary via-violet-500 to-brand-secondary p-[3px] shadow-lg shadow-brand-primary/25 ${
+                  hasActiveMoment ? "ring-2 ring-brand-secondary/40 ring-offset-2 ring-offset-white dark:ring-offset-brand-dark" : ""
+                }`}
+              >
+                {avatarSrc ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={avatarSrc}
+                    alt={`${user.name} LinkUp Avatar`}
+                    loading="lazy"
+                    className="h-24 w-24 rounded-[14px] border-2 border-white object-cover dark:border-brand-dark sm:h-28 sm:w-28"
+                  />
+                ) : (
+                  <div className="flex h-24 w-24 items-center justify-center rounded-[14px] border-2 border-white bg-gradient-to-br from-brand-primary to-brand-secondary text-2xl font-semibold text-white dark:border-brand-dark sm:h-28 sm:w-28">
+                    {initials}
+                  </div>
+                )}
+              </div>
+              <span
+                className="absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-400 dark:border-brand-dark"
+                aria-label="Online"
+              />
+              {!isEditing && onEditAvatar ? (
+                <button
+                  type="button"
+                  onClick={onEditAvatar}
+                  className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/0 opacity-0 transition group-hover:bg-black/35 group-hover:opacity-100 group-focus-within:bg-black/35 group-focus-within:opacity-100"
+                  aria-label="Edit LinkUp Avatar"
+                >
+                  <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-slate-900 shadow">
+                    <UserCircle2 className="h-3.5 w-3.5" />
+                    Edit
+                  </span>
+                </button>
+              ) : null}
+              <p className="mt-1.5 text-center text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-primary dark:text-brand-secondary">
+                Identity Ring
+              </p>
             </div>
 
             <div className="min-w-0 pb-1">
@@ -113,11 +160,27 @@ export default function ProfileHeader({
           </div>
 
           {!isEditing ? (
-            <div className="flex flex-wrap gap-2 self-start lg:self-auto">
+            <div className="flex w-full flex-col gap-2 self-start sm:flex-row sm:flex-wrap lg:w-auto lg:self-auto">
+              <button
+                type="button"
+                onClick={onEditAvatar}
+                className="linkup-btn-secondary min-h-[44px] flex-1 px-4 sm:flex-none sm:px-5"
+              >
+                <UserCircle2 className="h-4 w-4" />
+                Edit Avatar
+              </button>
+              <button
+                type="button"
+                onClick={onEditCover}
+                className="linkup-btn-secondary min-h-[44px] flex-1 px-4 sm:flex-none sm:px-5"
+              >
+                <ImageIcon className="h-4 w-4" />
+                Edit Pulse Cover
+              </button>
               <button
                 type="button"
                 onClick={onEditProfile}
-                className="linkup-btn-primary min-h-[44px] px-5"
+                className="linkup-btn-primary min-h-[44px] flex-1 px-4 sm:flex-none sm:px-5"
               >
                 <Pencil className="h-4 w-4" />
                 Edit Profile
@@ -125,7 +188,7 @@ export default function ProfileHeader({
               <button
                 type="button"
                 onClick={onShareProfile}
-                className="linkup-btn-secondary min-h-[44px] px-5"
+                className="linkup-btn-secondary min-h-[44px] flex-1 px-4 sm:flex-none sm:px-5"
               >
                 <Share2 className="h-4 w-4" />
                 Share Profile

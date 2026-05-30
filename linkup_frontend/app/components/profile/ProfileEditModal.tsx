@@ -1,13 +1,14 @@
 "use client";
 
 import { X } from "lucide-react";
-import ProfileEditForm from "../ProfileEditForm";
+import ProfileEditForm, { ProfileEditFocus } from "../ProfileEditForm";
 import { ProfileUser, UpdateProfilePayload } from "@/src/lib/users";
 
 type ProfileEditModalProps = {
   user: ProfileUser;
   isOpen: boolean;
   isSaving: boolean;
+  focus?: ProfileEditFocus;
   onClose: () => void;
   onSubmit: (payload: UpdateProfilePayload) => Promise<void>;
 };
@@ -16,6 +17,7 @@ export default function ProfileEditModal({
   user,
   isOpen,
   isSaving,
+  focus = "all",
   onClose,
   onSubmit,
 }: ProfileEditModalProps) {
@@ -45,7 +47,11 @@ export default function ProfileEditModal({
               id="edit-profile-title"
               className="mt-1 text-lg font-semibold text-slate-900 dark:text-white"
             >
-              Update your LinkUp Card
+              {focus === "avatar"
+                ? "Edit LinkUp Avatar"
+                : focus === "cover"
+                  ? "Edit Pulse Cover"
+                  : "Update your LinkUp Card"}
             </h2>
           </div>
           <button
@@ -66,6 +72,7 @@ export default function ProfileEditModal({
             onCancel={onClose}
             onSubmit={onSubmit}
             variant="modal"
+            focus={focus}
           />
         </div>
       </div>

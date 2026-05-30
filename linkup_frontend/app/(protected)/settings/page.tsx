@@ -38,6 +38,7 @@ import {
 import SettingsSection from "../../components/SettingsSection";
 import SettingsPageSkeleton from "../../components/settings/SettingsSkeleton";
 import { ThemeToggle } from "../../components/ThemeToggle";
+import LinkUpCardAppearanceEditor from "@/src/components/profile/LinkUpCardAppearanceEditor";
 
 type Visibility = "PUBLIC" | "PRIVATE";
 type MessagePolicy = "EVERYONE" | "FOLLOWERS" | "NO_ONE";
@@ -122,6 +123,9 @@ export default function SettingsPage() {
   const [bio, setBio] = useState("");
   const [country, setCountry] = useState("United Arab Emirates");
   const [language, setLanguage] = useState("en");
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [coverUrl, setCoverUrl] = useState("");
+  const [cardError, setCardError] = useState<string | null>(null);
 
   // UI-only preferences (no backend wiring requested / unknown support)
   const [profession, setProfession] = useState("");
@@ -166,6 +170,8 @@ export default function SettingsPage() {
       setBio(user.bio ?? "");
       setCountry(user.country ?? "United Arab Emirates");
       setLanguage(user.language ?? "en");
+      setAvatarUrl(user.avatarUrl ?? "");
+      setCoverUrl(user.coverUrl ?? "");
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         handleAuthFailure();
@@ -256,6 +262,7 @@ export default function SettingsPage() {
     event.preventDefault();
     setError(null);
     setSuccess(null);
+    setCardError(null);
     setIsSaving(true);
 
     const payload: UpdateProfilePayload = {
@@ -264,6 +271,8 @@ export default function SettingsPage() {
       bio: bio.trim() || undefined,
       country: country.trim() || undefined,
       language: language.trim() || undefined,
+      avatarUrl: avatarUrl.trim() || undefined,
+      coverUrl: coverUrl.trim() || undefined,
     };
 
     try {
@@ -289,7 +298,7 @@ export default function SettingsPage() {
         browserAlertsEnabled,
       };
       localStorage.setItem(LOCAL_PREFS_KEY, JSON.stringify(localPrefs));
-      setSuccess("Settings saved");
+      setSuccess("Your LinkUp Card has been updated.");
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         handleAuthFailure();
@@ -298,8 +307,10 @@ export default function SettingsPage() {
 
       if (err instanceof ApiError) {
         setError(err.message);
+        setCardError("Could not update your LinkUp Card. Please try again.");
       } else {
         setError("Unable to save settings. Please try again.");
+        setCardError("Could not update your LinkUp Card. Please try again.");
       }
     } finally {
       setIsSaving(false);
@@ -504,6 +515,26 @@ export default function SettingsPage() {
                 </div>
               </label>
             </div>
+          </SettingsSection>
+
+          <SettingsSection
+            title="LinkUp Card Appearance"
+            description="Upload your LinkUp Avatar and Pulse Cover, or paste image URLs. Changes sync to your profile."
+          >
+            {cardError ? (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+                {cardError}
+              </div>
+            ) : null}
+            <LinkUpCardAppearanceEditor
+              user={profileUser}
+              avatarUrl={avatarUrl}
+              coverUrl={coverUrl}
+              disabled={isSaving}
+              onAvatarChange={setAvatarUrl}
+              onCoverChange={setCoverUrl}
+              onError={setCardError}
+            />
           </SettingsSection>
 
           <SettingsSection
@@ -859,7 +890,7 @@ export default function SettingsPage() {
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-lg shadow-slate-950/5 dark:border-white/10 dark:bg-brand-dark/80 dark:shadow-slate-950/20">
             <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
               <Bell className="h-4 w-4 text-brand-primary" />
-              Account bio saves to your profile. Privacy, alerts, and LinkUp Card extras save on this device.
+              Account bio and LinkUp Card media save to your profile. Privacy, alerts, and LinkUp Card extras save on this device.
             </div>
             <button
               type="submit"

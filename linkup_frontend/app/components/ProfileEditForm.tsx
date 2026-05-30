@@ -1,12 +1,14 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
-import { FileText, Globe, Link2, Save, User, X } from "lucide-react";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { FileText, Globe, Save, User, X } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import { AccountType, User as AuthUser } from "@/src/lib/auth";
-import MediaUploader from "@/src/components/MediaUploader";
+import LinkUpCardAppearanceEditor from "@/src/components/profile/LinkUpCardAppearanceEditor";
 import { ACCOUNT_TYPES, COUNTRIES, LANGUAGES } from "@/src/lib/profileOptions";
 import { UpdateProfilePayload } from "@/src/lib/users";
+
+export type ProfileEditFocus = "all" | "avatar" | "cover";
 
 type ProfileEditFormProps = {
   user: AuthUser;
@@ -14,6 +16,7 @@ type ProfileEditFormProps = {
   onCancel: () => void;
   onSubmit: (payload: UpdateProfilePayload) => Promise<void>;
   variant?: "inline" | "modal";
+  focus?: ProfileEditFocus;
 };
 
 export default function ProfileEditForm({
@@ -22,6 +25,7 @@ export default function ProfileEditForm({
   onCancel,
   onSubmit,
   variant = "inline",
+  focus = "all",
 }: ProfileEditFormProps) {
   const [name, setName] = useState(user.name);
   const [username, setUsername] = useState(user.username);
@@ -32,6 +36,7 @@ export default function ProfileEditForm({
   const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl ?? "");
   const [coverUrl, setCoverUrl] = useState(user.coverUrl ?? "");
   const [error, setError] = useState<string | null>(null);
+  const mediaSectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setName(user.name);
@@ -44,6 +49,13 @@ export default function ProfileEditForm({
     setCoverUrl(user.coverUrl ?? "");
     setError(null);
   }, [user]);
+
+  useEffect(() => {
+    if (focus === "all" || !mediaSectionRef.current) {
+      return;
+    }
+    mediaSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [focus]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -64,7 +76,7 @@ export default function ProfileEditForm({
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
-        setError("Unable to update profile. Please try again.");
+        setError("Could not update your LinkUp Card. Please try again.");
       }
     }
   }
@@ -83,6 +95,8 @@ export default function ProfileEditForm({
       ? ""
       : "rounded-2xl border border-slate-200 bg-white p-5 shadow-lg shadow-slate-950/5 dark:border-white/10 dark:bg-brand-dark/80 dark:shadow-slate-950/20 sm:p-6";
 
+  const showProfileFields = focus === "all";
+
   return (
     <section className={shellClass}>
       {variant === "inline" ? (
@@ -95,7 +109,7 @@ export default function ProfileEditForm({
               Update your LinkUp Card
             </h2>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              Refresh who you are, what you do, and how people connect with you.
+              Refresh your LinkUp Avatar, Pulse Cover, and profile details.
             </p>
           </div>
           <button
@@ -117,162 +131,125 @@ export default function ProfileEditForm({
           </div>
         ) : null}
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <span className={labelClass}>Profile photo</span>
-            <MediaUploader
-              label="Upload avatar"
-              accept="image"
-              disabled={isSaving}
-              value={avatarUrl ? { url: avatarUrl, type: "image" } : null}
-              onChange={(value) => setAvatarUrl(value?.url ?? "")}
-            />
-            <label className="block space-y-1.5">
-              <span className="text-xs text-slate-500 dark:text-slate-400">
-                Or paste avatar URL
-              </span>
-              <div className={inputShell}>
-                <Link2 className="h-4 w-4 shrink-0 text-slate-500" />
-                <input
-                  className={inputClass}
-                  value={avatarUrl}
-                  onChange={(event) => setAvatarUrl(event.target.value)}
-                  placeholder="https://..."
+        <div ref={mediaSectionRef}>
+          <LinkUpCardAppearanceEditor
+            user={user}
+            avatarUrl={avatarUrl}
+            coverUrl={coverUrl}
+            disabled={isSaving}
+            onAvatarChange={setAvatarUrl}
+            onCoverChange={setCoverUrl}
+            onError={setError}
+          />
+        </div>
+
+        {showProfileFields ? (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block space-y-2">
+                <span className={labelClass}>Full name</span>
+                <div className={inputShell}>
+                  <User className="h-4 w-4 shrink-0 text-slate-500" />
+                  <input
+                    className={inputClass}
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    required
+                    disabled={isSaving}
+                  />
+                </div>
+              </label>
+
+              <label className="block space-y-2">
+                <span className={labelClass}>Username</span>
+                <div className={inputShell}>
+                  <User className="h-4 w-4 shrink-0 text-slate-500" />
+                  <input
+                    className={inputClass}
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value)}
+                    required
+                    disabled={isSaving}
+                  />
+                </div>
+              </label>
+            </div>
+
+            <label className="block space-y-2">
+              <span className={labelClass}>Bio</span>
+              <div className={`${inputShell} items-start py-3`}>
+                <FileText className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
+                <textarea
+                  className={`${inputClass} min-h-24 resize-y`}
+                  value={bio}
+                  onChange={(event) => setBio(event.target.value)}
+                  placeholder="Who you are, what you're building, and what you're open to connect for..."
                   disabled={isSaving}
+                  rows={4}
                 />
               </div>
             </label>
-          </div>
-          <div className="space-y-2">
-            <span className={labelClass}>Cover image</span>
-            <MediaUploader
-              label="Upload cover"
-              accept="image"
-              disabled={isSaving}
-              value={coverUrl ? { url: coverUrl, type: "image" } : null}
-              onChange={(value) => setCoverUrl(value?.url ?? "")}
-            />
-            <label className="block space-y-1.5">
-              <span className="text-xs text-slate-500 dark:text-slate-400">
-                Or paste cover URL
-              </span>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block space-y-2">
+                <span className={labelClass}>Country</span>
+                <div className={inputShell}>
+                  <Globe className="h-4 w-4 shrink-0 text-slate-500" />
+                  <select
+                    className={selectClass}
+                    value={country}
+                    onChange={(event) => setCountry(event.target.value)}
+                    disabled={isSaving}
+                  >
+                    {COUNTRIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </label>
+
+              <label className="block space-y-2">
+                <span className={labelClass}>Language</span>
+                <div className={inputShell}>
+                  <Globe className="h-4 w-4 shrink-0 text-slate-500" />
+                  <select
+                    className={selectClass}
+                    value={language}
+                    onChange={(event) => setLanguage(event.target.value)}
+                    disabled={isSaving}
+                  >
+                    {LANGUAGES.map((lang) => (
+                      <option key={lang.value} value={lang.value}>
+                        {lang.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </label>
+            </div>
+
+            <label className="block space-y-2">
+              <span className={labelClass}>Account type</span>
               <div className={inputShell}>
-                <Link2 className="h-4 w-4 shrink-0 text-slate-500" />
-                <input
-                  className={inputClass}
-                  value={coverUrl}
-                  onChange={(event) => setCoverUrl(event.target.value)}
-                  placeholder="https://..."
+                <User className="h-4 w-4 shrink-0 text-slate-500" />
+                <select
+                  className={selectClass}
+                  value={accountType}
+                  onChange={(event) => setAccountType(event.target.value as AccountType)}
                   disabled={isSaving}
-                />
+                >
+                  {ACCOUNT_TYPES.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </label>
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block space-y-2">
-            <span className={labelClass}>Full name</span>
-            <div className={inputShell}>
-              <User className="h-4 w-4 shrink-0 text-slate-500" />
-              <input
-                className={inputClass}
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                required
-                disabled={isSaving}
-              />
-            </div>
-          </label>
-
-          <label className="block space-y-2">
-            <span className={labelClass}>Username</span>
-            <div className={inputShell}>
-              <User className="h-4 w-4 shrink-0 text-slate-500" />
-              <input
-                className={inputClass}
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
-                required
-                disabled={isSaving}
-              />
-            </div>
-          </label>
-        </div>
-
-        <label className="block space-y-2">
-          <span className={labelClass}>Bio</span>
-          <div className={`${inputShell} items-start py-3`}>
-            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
-            <textarea
-              className={`${inputClass} min-h-24 resize-y`}
-              value={bio}
-              onChange={(event) => setBio(event.target.value)}
-              placeholder="Who you are, what you're building, and what you're open to connect for..."
-              disabled={isSaving}
-              rows={4}
-            />
-          </div>
-        </label>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block space-y-2">
-            <span className={labelClass}>Country</span>
-            <div className={inputShell}>
-              <Globe className="h-4 w-4 shrink-0 text-slate-500" />
-              <select
-                className={selectClass}
-                value={country}
-                onChange={(event) => setCountry(event.target.value)}
-                disabled={isSaving}
-              >
-                {COUNTRIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </label>
-
-          <label className="block space-y-2">
-            <span className={labelClass}>Language</span>
-            <div className={inputShell}>
-              <Globe className="h-4 w-4 shrink-0 text-slate-500" />
-              <select
-                className={selectClass}
-                value={language}
-                onChange={(event) => setLanguage(event.target.value)}
-                disabled={isSaving}
-              >
-                {LANGUAGES.map((lang) => (
-                  <option key={lang.value} value={lang.value}>
-                    {lang.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </label>
-        </div>
-
-        <label className="block space-y-2">
-          <span className={labelClass}>Account type</span>
-          <div className={inputShell}>
-            <User className="h-4 w-4 shrink-0 text-slate-500" />
-            <select
-              className={selectClass}
-              value={accountType}
-              onChange={(event) => setAccountType(event.target.value as AccountType)}
-              disabled={isSaving}
-            >
-              {ACCOUNT_TYPES.map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </label>
+          </>
+        ) : null}
 
         <div className="flex flex-wrap justify-end gap-3 pt-2">
           <button
@@ -289,7 +266,7 @@ export default function ProfileEditForm({
             className="linkup-btn-primary min-h-[44px] px-5 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Save className="h-4 w-4" />
-            {isSaving ? "Saving..." : "Save profile"}
+            {isSaving ? "Saving..." : "Save LinkUp Card"}
           </button>
         </div>
       </form>

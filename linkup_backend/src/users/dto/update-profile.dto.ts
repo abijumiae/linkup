@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString, IsUrl } from 'class-validator';
+import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -22,11 +22,13 @@ export class UpdateProfileDto {
   accountType?: 'PERSONAL' | 'CREATOR' | 'BUSINESS' | 'STUDENT' | 'PROFESSIONAL';
 
   @IsOptional()
-  @IsUrl()
+  @IsString()
+  @MaxLength(2048)
   avatarUrl?: string;
 
   @IsOptional()
-  @IsUrl()
+  @IsString()
+  @MaxLength(2048)
   coverUrl?: string;
 
   @IsOptional()

@@ -27,6 +27,7 @@ import { fetchUserMoments } from "@/src/lib/moments";
 import ProfileAboutSection from "./profile/ProfileAboutSection";
 import ProfileCompletionCard from "./profile/ProfileCompletionCard";
 import ProfileEditModal from "./profile/ProfileEditModal";
+import { ProfileEditFocus } from "./ProfileEditForm";
 import ProfileEmptyState from "./profile/ProfileEmptyState";
 import ProfileHeader from "./profile/ProfileHeader";
 import ProfileTabs, { ProfileTab } from "./profile/ProfileTabs";
@@ -44,6 +45,7 @@ export default function ProfilePageClient() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [editFocus, setEditFocus] = useState<ProfileEditFocus>("all");
   const [activeTab, setActiveTab] = useState<ProfileTab>("Sparks");
   const [warning, setWarning] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -95,7 +97,8 @@ export default function ProfilePageClient() {
       setProfileUser(user);
       setUser(user);
       setIsEditing(false);
-      setSuccess("Profile updated successfully.");
+      setEditFocus("all");
+      setSuccess("Your LinkUp Card has been updated.");
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         handleAuthFailure();
@@ -106,10 +109,19 @@ export default function ProfilePageClient() {
         throw err;
       }
 
-      throw new ApiError("Unable to update profile. Please try again.", 500);
+      throw new ApiError(
+        "Could not update your LinkUp Card. Please try again.",
+        500,
+      );
     } finally {
       setIsSaving(false);
     }
+  }
+
+  function openEditModal(focus: ProfileEditFocus) {
+    setSuccess(null);
+    setEditFocus(focus);
+    setIsEditing(true);
   }
 
   function handleShareProfile() {
@@ -277,10 +289,9 @@ export default function ProfilePageClient() {
           user={profileUser}
           isEditing={isEditing}
           hasActiveMoment={hasActiveMoment}
-          onEditProfile={() => {
-            setSuccess(null);
-            setIsEditing(true);
-          }}
+          onEditProfile={() => openEditModal("all")}
+          onEditAvatar={() => openEditModal("avatar")}
+          onEditCover={() => openEditModal("cover")}
           onShareProfile={handleShareProfile}
         />
 
@@ -308,7 +319,11 @@ export default function ProfilePageClient() {
         user={profileUser}
         isOpen={isEditing}
         isSaving={isSaving}
-        onClose={() => setIsEditing(false)}
+        focus={editFocus}
+        onClose={() => {
+          setIsEditing(false);
+          setEditFocus("all");
+        }}
         onSubmit={handleProfileUpdate}
       />
     </div>
