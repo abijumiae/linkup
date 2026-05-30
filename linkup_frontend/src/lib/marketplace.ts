@@ -54,6 +54,7 @@ export interface MarketplaceFilters {
   category?: string;
   minPrice?: number;
   maxPrice?: number;
+  sort?: "newest" | "trending" | "price_asc" | "price_desc";
   page?: number;
   limit?: number;
 }
@@ -102,6 +103,7 @@ export async function fetchMarketplaceItems(
     params.set("minPrice", String(filters.minPrice));
   if (filters.maxPrice !== undefined)
     params.set("maxPrice", String(filters.maxPrice));
+  if (filters.sort) params.set("sort", filters.sort);
   if (filters.page) params.set("page", String(filters.page));
   if (filters.limit) params.set("limit", String(filters.limit));
 
@@ -116,6 +118,49 @@ export async function fetchMarketplaceItems(
       },
     ).then(unwrapPaginated),
   );
+}
+
+export async function fetchMarketplaceItemsSafe(
+  filters: MarketplaceFilters = {},
+): Promise<{
+  items: MarketplaceItem[];
+  hasMore: boolean;
+  warning: string | null;
+}> {
+  try {
+    const data = await fetchMarketplaceItems(filters);
+    return { items: data.items, hasMore: data.hasMore, warning: null };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      throw error;
+    }
+    return {
+      items: [],
+      hasMore: false,
+      warning: "Market listings are warming up. Showing local filters only.",
+    };
+  }
+}
+
+export function sortMarketplaceItems(
+  items: MarketplaceItem[],
+  sort: MarketplaceFilters["sort"] = "newest",
+): MarketplaceItem[] {
+  const copy = [...items];
+
+  switch (sort) {
+    case "price_asc":
+      return copy.sort((a, b) => a.price - b.price);
+    case "price_desc":
+      return copy.sort((a, b) => b.price - a.price);
+    case "trending":
+    case "newest":
+    default:
+      return copy.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+  }
 }
 
 export async function fetchMarketplaceItem(

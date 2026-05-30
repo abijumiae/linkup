@@ -16,9 +16,9 @@ import { CreateMarketplaceItemDto } from './dto/create-marketplace-item.dto';
 import { UpdateMarketplaceItemDto } from './dto/update-marketplace-item.dto';
 import { MarketplaceService } from './marketplace.service';
 
-@Controller('marketplace')
+@Controller('listings')
 @UseGuards(JwtAuthGuard)
-export class MarketplaceController {
+export class ListingsController {
   constructor(private readonly marketplaceService: MarketplaceService) {}
 
   @Post()

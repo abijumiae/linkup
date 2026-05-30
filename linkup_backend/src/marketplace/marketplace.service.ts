@@ -38,6 +38,7 @@ export type MarketplaceQuery = {
   category?: string;
   minPrice?: number;
   maxPrice?: number;
+  sort?: string;
 };
 
 @Injectable()
@@ -101,9 +102,11 @@ export class MarketplaceService {
       }
     }
 
+    const orderBy = this.resolveSortOrder(query.sort);
+
     const items = await this.prisma.marketplaceItem.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy,
       skip: pagination.skip,
       take: pagination.limit + 1,
       include: itemInclude,
@@ -181,6 +184,21 @@ export class MarketplaceService {
     }
 
     return item;
+  }
+
+  private resolveSortOrder(
+    sort?: string,
+  ): Prisma.MarketplaceItemOrderByWithRelationInput {
+    switch (sort) {
+      case 'price_asc':
+        return { price: 'asc' };
+      case 'price_desc':
+        return { price: 'desc' };
+      case 'trending':
+      case 'newest':
+      default:
+        return { createdAt: 'desc' };
+    }
   }
 
   private mapItem(

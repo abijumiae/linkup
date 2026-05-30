@@ -93,7 +93,14 @@ export const explorePopularPosts = [
   },
 ];
 
-export const marketplaceCategories = ["Design", "Development", "Marketing", "Consulting", "Branding"];
+export const marketplaceCategories = [
+  "Electronics",
+  "Fashion",
+  "Jobs",
+  "Services",
+  "Events",
+  "Local",
+];
 export const marketplaceListings = [
   {
     title: "Brand refresh package",

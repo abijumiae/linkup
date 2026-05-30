@@ -1,42 +1,84 @@
 "use client";
 
 import Link from "next/link";
-import { memo } from "react";
-import { Mail, MapPin, ShoppingBag, Tag } from "lucide-react";
-import { formatPrice, MarketplaceItem } from "@/src/lib/marketplace";
+import { memo, useState } from "react";
+import { Bookmark, Mail, ShoppingBag } from "lucide-react";
+import {
+  formatPrice,
+  MarketplaceItem,
+} from "@/src/lib/marketplace";
+import {
+  formatListingStatus,
+} from "@/src/lib/marketConstants";
+import {
+  isMarketFavorite,
+  toggleMarketFavorite,
+} from "@/src/lib/marketFavorites";
 
 type MarketplaceCardProps = {
   item: MarketplaceItem;
 };
 
-function MarketplaceCard({ item }: MarketplaceCardProps) {
+function getInitials(name: string): string {
+  return (name[0] ?? "S").toUpperCase();
+}
+
+function MarketplaceCardComponent({ item }: MarketplaceCardProps) {
+  const [saved, setSaved] = useState(() => isMarketFavorite(item.id));
+  const status = formatListingStatus(item.status);
+
+  function handleToggleSave(event: React.MouseEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    setSaved(toggleMarketFavorite(item.id));
+  }
+
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-950/5 transition duration-300 hover:-translate-y-1 hover:border-brand-primary/30 hover:shadow-brand-primary/10 dark:border-white/10 dark:bg-brand-dark/80 dark:shadow-slate-950/20">
-      {item.imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={item.imageUrl}
-          alt=""
-          loading="lazy"
-          className="h-44 w-full object-cover"
-        />
-      ) : (
-        <div className="flex h-44 items-center justify-center bg-gradient-to-br from-brand-primary/15 via-slate-100 to-brand-secondary/10 dark:from-brand-primary/20 dark:via-brand-dark dark:to-brand-dark">
-          <ShoppingBag className="h-12 w-12 text-brand-primary/40 dark:text-brand-secondary/50" />
-        </div>
-      )}
+    <article className="linkup-panel group flex h-full flex-col overflow-hidden p-0 transition duration-200 hover:border-brand-primary/25 hover:shadow-lg hover:shadow-brand-primary/10">
+      <div className="relative">
+        {item.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={item.imageUrl}
+            alt=""
+            loading="lazy"
+            className="aspect-[4/3] w-full object-cover"
+          />
+        ) : (
+          <div className="flex aspect-[4/3] items-center justify-center bg-gradient-to-br from-brand-primary/15 via-slate-100 to-brand-secondary/10 dark:from-brand-primary/20 dark:via-brand-dark dark:to-brand-dark">
+            <ShoppingBag className="h-12 w-12 text-brand-primary/40 dark:text-brand-secondary/50" />
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={handleToggleSave}
+          className={`absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full border backdrop-blur-sm transition ${
+            saved
+              ? "border-brand-primary/40 bg-brand-primary text-white"
+              : "border-white/30 bg-black/35 text-white hover:bg-black/50"
+          }`}
+          aria-label={saved ? "Remove bookmark" : "Bookmark listing"}
+        >
+          <Bookmark className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />
+        </button>
+
+        <span
+          className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
+            status === "Sold"
+              ? "bg-slate-900/75 text-white"
+              : "bg-emerald-500/90 text-white"
+          }`}
+        >
+          {status}
+        </span>
+      </div>
 
       <div className="flex flex-1 flex-col p-5">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-brand-primary/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-brand-primary dark:text-brand-secondary">
+        <div className="flex items-center gap-2">
+          <span className="rounded-full bg-brand-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-brand-primary dark:text-brand-secondary">
             {item.category}
           </span>
-          {item.condition ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600 dark:bg-white/5 dark:text-slate-300">
-              <Tag className="h-3 w-3" />
-              {item.condition}
-            </span>
-          ) : null}
         </div>
 
         <h3 className="mt-3 line-clamp-2 text-lg font-semibold text-slate-900 dark:text-white">
@@ -47,48 +89,49 @@ function MarketplaceCard({ item }: MarketplaceCardProps) {
           {formatPrice(item.price, item.currency)}
         </p>
 
-        {item.location ? (
-          <p className="mt-2 flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400">
-            <MapPin className="h-3.5 w-3.5 shrink-0 text-brand-primary dark:text-brand-secondary" />
-            {item.location}
+        <div className="mt-4 flex items-center gap-2">
+          {item.seller.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={item.seller.avatarUrl}
+              alt=""
+              className="h-8 w-8 rounded-full object-cover ring-2 ring-brand-primary/15"
+            />
+          ) : (
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary text-xs font-semibold text-white">
+              {getInitials(item.seller.name)}
+            </div>
+          )}
+          <p className="truncate text-sm text-slate-600 dark:text-slate-400">
+            <span className="font-medium text-slate-800 dark:text-slate-200">
+              {item.seller.name}
+            </span>
           </p>
-        ) : null}
-
-        <p className="mt-3 line-clamp-2 flex-1 text-sm leading-6 text-slate-600 dark:text-slate-400">
-          {item.description}
-        </p>
-
-        <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-          Seller:{" "}
-          <span className="font-medium text-slate-700 dark:text-slate-200">
-            {item.seller.name}
-          </span>
-        </p>
+        </div>
 
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
           <Link
             href={`/marketplace/${item.id}`}
-            className="inline-flex flex-1 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-slate-700 transition hover:border-brand-primary/40 hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+            className="linkup-btn-secondary inline-flex flex-1 items-center justify-center min-h-[44px] text-xs font-semibold uppercase tracking-[0.12em]"
           >
             View Details
           </Link>
           {!item.isOwner ? (
             <Link
               href={`/messages?userId=${item.seller.id}&listingId=${item.id}`}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-white shadow-md shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover"
+              className="linkup-btn-primary inline-flex flex-1 items-center justify-center gap-2 min-h-[44px] text-xs font-semibold uppercase tracking-[0.12em]"
             >
               <Mail className="h-3.5 w-3.5" />
-              Message Seller
+              Contact
             </Link>
-          ) : (
-            <span className="inline-flex flex-1 items-center justify-center rounded-full border border-brand-primary/30 bg-brand-primary/10 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.15em] text-brand-primary dark:text-brand-secondary">
-              Your drop
-            </span>
-          )}
+          ) : null}
         </div>
       </div>
     </article>
   );
 }
 
-export default memo(MarketplaceCard);
+const MarketplaceCard = memo(MarketplaceCardComponent);
+MarketplaceCard.displayName = "MarketplaceCard";
+
+export default MarketplaceCard;
