@@ -4,7 +4,7 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import { createHash, randomUUID } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import { mkdir, writeFile } from 'fs/promises';
 import { extname, join } from 'path';
 
@@ -58,6 +58,8 @@ export type UploadResult = {
   url: string;
   type: UploadMediaType;
   filename: string;
+  mimeType: string;
+  size: number;
 };
 
 @Injectable()
@@ -131,22 +133,20 @@ export class UploadsService {
       }
     }
 
-    throw new BadRequestException(
-      `Unsupported audio file type: ${mimetype || 'unknown'}. Allowed: JPEG, PNG, WebP, MP4, WebM, MOV, and common audio formats.`,
-    );
+    throw new BadRequestException('Unsupported file type');
   }
 
   private validateSize(size: number, mediaType: UploadMediaType) {
     if (mediaType === 'image' && size > MAX_IMAGE_BYTES) {
-      throw new BadRequestException('Image must be 5MB or smaller.');
+      throw new BadRequestException('File too large');
     }
 
     if (mediaType === 'video' && size > MAX_VIDEO_BYTES) {
-      throw new BadRequestException('Video must be 50MB or smaller.');
+      throw new BadRequestException('File too large');
     }
 
     if (mediaType === 'audio' && size > MAX_AUDIO_BYTES) {
-      throw new BadRequestException('Audio must be 10MB or smaller.');
+      throw new BadRequestException('File too large');
     }
   }
 
@@ -218,7 +218,7 @@ export class UploadsService {
       file.originalname,
       normalizeMimeType(file.mimetype),
     );
-    const filename = `${randomUUID()}${extension}`;
+    const filename = `media-${Date.now()}-${randomBytes(6).toString('hex')}${extension}`;
     const destination = join(this.uploadDir, filename);
 
     await writeFile(destination, file.buffer);
@@ -231,6 +231,8 @@ export class UploadsService {
       url: `/uploads/${filename}`,
       type: mediaType,
       filename,
+      mimeType: normalizeMimeType(file.mimetype),
+      size: file.size,
     };
   }
 
@@ -282,6 +284,8 @@ export class UploadsService {
       url: data.secure_url,
       type: mediaType,
       filename: data.public_id ?? file.originalname,
+      mimeType: normalizeMimeType(file.mimetype),
+      size: file.size,
     };
   }
 }

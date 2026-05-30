@@ -130,7 +130,9 @@ const MediaUploader = forwardRef<MediaUploaderHandle, MediaUploaderProps>(
         setPreviewType(value?.type ?? null);
         URL.revokeObjectURL(objectUrl);
         reportError(
-          err instanceof ApiError ? err.message : "Could not upload media.",
+          err instanceof ApiError
+            ? err.message
+            : "Could not upload file. Please try again.",
         );
       } finally {
         setIsUploading(false);

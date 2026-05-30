@@ -26,12 +26,9 @@ async function bootstrap() {
     }),
   );
 
-  // Serves voice/media files from linkup_backend/uploads (ephemeral on Render).
-  // TODO: Move uploaded voice/media files to Cloudinary/S3/Supabase Storage for permanent production storage.
+  // Serves uploaded media from linkup_backend/uploads (ephemeral on Render).
+  // TODO: Render local filesystem is temporary. Move uploads to Cloudinary/S3/Supabase Storage before real public launch.
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
-  app.useStaticAssets(join(process.cwd(), 'uploads'), {
-    prefix: '/uploads/',
-  });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -51,6 +48,7 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   await app.listen(port);
   console.log(`LinkUp backend running on port ${port}`);
+  console.log('POST /uploads available for authenticated media uploads');
   console.log('Socket.io gateway available at /socket.io');
 }
 bootstrap();

@@ -7,6 +7,8 @@ export type UploadResult = {
   url: string;
   type: UploadMediaType;
   filename: string;
+  mimeType?: string;
+  size?: number;
 };
 
 const IMAGE_TYPES = new Set([
@@ -150,7 +152,7 @@ export async function uploadFile(
         "message" in data &&
         typeof (data as { message: unknown }).message === "string"
           ? (data as { message: string }).message
-          : "Upload failed";
+          : "Could not upload file. Please try again.";
       if (response.status === 401) {
         clearAuth();
       }
@@ -191,7 +193,7 @@ export async function uploadFile(
         "message" in data &&
         typeof (data as { message: unknown }).message === "string"
           ? (data as { message: string }).message
-          : "Upload failed";
+          : "Could not upload file. Please try again.";
 
       if (xhr.status === 401) {
         clearAuth();
@@ -200,7 +202,8 @@ export async function uploadFile(
       reject(new ApiError(message, xhr.status));
     };
 
-    xhr.onerror = () => reject(new ApiError("Upload failed", 0));
+    xhr.onerror = () =>
+      reject(new ApiError("Could not upload file. Please try again.", 0));
     xhr.send(formData);
   });
 }

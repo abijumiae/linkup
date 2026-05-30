@@ -28,5 +28,6 @@ const googleProviders =
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, GoogleConfiguredGuard, ...googleProviders],
+  exports: [PassportModule, JwtModule],
 })
 export class AuthModule {}
