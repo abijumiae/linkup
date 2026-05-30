@@ -132,7 +132,7 @@ export class UploadsService {
     }
 
     throw new BadRequestException(
-      'Unsupported file type. Allowed: JPEG, PNG, WebP, MP4, WebM, MOV, and common audio formats.',
+      `Unsupported audio file type: ${mimetype || 'unknown'}. Allowed: JPEG, PNG, WebP, MP4, WebM, MOV, and common audio formats.`,
     );
   }
 
@@ -226,7 +226,7 @@ export class UploadsService {
     );
 
     return {
-      url: `${this.publicBaseUrl}/uploads/${filename}`,
+      url: `/uploads/${filename}`,
       type: mediaType,
       filename,
     };

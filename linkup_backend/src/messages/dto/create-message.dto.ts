@@ -4,7 +4,6 @@ import {
   IsInt,
   IsOptional,
   IsString,
-  IsUrl,
   Min,
   MinLength,
   ValidateIf,
@@ -69,7 +68,8 @@ export class CreateMessageDto {
       );
     },
   )
-  @IsUrl({ require_tld: false })
+  @IsString()
+  @MinLength(1)
   mediaUrl?: string;
 
   @IsOptional()

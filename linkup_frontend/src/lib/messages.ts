@@ -94,6 +94,18 @@ async function withAuth<T>(request: () => Promise<T>): Promise<T> {
   }
 }
 
+function parseJsonBody(text: string): unknown {
+  if (!text.trim()) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return text;
+  }
+}
+
 export async function fetchConversations(): Promise<Conversation[]> {
   return withAuth(() =>
     apiRequest<Conversation[]>("/messages/conversations", {
@@ -146,6 +158,31 @@ type UploadVoiceResult = {
   filename: string;
 };
 
+async function postVoiceUpload(
+  file: File,
+  token: string,
+  apiUrl: string,
+  path: "/uploads" | "/messages/upload-audio",
+): Promise<{ response: Response; responseText: string }> {
+  const formData = new FormData();
+  formData.append("file", file, file.name || `voice-${Date.now()}.webm`);
+
+  if (path === "/messages/upload-audio") {
+    formData.append("audio", file, file.name || `voice-${Date.now()}.webm`);
+  }
+
+  const response = await fetch(`${apiUrl}${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  const responseText = await response.text();
+  return { response, responseText };
+}
+
 export async function uploadVoiceNote(file: File): Promise<UploadVoiceResult> {
   const token = getToken();
   const apiUrl = getApiBaseUrl();
@@ -158,60 +195,88 @@ export async function uploadVoiceNote(file: File): Promise<UploadVoiceResult> {
     throw new ApiError("Voice note recording is empty", 400);
   }
 
-  const formData = new FormData();
-  formData.append("file", file, file.name || `voice-${Date.now()}.webm`);
+  const uploadPaths: Array<"/uploads" | "/messages/upload-audio"> = [
+    "/uploads",
+    "/messages/upload-audio",
+  ];
 
-  let response: Response | undefined;
-  let responseBody: unknown = null;
+  let lastStatus = 0;
+  let lastBody: unknown = null;
+  let lastPath = uploadPaths[0];
 
-  try {
-    response = await fetch(`${apiUrl}/uploads`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    });
+  for (const path of uploadPaths) {
+    lastPath = path;
 
     try {
-      responseBody = await response.json();
-    } catch {
-      responseBody = null;
-    }
+      const { response, responseText } = await postVoiceUpload(
+        file,
+        token,
+        apiUrl,
+        path,
+      );
+      lastStatus = response.status;
+      lastBody = parseJsonBody(responseText);
 
-    if (!response.ok) {
-      if (response.status === 401) {
-        clearAuth();
+      console.log("VOICE UPLOAD STATUS:", response.status);
+      console.log("VOICE UPLOAD BODY:", responseText);
+      console.log("VOICE UPLOAD PATH:", path);
+
+      if (response.status === 404 || response.status === 405) {
+        console.warn(`Voice upload route unavailable (${path}), trying fallback`);
+        continue;
       }
 
-      console.error("Voice upload failed:", extractErrorMessage(responseBody, "Upload failed"));
-      console.error("Upload response status:", response.status);
-      console.error("Upload response body:", responseBody);
+      if (!response.ok) {
+        if (response.status === 401) {
+          clearAuth();
+        }
 
-      throw new ApiError(
-        extractErrorMessage(
-          responseBody,
-          "Could not send voice note. Please try again.",
-        ),
-        response.status,
-      );
-    }
+        console.error("Voice upload failed:", extractErrorMessage(lastBody, "Upload failed"));
+        console.error("Upload response status:", response.status);
+        console.error("Upload response body:", lastBody);
 
-    const uploaded = responseBody as Partial<UploadVoiceResult>;
-    if (!uploaded.url) {
-      console.error("Upload response missing url:", responseBody);
-      throw new ApiError("Upload response missing audio URL", 500);
-    }
+        throw new ApiError(
+          extractErrorMessage(
+            lastBody,
+            "Could not send voice note. Please try again.",
+          ),
+          response.status,
+        );
+      }
 
-    return uploaded as UploadVoiceResult;
-  } catch (error) {
-    if (!(error instanceof ApiError)) {
+      const uploaded = lastBody as Partial<UploadVoiceResult>;
+      if (!uploaded?.url) {
+        console.error("Upload response missing url:", lastBody);
+        throw new ApiError("Upload response missing audio URL", 500);
+      }
+
+      console.log("VOICE UPLOAD URL:", uploaded.url);
+      return uploaded as UploadVoiceResult;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
       console.error("Voice upload failed:", error);
-      console.error("Upload response status:", response?.status);
-      console.error("Upload response body:", responseBody);
+      console.error("Upload response status:", lastStatus);
+      console.error("Upload response body:", lastBody);
+      throw error;
     }
-    throw error;
   }
+
+  console.error("Voice upload failed: no upload route available", {
+    lastPath,
+    lastStatus,
+    lastBody,
+  });
+
+  throw new ApiError(
+    extractErrorMessage(
+      lastBody,
+      "Could not send voice note. Please try again.",
+    ),
+    lastStatus || 404,
+  );
 }
 
 export async function sendVoiceMessageByUrl(
@@ -239,64 +304,61 @@ export async function sendVoiceMessageByUrl(
     throw new ApiError("Not authenticated", 401);
   }
 
-  let response: Response | undefined;
-  let responseBody: unknown = null;
+  const requestBody = {
+    content: payload.content ?? "",
+    type: "voice",
+    mediaUrl: payload.mediaUrl,
+    mediaType: "audio",
+    duration: Math.floor(payload.duration),
+  };
 
-  try {
-    response = await fetch(`${apiUrl}/messages/${encodeURIComponent(receiverId)}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        type: "voice",
-        mediaUrl: payload.mediaUrl,
-        mediaType: "audio",
-        duration: Math.floor(payload.duration),
-        content: payload.content ?? "",
-      }),
-    });
+  console.log("VOICE MESSAGE PAYLOAD:", {
+    receiverId,
+    type: requestBody.type,
+    hasMediaUrl: Boolean(requestBody.mediaUrl),
+    duration: requestBody.duration,
+  });
 
-    try {
-      responseBody = await response.json();
-    } catch {
-      responseBody = null;
+  const response = await fetch(`${apiUrl}/messages/${encodeURIComponent(receiverId)}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  const responseText = await response.text();
+  const responseBody = parseJsonBody(responseText);
+
+  console.log("VOICE MESSAGE STATUS:", response.status);
+  console.log("VOICE MESSAGE BODY:", responseText);
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      clearAuth();
     }
 
-    if (!response.ok) {
-      if (response.status === 401) {
-        clearAuth();
-      }
+    console.error(
+      "Voice message send failed:",
+      extractErrorMessage(responseBody, "Send failed"),
+    );
+    console.error("Message send response status:", response.status);
+    console.error("Message send response body:", responseBody);
 
-      console.error(
-        "Voice message send failed:",
-        extractErrorMessage(responseBody, "Send failed"),
-      );
-      console.error("Message send response status:", response.status);
-      console.error("Message send response body:", responseBody);
-
-      throw new ApiError(
-        extractErrorMessage(
-          responseBody,
-          "Could not send voice note. Please try again.",
-        ),
-        response.status,
-      );
-    }
-
-    return responseBody as ChatMessage;
-  } catch (error) {
-    if (!(error instanceof ApiError)) {
-      console.error("Voice message send failed:", error);
-      console.error("Message send response status:", response?.status);
-      console.error("Message send response body:", responseBody);
-    }
-    throw error;
+    throw new ApiError(
+      extractErrorMessage(
+        responseBody,
+        "Could not send voice note. Please try again.",
+      ),
+      response.status,
+    );
   }
+
+  return responseBody as ChatMessage;
 }
 
-/** Upload audio to /uploads, then create a voice message via JSON POST. */
+/** Upload audio, then create a voice message via JSON POST. */
 export async function sendVoiceMessage(
   userId: string,
   file: File,
@@ -316,8 +378,10 @@ export async function sendVoiceMessage(
     throw new ApiError("Voice note recording is empty", 400);
   }
 
+  console.log("VOICE STEP 7: starting upload");
   const uploaded = await uploadVoiceNote(file);
 
+  console.log("VOICE STEP 8: starting message send");
   return sendVoiceMessageByUrl(receiverId, {
     mediaUrl: uploaded.url,
     duration: Math.floor(duration),

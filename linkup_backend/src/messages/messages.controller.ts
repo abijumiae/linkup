@@ -182,6 +182,7 @@ export class MessagesController {
       const messages = errors.flatMap((error) =>
         Object.values(error.constraints ?? {}),
       );
+      this.logger.warn(`Message validation failed: ${messages.join('; ')}`);
       throw new BadRequestException(
         messages[0] ?? 'Invalid message payload',
       );

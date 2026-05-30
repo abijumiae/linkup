@@ -4,11 +4,11 @@ import {
   Logger,
   Post,
   Req,
-  UploadedFiles,
+  UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UploadsService } from './uploads.service';
@@ -25,44 +25,45 @@ export class UploadsController {
 
   @Post()
   @UseInterceptors(
-    FileFieldsInterceptor(
-      [
-        { name: 'file', maxCount: 1 },
-        { name: 'audio', maxCount: 1 },
-      ],
-      {
-        storage: memoryStorage(),
-        limits: { fileSize: UPLOAD_LIMIT },
-      },
-    ),
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: UPLOAD_LIMIT },
+    }),
   )
   upload(
-    @Req() _req: { user: { id: string } },
-    @UploadedFiles()
-    files: {
-      file?: Express.Multer.File[];
-      audio?: Express.Multer.File[];
-    },
+    @Req() req: { user: { id: string; sub?: string } },
+    @UploadedFile() file?: Express.Multer.File,
   ) {
-    const file = files.file?.[0] ?? files.audio?.[0];
+    console.log('UPLOAD HIT');
+    console.log('UPLOAD USER:', req.user?.id || req.user?.sub || 'unknown');
+    console.log(
+      'UPLOAD FILE:',
+      file?.originalname,
+      file?.mimetype,
+      file?.size,
+    );
+
     this.logger.log('Upload request received');
     this.logger.log(
       `File received: ${file?.originalname ?? 'none'} ${file?.mimetype ?? 'none'} ${file?.size ?? 0}`,
     );
 
-    if (file && file.size > AUDIO_UPLOAD_LIMIT) {
-      const normalized = file.mimetype.split(';')[0]?.trim().toLowerCase() ?? '';
+    if (!file || file.size < 1) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    if (file.size > AUDIO_UPLOAD_LIMIT) {
+      const normalized =
+        file.mimetype.split(';')[0]?.trim().toLowerCase() ?? '';
       const isAudio =
         normalized.startsWith('audio/') ||
-        file.originalname.match(/\.(webm|mp3|m4a|aac|wav|ogg|caf)$/i);
+        Boolean(
+          file.originalname.match(/\.(webm|mp3|m4a|aac|wav|ogg|caf)$/i),
+        );
 
       if (isAudio) {
         throw new BadRequestException('Audio must be 10MB or smaller.');
       }
-    }
-
-    if (!file) {
-      throw new BadRequestException('No file uploaded');
     }
 
     return this.uploadsService.uploadFile(file);
