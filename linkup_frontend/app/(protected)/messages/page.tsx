@@ -434,7 +434,7 @@ export default function MessagesPage() {
     }
 
     let cancelled = false;
-    const pollIntervalMs = socketStatus === "connected" ? 12000 : 3000;
+    const pollIntervalMs = socketStatus === "connected" ? 5000 : 3000;
 
     const pollMessages = async () => {
       if (cancelled || document.hidden) {

@@ -9,30 +9,15 @@ import {
   ValidateIf,
 } from 'class-validator';
 
+function isVoiceType(type: unknown): boolean {
+  if (typeof type !== 'string') {
+    return false;
+  }
+  const normalized = type.toLowerCase();
+  return normalized === 'voice' || normalized === 'audio';
+}
+
 export class CreateMessageDto {
-  @Transform(({ obj, value }: { obj: Record<string, unknown>; value?: string }) => {
-    const normalized =
-      (typeof value === 'string' ? value : undefined) ??
-      (typeof obj.message === 'string' ? obj.message : undefined) ??
-      (typeof obj.text === 'string' ? obj.text : undefined);
-    return normalized;
-  })
-  @ValidateIf((dto: CreateMessageDto) => {
-    const messageType = dto.type ?? 'text';
-    return messageType !== 'voice' && messageType !== 'audio';
-  })
-  @IsString()
-  @MinLength(1)
-  content?: string;
-
-  @IsOptional()
-  @IsString()
-  message?: string;
-
-  @IsOptional()
-  @IsString()
-  text?: string;
-
   @Transform(({ obj, value }: { obj: Record<string, unknown>; value?: string }) => {
     const raw =
       (typeof value === 'string' ? value : undefined) ??
@@ -52,22 +37,39 @@ export class CreateMessageDto {
   type?: 'text' | 'voice' | 'image' | 'video' | 'audio';
 
   @Transform(({ obj, value }: { obj: Record<string, unknown>; value?: string }) => {
+    const normalized =
+      (typeof value === 'string' ? value : undefined) ??
+      (typeof obj.message === 'string' ? obj.message : undefined) ??
+      (typeof obj.text === 'string' ? obj.text : undefined);
+    return normalized;
+  })
+  @ValidateIf((dto: CreateMessageDto) => !isVoiceType(dto.type))
+  @IsString()
+  @MinLength(1)
+  content?: string;
+
+  @IsOptional()
+  @IsString()
+  message?: string;
+
+  @IsOptional()
+  @IsString()
+  text?: string;
+
+  @Transform(({ obj, value }: { obj: Record<string, unknown>; value?: string }) => {
     return (
       (typeof value === 'string' ? value : undefined) ??
       (typeof obj.audioUrl === 'string' ? obj.audioUrl : undefined)
     );
   })
-  @ValidateIf(
-    (dto: CreateMessageDto) => {
-      const messageType = dto.type ?? 'text';
-      return (
-        messageType === 'voice' ||
-        messageType === 'audio' ||
-        messageType === 'image' ||
-        messageType === 'video'
-      );
-    },
-  )
+  @ValidateIf((dto: CreateMessageDto) => {
+    const messageType = dto.type ?? 'text';
+    return (
+      messageType === 'voice' ||
+      messageType === 'image' ||
+      messageType === 'video'
+    );
+  })
   @IsString()
   @MinLength(1)
   mediaUrl?: string;
@@ -84,10 +86,7 @@ export class CreateMessageDto {
     const resolved = value ?? obj.audioDuration;
     return resolved === undefined || resolved === null ? undefined : Number(resolved);
   })
-  @ValidateIf((dto: CreateMessageDto) => {
-    const messageType = dto.type ?? 'text';
-    return messageType === 'voice' || messageType === 'audio';
-  })
+  @ValidateIf((dto: CreateMessageDto) => isVoiceType(dto.type))
   @Type(() => Number)
   @IsInt()
   @Min(1)

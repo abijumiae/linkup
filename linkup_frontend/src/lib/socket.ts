@@ -6,6 +6,7 @@ import { getToken } from "./auth";
 
 let socket: Socket | null = null;
 let statusSocket: Socket | null = null;
+let lastConnectErrorLogAt = 0;
 
 export type SocketConnectionStatus = "connected" | "reconnecting" | "offline";
 
@@ -15,6 +16,15 @@ let currentStatus: SocketConnectionStatus = "offline";
 function notifyStatus(status: SocketConnectionStatus) {
   currentStatus = status;
   statusListeners.forEach((listener) => listener(status));
+}
+
+function logConnectError(message: string) {
+  const now = Date.now();
+  if (now - lastConnectErrorLogAt < 10_000) {
+    return;
+  }
+  lastConnectErrorLogAt = now;
+  console.warn("Socket connect_error:", message);
 }
 
 function detachStatusListeners(activeSocket: Socket) {
@@ -37,13 +47,17 @@ function attachStatusListeners(activeSocket: Socket) {
   statusSocket = activeSocket;
 
   activeSocket.on("connect", () => {
+    lastConnectErrorLogAt = 0;
     if (process.env.NODE_ENV === "development") {
       console.log("Socket connected:", activeSocket.id);
     }
     notifyStatus("connected");
   });
 
-  activeSocket.on("disconnect", () => {
+  activeSocket.on("disconnect", (reason) => {
+    if (process.env.NODE_ENV === "development") {
+      console.log("Socket disconnected:", reason);
+    }
     notifyStatus("offline");
   });
 
@@ -56,7 +70,7 @@ function attachStatusListeners(activeSocket: Socket) {
   });
 
   activeSocket.on("connect_error", (err: Error) => {
-    console.log("Socket connect_error:", err.message);
+    logConnectError(err.message);
     if (!activeSocket.connected) {
       notifyStatus("reconnecting");
     }
@@ -199,6 +213,17 @@ export function hasAuthToken(): boolean {
   return Boolean(getToken());
 }
 
+function teardownSocket() {
+  if (!socket) {
+    return;
+  }
+  detachStatusListeners(socket);
+  socket.removeAllListeners();
+  socket.disconnect();
+  socket = null;
+  statusSocket = null;
+}
+
 /** Connect to LinkUp real-time socket with JWT auth. */
 export function connectSocket(token?: string | null): Socket | null {
   if (typeof window === "undefined") {
@@ -206,9 +231,6 @@ export function connectSocket(token?: string | null): Socket | null {
   }
 
   const authToken = token ?? getToken();
-  if (process.env.NODE_ENV === "development") {
-    console.log("Socket token exists:", Boolean(authToken));
-  }
 
   if (!authToken) {
     disconnectSocket();
@@ -220,26 +242,25 @@ export function connectSocket(token?: string | null): Socket | null {
     console.log("Socket connecting to:", apiUrl);
   }
 
-  if (socket?.connected) {
-    socket.auth = { token: authToken };
+  const existingToken = (socket?.auth as { token?: string } | undefined)?.token;
+  if (socket?.connected && existingToken === authToken) {
     return socket;
   }
 
   if (socket) {
-    detachStatusListeners(socket);
-    socket.removeAllListeners();
-    socket.disconnect();
-    socket = null;
-    statusSocket = null;
+    teardownSocket();
   }
 
   socket = io(apiUrl, {
     auth: { token: authToken },
-    transports: ["websocket", "polling"],
+    path: "/socket.io",
+    transports: ["polling", "websocket"],
     autoConnect: true,
     reconnection: true,
     reconnectionAttempts: Infinity,
     reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    timeout: 20000,
     withCredentials: true,
   });
 
@@ -272,13 +293,8 @@ export function isSocketConnected(): boolean {
 }
 
 export function disconnectSocket() {
-  if (socket) {
-    detachStatusListeners(socket);
-    socket.disconnect();
-    socket = null;
-    statusSocket = null;
-    notifyStatus("offline");
-  }
+  teardownSocket();
+  notifyStatus("offline");
 }
 
 /** @deprecated Use connectSocket */

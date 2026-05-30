@@ -169,10 +169,40 @@ export class MessagesController {
     return this.messagesService.sendMessage(req.user.id, userId, dto);
   }
 
+  private normalizeMessageBody(
+    body: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const rawType = typeof body.type === 'string' ? body.type.toLowerCase() : '';
+    const isVoice = rawType === 'voice' || rawType === 'audio';
+
+    if (!isVoice) {
+      return body;
+    }
+
+    const normalized: Record<string, unknown> = {
+      ...body,
+      type: 'voice',
+    };
+
+    const content =
+      typeof body.content === 'string' ? body.content.trim() : '';
+    if (!content) {
+      delete normalized.content;
+    } else {
+      normalized.content = content;
+    }
+
+    return normalized;
+  }
+
   private async validateCreateMessageDto(
     body: Record<string, unknown>,
   ): Promise<CreateMessageDto> {
-    const dto = plainToInstance(CreateMessageDto, body);
+    const dto = plainToInstance(
+      CreateMessageDto,
+      this.normalizeMessageBody(body),
+      { enableImplicitConversion: true },
+    );
     const errors = await validate(dto, {
       whitelist: true,
       forbidNonWhitelisted: true,

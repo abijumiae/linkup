@@ -304,13 +304,16 @@ export async function sendVoiceMessageByUrl(
     throw new ApiError("Not authenticated", 401);
   }
 
-  const requestBody = {
-    content: payload.content ?? "",
+  const requestBody: Record<string, unknown> = {
     type: "voice",
     mediaUrl: payload.mediaUrl,
     mediaType: "audio",
     duration: Math.floor(payload.duration),
   };
+
+  if (payload.content?.trim()) {
+    requestBody.content = payload.content.trim();
+  }
 
   console.log("VOICE MESSAGE PAYLOAD:", {
     receiverId,
