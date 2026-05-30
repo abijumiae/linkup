@@ -26,15 +26,18 @@ export default function PulseMeter({ stats }: PulseMeterProps) {
             <Link
               key={card.label}
               href={card.href}
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-brand-primary/30 hover:bg-brand-primary/5 dark:border-white/10 dark:bg-brand-dark/80 dark:hover:bg-brand-primary/10"
+              className="group relative overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white to-slate-50/80 p-4 transition hover:-translate-y-0.5 hover:border-brand-primary/35 hover:shadow-lg hover:shadow-brand-primary/10 active:scale-[0.99] dark:border-white/10 dark:from-brand-dark/90 dark:to-brand-dark/60 dark:hover:border-brand-secondary/30 dark:hover:shadow-brand-secondary/10"
             >
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-brand-primary/0 via-brand-primary/70 to-brand-secondary/0 opacity-0 transition group-hover:opacity-100" />
               <div className="flex items-center justify-between gap-2">
-                <Icon className="h-5 w-5 text-brand-primary dark:text-brand-secondary" />
-                <span className="text-2xl font-semibold text-slate-900 dark:text-white">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-primary/10 text-brand-primary transition group-hover:bg-brand-primary/15 dark:bg-brand-primary/15 dark:text-brand-secondary">
+                  <Icon className="h-4 w-4" />
+                </div>
+                <span className="text-2xl font-semibold tabular-nums text-slate-900 dark:text-white">
                   {card.value}
                 </span>
               </div>
-              <p className="mt-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+              <p className="mt-3 text-sm font-medium leading-snug text-slate-700 dark:text-slate-300">
                 {card.label}
               </p>
             </Link>

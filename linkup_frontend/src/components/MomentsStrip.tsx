@@ -31,26 +31,28 @@ function MomentAvatar({
   onClick: () => void;
 }) {
   const ringClass = hasMoments
-    ? "bg-gradient-to-tr from-brand-primary via-violet-500 to-brand-secondary p-[3px]"
+    ? "bg-gradient-to-tr from-brand-primary via-violet-500 to-brand-secondary p-[3px] shadow-lg shadow-brand-primary/20"
     : "bg-slate-200 p-[2px] dark:bg-white/15";
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className="group flex w-[4.75rem] shrink-0 flex-col items-center gap-2 text-center sm:w-[5.25rem]"
+      className="group flex w-[4.75rem] shrink-0 flex-col items-center gap-2 text-center transition active:scale-[0.97] sm:w-[5.25rem]"
     >
-      <div className={`rounded-2xl ${ringClass}`}>
-        <div className="rounded-[14px] bg-white p-0.5 dark:bg-brand-dark">
+      <div
+        className={`rounded-full ${ringClass} transition group-hover:scale-105 group-hover:shadow-brand-primary/30`}
+      >
+        <div className="rounded-full bg-white p-0.5 dark:bg-brand-dark">
           {user.avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={user.avatarUrl}
               alt={user.name}
-              className="h-14 w-14 rounded-xl object-cover sm:h-16 sm:w-16"
+              className="h-14 w-14 rounded-full object-cover sm:h-16 sm:w-16"
             />
           ) : (
-            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-brand-primary/80 to-brand-secondary/80 text-sm font-semibold text-white sm:h-16 sm:w-16 sm:text-base">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary/90 to-brand-secondary/90 text-sm font-semibold text-white sm:h-16 sm:w-16 sm:text-base">
               {getInitials(user.name)}
             </div>
           )}
@@ -85,14 +87,14 @@ export default function MomentsStrip({
         </div>
       </div>
 
-      <div className="mt-4 -mx-1 overflow-x-auto pb-1">
+      <div className="linkup-chip-row mt-4">
         <div className="flex min-w-min gap-3 px-1">
           <button
             type="button"
             onClick={onDropMoment}
-            className="flex w-[4.75rem] shrink-0 flex-col items-center gap-2 text-center sm:w-[5.25rem]"
+            className="flex w-[4.75rem] shrink-0 flex-col items-center gap-2 text-center transition active:scale-[0.97] sm:w-[5.25rem]"
           >
-            <div className="flex h-[4.25rem] w-[4.25rem] items-center justify-center rounded-2xl border-2 border-dashed border-brand-primary/40 bg-gradient-to-br from-brand-primary/10 to-brand-secondary/10 text-brand-primary transition hover:border-brand-primary hover:from-brand-primary/15 hover:to-brand-secondary/15 dark:border-brand-secondary/40 dark:text-brand-secondary sm:h-[4.75rem] sm:w-[4.75rem]">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed border-brand-primary/45 bg-gradient-to-br from-brand-primary/10 to-brand-secondary/10 text-brand-primary shadow-inner transition hover:border-brand-primary hover:from-brand-primary/15 hover:to-brand-secondary/15 hover:shadow-lg hover:shadow-brand-primary/15 dark:border-brand-secondary/45 dark:text-brand-secondary sm:h-16 sm:w-16">
               <Plus className="h-7 w-7" strokeWidth={2.5} />
             </div>
             <span className="text-[11px] font-semibold leading-tight text-brand-primary dark:text-brand-secondary">
@@ -106,8 +108,8 @@ export default function MomentsStrip({
                 key={`moment-skeleton-${index}`}
                 className="flex w-[4.75rem] shrink-0 flex-col items-center gap-2 sm:w-[5.25rem]"
               >
-                <div className="h-[4.25rem] w-[4.25rem] animate-pulse rounded-2xl bg-slate-200 dark:bg-white/10 sm:h-[4.75rem] sm:w-[4.75rem]" />
-                <div className="h-3 w-12 animate-pulse rounded bg-slate-200 dark:bg-white/10" />
+                <div className="h-14 w-14 animate-pulse rounded-full bg-slate-200 dark:bg-white/10 sm:h-16 sm:w-16" />
+                <div className="h-3 w-12 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
               </div>
             ))
           ) : (

@@ -1,14 +1,16 @@
 "use client";
 
-import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useSocket } from "@/src/components/SocketProvider";
 import {
+  Bookmark,
   Briefcase,
   CalendarDays,
   Heart,
   MessageCircle,
   PlusCircle,
+  Share2,
   ShoppingBag,
   Sparkles,
   UserPlus,
@@ -28,10 +30,9 @@ import {
   formatTimeAgo,
 } from "../../../src/lib/posts";
 import DailySparkCard from "../../components/linkup/DailySparkCard";
-import LocalPulseCard from "../../components/linkup/LocalPulseCard";
-import OpportunityBoard from "../../components/linkup/OpportunityBoard";
 import PulseMeter from "../../components/linkup/PulseMeter";
-import QuickConnectPanel from "../../components/linkup/QuickConnectPanel";
+import OpportunityBoard from "../../components/linkup/OpportunityBoard";
+import PulseFeedSkeleton from "../../components/linkup/PulseFeedSkeleton";
 import FeedPostCard from "../../components/FeedPostCard";
 import MomentsStrip from "@/src/components/MomentsStrip";
 import DropMomentModal from "@/src/components/DropMomentModal";
@@ -42,6 +43,37 @@ import {
   MomentGroup,
 } from "@/src/lib/moments";
 import { UploadMediaType } from "@/src/lib/uploads";
+
+const LocalPulseCard = dynamic(
+  () => import("../../components/linkup/LocalPulseCard"),
+  {
+    loading: () => (
+      <div className="linkup-panel h-64 animate-pulse p-5">
+        <div className="h-4 w-24 rounded-full bg-slate-200 dark:bg-white/10" />
+        <div className="mt-4 space-y-3">
+          {[0, 1, 2].map((key) => (
+            <div
+              key={key}
+              className="h-14 rounded-2xl bg-slate-200 dark:bg-white/10"
+            />
+          ))}
+        </div>
+      </div>
+    ),
+  },
+);
+
+const QuickConnectPanel = dynamic(
+  () => import("../../components/linkup/QuickConnectPanel"),
+  {
+    loading: () => (
+      <div className="linkup-panel h-48 animate-pulse p-5">
+        <div className="h-4 w-28 rounded-full bg-slate-200 dark:bg-white/10" />
+        <div className="mt-4 h-24 rounded-2xl bg-slate-200 dark:bg-white/10" />
+      </div>
+    ),
+  },
+);
 
 type FeedComment = {
   id: string;
@@ -133,6 +165,7 @@ export default function HomeDashboardPage() {
   } | null>(null);
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
+  const [feedError, setFeedError] = useState<string | null>(null);
   const [feedPage, setFeedPage] = useState(1);
   const [feedHasMore, setFeedHasMore] = useState(false);
   const [feedLoadingMore, setFeedLoadingMore] = useState(false);
@@ -171,6 +204,7 @@ export default function HomeDashboardPage() {
 
   useEffect(() => {
     setFeedLoading(true);
+    setFeedError(null);
     fetchFeed(1)
       .then((data) => {
         setPosts(data.items.map(mapPostToFeedPost));
@@ -178,6 +212,7 @@ export default function HomeDashboardPage() {
         setFeedHasMore(data.hasMore);
       })
       .catch(() => {
+        setFeedError("Could not load your feed. Showing sample Sparks.");
         setPosts(mapStaticPosts());
         setFeedHasMore(false);
       })
@@ -482,11 +517,12 @@ export default function HomeDashboardPage() {
       <div className="linkup-container-wide max-w-[1760px]">
         <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
           <main className="min-w-0 space-y-6">
-            <header className="linkup-panel p-6 sm:p-7">
+            <header className="linkup-panel relative overflow-hidden p-6 sm:p-7">
+              <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-brand-primary/10 via-brand-secondary/5 to-transparent dark:from-brand-primary/15" />
               <p className="linkup-eyebrow">LinkUp Pulse</p>
               <h1 className="linkup-title mt-3">Pulse</h1>
-              <p className="linkup-subtitle">
-                People, communities, opportunities — all in one social workspace.
+              <p className="linkup-subtitle max-w-3xl text-base leading-7">
+                Your social workspace for sparks, people, hubs, and opportunities.
               </p>
             </header>
 
@@ -541,6 +577,7 @@ export default function HomeDashboardPage() {
                 if (error) setError(null);
                 if (success) setSuccess(null);
               }}
+              onDropMoment={() => setDropMomentOpen(true)}
             />
 
             <section
@@ -552,43 +589,30 @@ export default function HomeDashboardPage() {
                 Sparks from your network
               </h2>
 
+              {feedError ? (
+                <p className="linkup-alert-warning mt-4" role="status">
+                  {feedError}
+                </p>
+              ) : null}
+
               <div className="mt-6 space-y-4">
                 {feedLoading ? (
-                  <>
-                    {[0, 1, 2].map((key) => (
-                      <div
-                        key={key}
-                        className="animate-pulse linkup-card p-5"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="h-12 w-12 rounded-3xl bg-slate-200 dark:bg-white/10" />
-                          <div className="space-y-2">
-                            <div className="h-4 w-32 rounded bg-slate-200 dark:bg-white/10" />
-                            <div className="h-3 w-24 rounded bg-slate-200 dark:bg-white/10" />
-                          </div>
-                        </div>
-                        <div className="mt-5 space-y-2">
-                          <div className="h-3 w-full rounded bg-slate-200 dark:bg-white/10" />
-                          <div className="h-3 w-5/6 rounded bg-slate-200 dark:bg-white/10" />
-                        </div>
-                      </div>
-                    ))}
-                  </>
+                  <PulseFeedSkeleton count={3} />
                 ) : posts.length === 0 ? (
-                  <div className="linkup-empty p-10 text-center">
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary dark:text-brand-secondary">
-                      <Sparkles className="h-5 w-5" />
+                  <div className="linkup-empty p-10 text-center sm:p-12">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary/15 to-brand-secondary/15 text-brand-primary dark:text-brand-secondary">
+                      <Sparkles className="h-6 w-6" />
                     </div>
-                    <h3 className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">
-                      No sparks yet
+                    <h3 className="mt-5 text-xl font-semibold text-slate-900 dark:text-white">
+                      Your Pulse is warming up
                     </h3>
-                    <p className="mx-auto mt-2 max-w-md text-sm text-slate-600 dark:text-slate-400">
-                      Drop the first spark and start the pulse.
+                    <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-600 dark:text-slate-400">
+                      Connect with people, join hubs, or drop your first Spark.
                     </p>
                     <button
                       type="button"
                       onClick={focusSparkInput}
-                      className="linkup-btn-primary mt-5 min-h-[44px]"
+                      className="linkup-btn-primary mt-6 min-h-[44px]"
                     >
                       <PlusCircle className="h-4 w-4" />
                       Drop Spark
@@ -606,11 +630,11 @@ export default function HomeDashboardPage() {
                     ) : (
                       <article
                         key={post.id}
-                        className="linkup-card p-5"
+                        className="linkup-card p-5 transition hover:border-brand-primary/25 hover:shadow-xl hover:shadow-brand-primary/5 sm:p-6"
                       >
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white shadow-md shadow-brand-primary/20">
                               {getInitials(post.author)}
                             </div>
                             <div>
@@ -626,14 +650,22 @@ export default function HomeDashboardPage() {
                         <p className="mt-5 text-sm leading-7 text-slate-700 dark:text-slate-300">
                           {post.content}
                         </p>
-                        <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-slate-200 pt-4 text-sm dark:border-white/10">
-                          <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2 text-slate-600 dark:bg-white/5 dark:text-slate-400">
+                        <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-200/80 pt-4 text-sm dark:border-white/10 sm:gap-3">
+                          <span className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-slate-100 px-3.5 py-2.5 text-slate-600 dark:bg-white/5 dark:text-slate-400">
                             <Heart className="h-4 w-4 text-pink-400" />
                             Boost {post.stats.likes}
                           </span>
-                          <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2 text-slate-600 dark:bg-white/5 dark:text-slate-400">
+                          <span className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-slate-100 px-3.5 py-2.5 text-slate-600 dark:bg-white/5 dark:text-slate-400">
                             <MessageCircle className="h-4 w-4 text-brand-secondary" />
                             Reply {post.stats.comments}
+                          </span>
+                          <span className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-slate-100 px-3.5 py-2.5 text-slate-600 dark:bg-white/5 dark:text-slate-400">
+                            <Share2 className="h-4 w-4 text-brand-secondary" />
+                            Share {post.stats.shares}
+                          </span>
+                          <span className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-slate-100 px-3.5 py-2.5 text-slate-600 dark:bg-white/5 dark:text-slate-400">
+                            <Bookmark className="h-4 w-4 text-brand-primary dark:text-brand-secondary" />
+                            Save {post.stats.saves}
                           </span>
                         </div>
                       </article>
@@ -656,7 +688,7 @@ export default function HomeDashboardPage() {
             </section>
           </main>
 
-          <aside className="min-w-0 space-y-6">
+          <aside className="min-w-0 space-y-6 xl:sticky xl:top-6 xl:self-start">
             <LocalPulseCard
               country={currentUser?.country}
               enabled={showLocalPulse}

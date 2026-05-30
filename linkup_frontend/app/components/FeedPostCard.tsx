@@ -28,6 +28,14 @@ type FeedComment = {
   time: string;
 };
 
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+  return (name[0] ?? "U").toUpperCase();
+}
+
 type CardPost = {
   id: string;
   authorId: string;
@@ -201,16 +209,16 @@ function FeedPostCard({
   }
 
   return (
-    <article className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-2xl shadow-slate-950/10 transition hover:border-brand-primary/20 hover:shadow-brand-primary/10 dark:border-white/10 dark:bg-brand-dark/80">
+    <article className="linkup-card p-5 transition hover:border-brand-primary/25 hover:shadow-xl hover:shadow-brand-primary/5 sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-brand-primary/15 text-brand-primary dark:text-brand-secondary">
-            {cardPost.author[0]}
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white shadow-md shadow-brand-primary/20">
+            {getInitials(cardPost.author)}
           </div>
           <div>
             <p className="font-semibold text-slate-900 dark:text-white">{cardPost.author}</p>
-            <p className="text-sm text-slate-500">
-              {cardPost.role} · {cardPost.time}
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              @{post.author.username} · {cardPost.role} · {cardPost.time}
             </p>
           </div>
         </div>
@@ -268,11 +276,11 @@ function FeedPostCard({
           />
         </div>
       ) : null}
-      <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-slate-200 pt-4 text-sm text-slate-600 dark:border-white/10 dark:text-slate-400">
+      <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-200/80 pt-4 text-sm text-slate-600 dark:border-white/10 dark:text-slate-400 sm:gap-3">
         <button
           type="button"
           onClick={() => void handleLike()}
-          className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-3 py-2.5 transition ${
+          className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-3.5 py-2.5 transition active:scale-[0.97] ${
             cardPost.liked
               ? "bg-pink-500/10 text-pink-600 dark:bg-pink-500/15 dark:text-pink-300"
               : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
@@ -295,7 +303,7 @@ function FeedPostCard({
         <button
           type="button"
           onClick={() => void handleToggleComments()}
-          className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-3 py-2.5 transition ${
+          className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-3.5 py-2.5 transition active:scale-[0.97] ${
             cardPost.showComments
               ? "bg-brand-secondary/10 text-brand-primary dark:bg-brand-secondary/15 dark:text-brand-secondary"
               : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
@@ -313,7 +321,10 @@ function FeedPostCard({
             cardPost.stats.comments
           )}
         </button>
-        <button className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-slate-100 px-3 py-2.5 text-slate-700 transition hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10">
+        <button
+          type="button"
+          className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-slate-100 px-3.5 py-2.5 text-slate-700 transition hover:bg-slate-200 active:scale-[0.97] dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+        >
           <Share2 className="h-4 w-4 text-brand-secondary dark:text-brand-secondary" />
           {useSparkWording ? (
             <>
@@ -326,9 +337,21 @@ function FeedPostCard({
             cardPost.stats.shares
           )}
         </button>
-        <button className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-slate-100 px-3 py-2.5 text-slate-700 transition hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10">
+        <button
+          type="button"
+          className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-slate-100 px-3.5 py-2.5 text-slate-700 transition hover:bg-slate-200 active:scale-[0.97] dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+        >
           <Bookmark className="h-4 w-4 text-brand-primary dark:text-brand-secondary" />
-          {cardPost.stats.saves}
+          {useSparkWording ? (
+            <>
+              Save
+              <span className="tabular-nums text-slate-500 dark:text-slate-400">
+                {cardPost.stats.saves}
+              </span>
+            </>
+          ) : (
+            cardPost.stats.saves
+          )}
         </button>
       </div>
       {(pulseLabels || sparkLabels) ? <BoostReactionHints /> : null}

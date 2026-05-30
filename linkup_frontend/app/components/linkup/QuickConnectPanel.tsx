@@ -36,7 +36,7 @@ export default function QuickConnectPanel({
       </p>
       <div className="mt-4 space-y-3">
         {suggestions.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center dark:border-white/15 dark:bg-brand-dark/60">
+          <div className="rounded-2xl border border-dashed border-slate-300/90 bg-slate-50/80 p-4 text-center dark:border-white/15 dark:bg-brand-dark/60">
             <UserPlus className="mx-auto h-5 w-5 text-brand-primary dark:text-brand-secondary" />
             <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
               {emptyMessage}
@@ -52,10 +52,10 @@ export default function QuickConnectPanel({
           suggestions.map((person) => (
             <div
               key={person.id}
-              className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-brand-dark/80"
+              className="rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white to-slate-50/70 px-4 py-3.5 dark:border-white/10 dark:from-brand-dark/85 dark:to-brand-dark/60"
             >
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white shadow-md shadow-brand-primary/20">
                   {getInitials(person.name)}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -75,14 +75,14 @@ export default function QuickConnectPanel({
               <div className="mt-3 flex flex-wrap gap-2">
                 <Link
                   href="/explore"
-                  className="inline-flex min-h-[36px] flex-1 items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-3 py-2 text-xs font-semibold text-white shadow-md shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover"
+                  className="inline-flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-3 py-2 text-xs font-semibold text-white shadow-md shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover active:scale-[0.98]"
                 >
                   <UserPlus className="h-3.5 w-3.5" />
                   Connect
                 </Link>
                 <Link
-                  href="/messages"
-                  className="inline-flex min-h-[36px] flex-1 items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-white/10 dark:bg-brand-dark dark:text-slate-200 dark:hover:bg-white/10"
+                  href={`/messages?userId=${encodeURIComponent(person.id)}`}
+                  className="inline-flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-full border border-slate-200/90 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-brand-primary/30 hover:bg-brand-primary/5 active:scale-[0.98] dark:border-white/10 dark:bg-brand-dark dark:text-slate-200 dark:hover:bg-white/10"
                 >
                   <MessageCircle className="h-3.5 w-3.5" />
                   Start Chat
