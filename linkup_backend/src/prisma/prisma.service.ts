@@ -6,7 +6,21 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 import { PrismaClient } from '../generated/prisma/client';
+
+function normalizeDatabaseUrl(connectionString: string): string {
+  try {
+    const parsed = new URL(connectionString);
+    if (!parsed.searchParams.has('uselibpqcompat')) {
+      parsed.searchParams.set('uselibpqcompat', 'true');
+    }
+    parsed.searchParams.delete('channel_binding');
+    return parsed.toString();
+  } catch {
+    return connectionString;
+  }
+}
 
 @Injectable()
 export class PrismaService
@@ -14,6 +28,7 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   private readonly logger = new Logger(PrismaService.name);
+  private readonly pool: Pool;
 
   constructor() {
     const connectionString = process.env.DATABASE_URL;
@@ -22,8 +37,15 @@ export class PrismaService
       throw new Error('DATABASE_URL is not set');
     }
 
-    const adapter = new PrismaPg({ connectionString });
+    const pool = new Pool({
+      connectionString: normalizeDatabaseUrl(connectionString),
+      connectionTimeoutMillis: 10_000,
+      idleTimeoutMillis: 30_000,
+      max: 5,
+    });
+    const adapter = new PrismaPg(pool);
     super({ adapter });
+    this.pool = pool;
   }
 
   async onModuleInit(): Promise<void> {
@@ -39,5 +61,6 @@ export class PrismaService
 
   async onModuleDestroy(): Promise<void> {
     await this.$disconnect();
+    await this.pool.end();
   }
 }

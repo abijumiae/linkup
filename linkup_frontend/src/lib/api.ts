@@ -19,6 +19,8 @@ export class ApiError extends Error {
   }
 }
 
+const API_TIMEOUT_MS = 15_000;
+
 export async function apiRequest<T>(
   path: string,
   options: RequestInit = {},
@@ -36,10 +38,36 @@ export async function apiRequest<T>(
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(`${getApiBaseUrl()}${path}`, {
-    ...options,
-    headers,
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+
+  let response: Response;
+
+  try {
+    response = await fetch(`${getApiBaseUrl()}${path}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new ApiError(
+        "Request timed out. The backend or database may be unreachable.",
+        0,
+      );
+    }
+
+    if (error instanceof TypeError) {
+      throw new ApiError(
+        "Cannot reach the backend. Start linkup_backend on http://localhost:3000.",
+        0,
+      );
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 
   let data: unknown = null;
 

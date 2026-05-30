@@ -248,6 +248,19 @@ export function mergeWithDemoVideos(videos: WatchVideo[]): WatchVideo[] {
   return DEMO_WATCH_VIDEOS;
 }
 
+export function watchWarningFromError(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 404) {
+      return "Watch API is not live yet. Redeploy Render or restart the local backend.";
+    }
+    if (error.status === 0) {
+      return error.message;
+    }
+  }
+
+  return "Watch is warming up. Try again shortly.";
+}
+
 export async function fetchWatchVideosSafe(
   filters: WatchFilters = {},
 ): Promise<{ items: WatchVideo[]; warning: string | null }> {
@@ -260,7 +273,7 @@ export async function fetchWatchVideosSafe(
     }
     return {
       items: [],
-      warning: "Watch is warming up. Try again shortly.",
+      warning: watchWarningFromError(error),
     };
   }
 }

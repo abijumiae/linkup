@@ -19,6 +19,7 @@ import {
   WATCH_CATEGORIES,
   WatchCategory,
   WatchVideo,
+  watchWarningFromError,
 } from "@/src/lib/watch";
 import VideoPlayerModal from "./watch/VideoPlayerModal";
 import WatchEmptyState from "./watch/WatchEmptyState";
@@ -75,21 +76,32 @@ export default function WatchPageClient() {
       setContinueWatching(progressResult.items);
       setMomentGroups(momentsResult.groups);
       setVisibleCount(PAGE_SIZE);
-      setWarning(
+
+      const apiWarning =
         fetchedResult.warning ??
-          progressResult.warning ??
-          momentsResult.warning,
+        progressResult.warning ??
+        momentsResult.warning;
+
+      setWarning(
+        apiWarning && fetchedResult.items.length === 0 && merged.length > 0
+          ? `${apiWarning} Preview picks are available below.`
+          : apiWarning,
       );
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         router.replace("/login");
         return;
       }
-      setVideos(mergeWithDemoVideos([]));
-      setUsingDemo(true);
+      const merged = mergeWithDemoVideos([]);
+      setVideos(merged);
+      setUsingDemo(merged.length > 0);
       setContinueWatching([]);
       setMomentGroups([]);
-      setWarning("Watch is warming up. Try again shortly.");
+      setWarning(
+        merged.length > 0
+          ? "Live catalog unavailable. Preview picks are available below."
+          : watchWarningFromError(err),
+      );
     } finally {
       setIsLoading(false);
       setMomentsLoading(false);

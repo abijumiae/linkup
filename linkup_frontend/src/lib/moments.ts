@@ -35,6 +35,19 @@ export type CreateMomentInput = {
   background?: string;
 };
 
+function momentsWarningFromError(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 404) {
+      return "Moments API is not live yet. Redeploy Render or restart the local backend.";
+    }
+    if (error.status === 0) {
+      return "Cannot reach the backend. Start linkup_backend on http://localhost:3000.";
+    }
+  }
+
+  return "Moments are warming up.";
+}
+
 export async function fetchMomentsFeedSafe(): Promise<{
   groups: MomentGroup[];
   warning: string | null;
@@ -46,7 +59,7 @@ export async function fetchMomentsFeedSafe(): Promise<{
     if (error instanceof ApiError && error.status === 401) {
       throw error;
     }
-    return { groups: [], warning: "Moments are warming up." };
+    return { groups: [], warning: momentsWarningFromError(error) };
   }
 }
 
@@ -61,7 +74,7 @@ export async function fetchMyMomentsSafe(): Promise<{
     if (error instanceof ApiError && error.status === 401) {
       throw error;
     }
-    return { moments: [], warning: "Moments are warming up." };
+    return { moments: [], warning: momentsWarningFromError(error) };
   }
 }
 
