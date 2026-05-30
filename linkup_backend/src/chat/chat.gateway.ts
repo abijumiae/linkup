@@ -23,6 +23,11 @@ import {
 } from './live-room.manager';
 import { RealtimeEmitter } from './realtime.emitter';
 import { WsAuthService } from './ws-auth.service';
+import {
+  getDirectRoom,
+  getGroupRoom,
+  getUserRoom,
+} from './chat-rooms.util';
 
 type AuthedSocket = Socket & {
   data: {
@@ -38,26 +43,9 @@ type AuthedSocket = Socket & {
 
 type ChatType = 'direct' | 'group';
 
-const SOCKET_CORS_ORIGINS = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'https://linkup-nu-ruby.vercel.app',
-];
-
 @WebSocketGateway({
-  namespace: '/chat',
   cors: {
-    origin: (origin, callback) => {
-      if (
-        !origin ||
-        SOCKET_CORS_ORIGINS.includes(origin) ||
-        process.env.NODE_ENV !== 'production'
-      ) {
-        callback(null, true);
-        return;
-      }
-      callback(null, true);
-    },
+    origin: true,
     credentials: true,
   },
 })
@@ -85,6 +73,7 @@ export class ChatGateway
   }
 
   async handleConnection(client: AuthedSocket) {
+    this.logger.log('Socket connection attempt');
     try {
       const token =
         (client.handshake.auth?.token as string | undefined) ??
@@ -100,9 +89,11 @@ export class ChatGateway
       }
       this.onlineUsers.get(user.id)?.add(client.id);
 
-      client.join(this.userRoom(user.id));
+      client.join(getUserRoom(user.id));
       client.emit('socket_ready', { userId: user.id });
-      this.logger.log(`Socket connected: ${user.id}`);
+      this.logger.log(
+        `Socket connected user: ${user.id} socket: ${client.id}`,
+      );
       this.broadcastPresence(user.id, true);
       this.server.emit('user_online', {
         userId: user.id,
@@ -160,7 +151,15 @@ export class ChatGateway
     if (!client.data?.userId || !payload?.otherUserId) {
       return;
     }
-    client.join(this.directRoom(client.data.userId, payload.otherUserId));
+    const roomName = getDirectRoom(client.data.userId, payload.otherUserId);
+    this.logger.log(
+      `join_direct_chat: ${JSON.stringify({
+        userId: client.data.userId,
+        otherUserId: payload.otherUserId,
+        roomName,
+      })}`,
+    );
+    client.join(roomName);
     client.emit('joined_direct_chat', { otherUserId: payload.otherUserId });
   }
 
@@ -177,6 +176,17 @@ export class ChatGateway
       duration?: number;
     },
   ) {
+    const senderId = client.data?.userId;
+    const receiverId = payload?.receiverId;
+    const roomName =
+      senderId && receiverId ? getDirectRoom(senderId, receiverId) : '';
+    this.logger.log(
+      `send_direct_message: ${JSON.stringify({
+        senderId,
+        receiverId,
+        roomName,
+      })}`,
+    );
     await this.handleSendMessage(client, {
       chatType: 'direct',
       receiverId: payload?.receiverId,
@@ -196,7 +206,7 @@ export class ChatGateway
     if (!client.data?.userId || !payload?.groupId) {
       return;
     }
-    client.join(this.groupRoom(payload.groupId));
+    client.join(getGroupRoom(payload.groupId));
     client.emit('joined_group_chat', { groupId: payload.groupId });
   }
 
@@ -323,11 +333,11 @@ export class ChatGateway
     }
 
     if (payload.chatType === 'group') {
-      client.join(this.groupRoom(payload.targetId));
+      client.join(getGroupRoom(payload.targetId));
       return;
     }
 
-    client.join(this.directRoom(client.data.userId, payload.targetId));
+    client.join(getDirectRoom(client.data.userId, payload.targetId));
   }
 
   /** @deprecated Use join_chat */
@@ -339,7 +349,7 @@ export class ChatGateway
     if (!client.data?.userId || !payload?.peerId) {
       return;
     }
-    client.join(this.directRoom(client.data.userId, payload.peerId));
+    client.join(getDirectRoom(client.data.userId, payload.peerId));
   }
 
   /** @deprecated Use join_chat */
@@ -351,7 +361,7 @@ export class ChatGateway
     if (!client.data?.userId || !payload?.groupId) {
       return;
     }
-    client.join(this.groupRoom(payload.groupId));
+    client.join(getGroupRoom(payload.groupId));
   }
 
   @SubscribeMessage('send_message')
@@ -453,13 +463,13 @@ export class ChatGateway
 
     if (payload.chatType === 'group') {
       client
-        .to(this.groupRoom(payload.targetId))
+        .to(getGroupRoom(payload.targetId))
         .emit('typing', eventPayload);
       return;
     }
 
     this.server
-      .to(this.directRoom(userId, payload.targetId))
+      .to(getDirectRoom(userId, payload.targetId))
       .emit('typing', eventPayload);
   }
 
@@ -476,7 +486,7 @@ export class ChatGateway
     }
 
     if (payload.groupId) {
-      client.to(this.groupRoom(payload.groupId)).emit('typing', {
+      client.to(getGroupRoom(payload.groupId)).emit('typing', {
         chatType: 'group' as const,
         targetId: payload.groupId,
         isTyping: true,
@@ -487,7 +497,7 @@ export class ChatGateway
 
     if (payload.peerId) {
       this.server
-        .to(this.directRoom(userId, payload.peerId))
+        .to(getDirectRoom(userId, payload.peerId))
         .emit('typing', {
           chatType: 'direct' as const,
           targetId: payload.peerId,
@@ -510,7 +520,7 @@ export class ChatGateway
     }
 
     if (payload.groupId) {
-      client.to(this.groupRoom(payload.groupId)).emit('typing', {
+      client.to(getGroupRoom(payload.groupId)).emit('typing', {
         chatType: 'group' as const,
         targetId: payload.groupId,
         isTyping: false,
@@ -521,7 +531,7 @@ export class ChatGateway
 
     if (payload.peerId) {
       this.server
-        .to(this.directRoom(userId, payload.peerId))
+        .to(getDirectRoom(userId, payload.peerId))
         .emit('typing', {
           chatType: 'direct' as const,
           targetId: payload.peerId,
@@ -531,65 +541,8 @@ export class ChatGateway
     }
   }
 
-  emitDirectMessage(message: {
-    id: string;
-    type?: string;
-    content: string;
-    mediaUrl?: string | null;
-    mediaType?: string | null;
-    duration?: number | null;
-    senderId: string;
-    receiverId: string;
-    read: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-    sender: unknown;
-  }) {
-    if (!this.server) {
-      this.logger.warn('Cannot emit direct message: socket server not ready');
-      return;
-    }
-
-    const serialized = {
-      ...message,
-      createdAt:
-        message.createdAt instanceof Date
-          ? message.createdAt.toISOString()
-          : message.createdAt,
-      updatedAt:
-        message.updatedAt instanceof Date
-          ? message.updatedAt.toISOString()
-          : message.updatedAt,
-    };
-
-    const room = this.directRoom(message.senderId, message.receiverId);
-    const payload = { chatType: 'direct' as const, message: serialized };
-    const directPayload = { message: serialized };
-    const notificationPayload = { type: 'chat' as const, message: serialized };
-
-    this.logger.log(`Message emitted to room: ${room}`);
-
-    const targets = new Set([
-      room,
-      this.userRoom(message.receiverId),
-      this.userRoom(message.senderId),
-    ]);
-
-    for (const target of targets) {
-      this.server.to(target).emit('message_received', payload);
-      this.server.to(target).emit('direct_message_received', directPayload);
-    }
-
-    this.server
-      .to(this.userRoom(message.receiverId))
-      .emit('new_message_notification', notificationPayload);
-
-    this.server
-      .to(this.userRoom(message.receiverId))
-      .emit('conversation:update', { peerId: message.senderId });
-    this.server
-      .to(this.userRoom(message.senderId))
-      .emit('conversation:update', { peerId: message.receiverId });
+  emitDirectMessage(message: Parameters<RealtimeEmitter['emitDirectMessage']>[0]) {
+    this.realtimeEmitter.emitDirectMessage(message);
   }
 
   emitGroupMessage(message: {
@@ -603,17 +556,17 @@ export class ChatGateway
   }) {
     const payload = { chatType: 'group' as const, message };
 
-    this.server.to(this.groupRoom(message.groupId)).emit('message_received', payload);
+    this.server.to(getGroupRoom(message.groupId)).emit('message_received', payload);
     this.server
-      .to(this.groupRoom(message.groupId))
+      .to(getGroupRoom(message.groupId))
       .emit('group_message_received', { message });
     this.server
-      .to(this.groupRoom(message.groupId))
+      .to(getGroupRoom(message.groupId))
       .emit('message:new', { type: 'group', message });
   }
 
   emitMessagesRead(readerId: string, peerId: string) {
-    this.server.to(this.directRoom(readerId, peerId)).emit('message:read', {
+    this.server.to(getDirectRoom(readerId, peerId)).emit('message:read', {
       readerId,
       peerId,
     });
@@ -857,7 +810,7 @@ export class ChatGateway
       return;
     }
 
-    this.server.to(this.userRoom(targetUserId)).emit(event, {
+    this.server.to(getUserRoom(targetUserId)).emit(event, {
       ...data,
       fromUserId,
     });
@@ -914,10 +867,10 @@ export class ChatGateway
       fromUserId,
     };
 
-    this.server.to(this.userRoom(peerId)).emit(event, payload);
+    this.server.to(getUserRoom(peerId)).emit(event, payload);
 
     if (event === 'call_offer') {
-      this.server.to(this.userRoom(peerId)).emit('incoming_call', {
+      this.server.to(getUserRoom(peerId)).emit('incoming_call', {
         ...payload,
         callType: data.callType ?? 'video',
         offer: data.sdp,
@@ -925,7 +878,7 @@ export class ChatGateway
     }
 
     if (event === 'call_end') {
-      this.server.to(this.userRoom(peerId)).emit('call_ended', payload);
+      this.server.to(getUserRoom(peerId)).emit('call_ended', payload);
     }
   }
 
@@ -947,16 +900,16 @@ export class ChatGateway
     };
 
     if (payload.chatType === 'group') {
-      client.to(this.groupRoom(payload.targetId)).emit('typing_update', eventPayload);
-      client.to(this.groupRoom(payload.targetId)).emit('typing', eventPayload);
+      client.to(getGroupRoom(payload.targetId)).emit('typing_update', eventPayload);
+      client.to(getGroupRoom(payload.targetId)).emit('typing', eventPayload);
       return;
     }
 
     client
-      .to(this.directRoom(userId, payload.targetId))
+      .to(getDirectRoom(userId, payload.targetId))
       .emit('typing_update', eventPayload);
     client
-      .to(this.directRoom(userId, payload.targetId))
+      .to(getDirectRoom(userId, payload.targetId))
       .emit('typing', eventPayload);
   }
 
@@ -997,16 +950,4 @@ export class ChatGateway
     });
   }
 
-  private userRoom(userId: string) {
-    return `user:${userId}`;
-  }
-
-  private groupRoom(groupId: string) {
-    return `group:${groupId}`;
-  }
-
-  private directRoom(userA: string, userB: string) {
-    const [first, second] = [userA, userB].sort();
-    return `direct:${first}:${second}`;
-  }
 }

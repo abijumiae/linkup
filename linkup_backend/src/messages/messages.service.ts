@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
 import { ChatGateway } from '../chat/chat.gateway';
+import { RealtimeEmitter } from '../chat/realtime.emitter';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
@@ -40,6 +41,7 @@ export class MessagesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
+    private readonly realtimeEmitter: RealtimeEmitter,
     @Inject(forwardRef(() => ChatGateway))
     private readonly chatGateway: ChatGateway,
   ) {}
@@ -223,7 +225,7 @@ export class MessagesService {
         );
       }
 
-      this.chatGateway.emitDirectMessage(message);
+      this.realtimeEmitter.emitDirectMessage(message);
       this.notificationsService.emitDirectMessageAlert(message);
 
       return message;

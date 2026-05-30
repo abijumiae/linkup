@@ -5,7 +5,7 @@ import { getApiBaseUrl } from "./api";
 import { getToken } from "./auth";
 
 let socket: Socket | null = null;
-let statusListenersAttached = false;
+let statusSocket: Socket | null = null;
 
 export type SocketConnectionStatus = "connected" | "reconnecting" | "offline";
 
@@ -17,18 +17,46 @@ function notifyStatus(status: SocketConnectionStatus) {
   statusListeners.forEach((listener) => listener(status));
 }
 
+function detachStatusListeners(activeSocket: Socket) {
+  activeSocket.off("connect");
+  activeSocket.off("disconnect");
+  activeSocket.off("reconnect_attempt");
+  activeSocket.off("reconnect");
+  activeSocket.off("connect_error");
+}
+
 function attachStatusListeners(activeSocket: Socket) {
-  if (statusListenersAttached) {
+  if (statusSocket === activeSocket) {
     return;
   }
 
-  statusListenersAttached = true;
+  if (statusSocket) {
+    detachStatusListeners(statusSocket);
+  }
 
-  activeSocket.on("connect", () => notifyStatus("connected"));
-  activeSocket.on("disconnect", () => notifyStatus("offline"));
-  activeSocket.on("reconnect_attempt", () => notifyStatus("reconnecting"));
-  activeSocket.on("reconnect", () => notifyStatus("connected"));
-  activeSocket.on("connect_error", () => {
+  statusSocket = activeSocket;
+
+  activeSocket.on("connect", () => {
+    if (process.env.NODE_ENV === "development") {
+      console.log("Socket connected:", activeSocket.id);
+    }
+    notifyStatus("connected");
+  });
+
+  activeSocket.on("disconnect", () => {
+    notifyStatus("offline");
+  });
+
+  activeSocket.on("reconnect_attempt", () => {
+    notifyStatus("reconnecting");
+  });
+
+  activeSocket.on("reconnect", () => {
+    notifyStatus("connected");
+  });
+
+  activeSocket.on("connect_error", (err: Error) => {
+    console.log("Socket connect_error:", err.message);
     if (!activeSocket.connected) {
       notifyStatus("reconnecting");
     }
@@ -166,39 +194,52 @@ export function toMessageReceivedPayload(
   return null;
 }
 
-/** Connect to LinkUp real-time chat namespace with JWT auth. */
+export function hasAuthToken(): boolean {
+  return Boolean(getToken());
+}
+
+/** Connect to LinkUp real-time socket with JWT auth. */
 export function connectSocket(token?: string | null): Socket | null {
   if (typeof window === "undefined") {
     return null;
   }
 
   const authToken = token ?? getToken();
+  if (process.env.NODE_ENV === "development") {
+    console.log("Socket token exists:", Boolean(authToken));
+  }
+
   if (!authToken) {
+    disconnectSocket();
     return null;
   }
 
+  const apiUrl = getApiBaseUrl();
+  if (process.env.NODE_ENV === "development") {
+    console.log("Socket connecting to:", apiUrl);
+  }
+
   if (socket?.connected) {
-    const authToken = token ?? getToken();
-    if (authToken) {
-      socket.auth = { token: authToken };
-    }
-    return socket;
-  }
-
-  if (socket && !socket.connected) {
     socket.auth = { token: authToken };
-    attachStatusListeners(socket);
-    notifyStatus("reconnecting");
-    socket.connect();
     return socket;
   }
 
-  socket = io(`${getApiBaseUrl()}/chat`, {
+  if (socket) {
+    detachStatusListeners(socket);
+    socket.removeAllListeners();
+    socket.disconnect();
+    socket = null;
+    statusSocket = null;
+  }
+
+  socket = io(apiUrl, {
     auth: { token: authToken },
     transports: ["websocket", "polling"],
     autoConnect: true,
     reconnection: true,
-    reconnectionAttempts: 10,
+    reconnectionAttempts: Infinity,
+    reconnectionDelay: 1000,
+    withCredentials: true,
   });
 
   attachStatusListeners(socket);
@@ -231,9 +272,10 @@ export function isSocketConnected(): boolean {
 
 export function disconnectSocket() {
   if (socket) {
+    detachStatusListeners(socket);
     socket.disconnect();
     socket = null;
-    statusListenersAttached = false;
+    statusSocket = null;
     notifyStatus("offline");
   }
 }

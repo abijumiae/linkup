@@ -18,9 +18,10 @@ import {
   Video,
 } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
-import { getCurrentUser } from "@/src/lib/auth";
+import { getCurrentUser, getToken } from "@/src/lib/auth";
 import {
   getSocket,
+  hasAuthToken,
   isSocketConnected,
   toMessageReceivedPayload,
   TypingPayload,
@@ -100,6 +101,10 @@ function getInitials(name: string): string {
   return (name[0] ?? "U").toUpperCase();
 }
 
+function directRoomName(userA: string, userB: string): string {
+  return `direct:${[userA, userB].sort().join(":")}`;
+}
+
 export default function MessagesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -135,6 +140,7 @@ export default function MessagesPage() {
   const [typingPeerId, setTypingPeerId] = useState<string | null>(null);
   const [typingGroupId, setTypingGroupId] = useState<string | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<Record<string, boolean>>({});
+  const [joinedDirectRoom, setJoinedDirectRoom] = useState<string | null>(null);
   const { socket, status: socketStatus } = useSocket();
   const { setActiveChatPeerId } = useActiveChat();
   const activeUserRef = useRef(activeUser);
@@ -296,6 +302,12 @@ export default function MessagesPage() {
           ),
         );
         getSocket()?.emit("join_direct_chat", { otherUserId: peerId });
+        if (process.env.NODE_ENV === "development") {
+          console.log("Joining direct chat:", peerId);
+        }
+        if (currentUserId) {
+          setJoinedDirectRoom(directRoomName(currentUserId, peerId));
+        }
         getSocket()?.emit("join_chat", {
           chatType: "direct",
           targetId: peerId,
@@ -395,12 +407,58 @@ export default function MessagesPage() {
       return;
     }
 
+    if (process.env.NODE_ENV === "development") {
+      console.log("Joining direct chat:", activeUser.id);
+    }
     socket.emit("join_direct_chat", { otherUserId: activeUser.id });
+    if (currentUserId) {
+      setJoinedDirectRoom(directRoomName(currentUserId, activeUser.id));
+    }
     socket.emit("join_chat", {
       chatType: "direct",
       targetId: activeUser.id,
     });
-  }, [socket, activeUser?.id]);
+  }, [socket, activeUser?.id, currentUserId]);
+
+  useEffect(() => {
+    if (
+      socketStatus === "connected" ||
+      chatTab !== "direct" ||
+      !activeUser?.id
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const pollMessages = async () => {
+      if (cancelled || document.hidden) {
+        return;
+      }
+
+      try {
+        const data = await fetchConversation(activeUser.id);
+        setMessages((current) => {
+          const currentIds = new Set(current.map((item) => item.id));
+          const hasNew = data.messages.some((item) => !currentIds.has(item.id));
+          if (!hasNew && data.messages.length === current.length) {
+            return current;
+          }
+          return data.messages;
+        });
+      } catch {
+        // Polling is a fallback only; ignore transient errors.
+      }
+    };
+
+    void pollMessages();
+    const intervalId = window.setInterval(pollMessages, 3000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [socketStatus, chatTab, activeUser?.id]);
 
   useEffect(() => {
     if (!currentUserId || !socket) {
@@ -412,7 +470,13 @@ export default function MessagesPage() {
       const groupId = activeGroupRef.current?.id;
 
       if (peerId) {
+        if (process.env.NODE_ENV === "development") {
+          console.log("Joining direct chat:", peerId);
+        }
         socket.emit("join_direct_chat", { otherUserId: peerId });
+        if (currentUserId) {
+          setJoinedDirectRoom(directRoomName(currentUserId, peerId));
+        }
         socket.emit("join_chat", {
           chatType: "direct",
           targetId: peerId,
@@ -654,13 +718,27 @@ export default function MessagesPage() {
       }
     };
 
+    const onDirectMessageReceived = (raw: unknown) => {
+      if (process.env.NODE_ENV === "development") {
+        console.log("Received direct_message_received:", raw);
+      }
+      applyIncomingMessage(raw);
+    };
+
+    const onJoinedDirectChat = (payload: { otherUserId: string }) => {
+      if (currentUserId) {
+        setJoinedDirectRoom(directRoomName(currentUserId, payload.otherUserId));
+      }
+    };
+
     if (socket.connected) {
       onConnect();
     }
 
     socket.on("connect", onConnect);
     socket.on("message_received", applyIncomingMessage);
-    socket.on("direct_message_received", applyIncomingMessage);
+    socket.on("direct_message_received", onDirectMessageReceived);
+    socket.on("joined_direct_chat", onJoinedDirectChat);
     socket.on("group_message_received", applyIncomingMessage);
     socket.on("new_message_notification", applyIncomingMessage);
     socket.on("message_error", onMessageError);
@@ -682,7 +760,8 @@ export default function MessagesPage() {
     return () => {
       socket.off("connect", onConnect);
       socket.off("message_received", applyIncomingMessage);
-      socket.off("direct_message_received", applyIncomingMessage);
+      socket.off("direct_message_received", onDirectMessageReceived);
+      socket.off("joined_direct_chat", onJoinedDirectChat);
       socket.off("group_message_received", applyIncomingMessage);
       socket.off("new_message_notification", applyIncomingMessage);
       socket.off("message_error", onMessageError);
@@ -955,9 +1034,22 @@ export default function MessagesPage() {
     emitTypingStop();
 
     try {
-      await sendViaRest(trimmed);
-      setMessageInput("");
-      setTimeout(scrollToBottom, 50);
+      if (
+        chatTab === "direct" &&
+        activeUser?.id &&
+        socket?.connected
+      ) {
+        socket.emit("send_direct_message", {
+          receiverId: activeUser.id,
+          content: trimmed,
+        });
+        setMessageInput("");
+        setTimeout(scrollToBottom, 50);
+      } else {
+        await sendViaRest(trimmed);
+        setMessageInput("");
+        setTimeout(scrollToBottom, 50);
+      }
     } catch (err) {
       console.error("Send message failed:", err);
 
@@ -1287,7 +1379,9 @@ export default function MessagesPage() {
             </div>
             <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-200">
               <span className="relative flex h-2 w-2">
-                {socketStatus === "connected" ? (
+                {!hasAuthToken() ? (
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-slate-400" />
+                ) : socketStatus === "connected" ? (
                   <>
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
                     <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
@@ -1298,11 +1392,13 @@ export default function MessagesPage() {
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-slate-400" />
                 )}
               </span>
-              {socketStatus === "connected"
-                ? "Live connected"
-                : socketStatus === "reconnecting"
-                  ? "Reconnecting"
-                  : "Offline"}
+              {!hasAuthToken()
+                ? "Login required"
+                : socketStatus === "connected"
+                  ? "Live"
+                  : socketStatus === "reconnecting"
+                    ? "Reconnecting"
+                    : "Offline"}
             </div>
           </div>
         </header>
@@ -1753,6 +1849,17 @@ export default function MessagesPage() {
           onToggleAudio={handleToggleGroupCallAudio}
           onToggleVideo={handleToggleGroupCallVideo}
         />
+      ) : null}
+
+      {process.env.NODE_ENV === "development" ? (
+        <div className="fixed bottom-2 right-2 z-50 max-w-xs rounded-lg border border-slate-300/40 bg-white/90 p-2 text-[10px] leading-relaxed text-slate-600 shadow-sm dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-300">
+          <p>socket connected: {String(Boolean(socket?.connected))}</p>
+          <p>socket id: {socket?.id ?? "—"}</p>
+          <p>token exists: {String(Boolean(getToken()))}</p>
+          <p>current user id: {currentUserId ?? "—"}</p>
+          <p>selectedUserId: {activeUser?.id ?? selectedUserId ?? "—"}</p>
+          <p>joined room: {joinedDirectRoom ?? "—"}</p>
+        </div>
       ) : null}
     </div>
   );
