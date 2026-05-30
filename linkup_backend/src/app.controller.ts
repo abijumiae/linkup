@@ -24,6 +24,8 @@ export class AppController {
         database: 'connected',
         realtime: 'socket.io',
         socketPath: '/socket.io',
+        deployCommit: process.env.RENDER_GIT_COMMIT ?? null,
+        deployBranch: process.env.RENDER_GIT_BRANCH ?? null,
         time: new Date().toISOString(),
       };
     } catch {

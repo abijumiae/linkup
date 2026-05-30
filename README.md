@@ -40,22 +40,37 @@ LinkUp is a full social platform with a NestJS backend and a Next.js frontend. I
 
 ## Backend Deployment
 
-Render deployment settings:
+Render dashboard settings (must match `render.yaml` at repo root):
 
+- Repository: `https://github.com/abijumiae/linkup`
+- Branch: `main`
 - Root directory: `linkup_backend`
 - Build command:
   ```bash
-  npm install && npx prisma generate && npm run build
+  npm ci && npm run build
   ```
 - Start command:
   ```bash
-  npm run start
+  npm run start:prod
   ```
+- Health check path: `/health`
 - Required environment variables:
   - `DATABASE_URL`
   - `JWT_SECRET`
-  - `FRONTEND_URL`
-  - `PORT`
+  - `FRONTEND_URL` (production: `https://linkup-nu-ruby.vercel.app`)
+  - `NODE_ENV` = `production`
+
+After changing settings or pushing to `main`, redeploy with **Manual Deploy → Clear build cache & deploy**.
+
+Verify production:
+
+```bash
+curl -s https://linkup-backend-oabq.onrender.com/health
+curl -s -o /dev/null -w "%{http_code}\n" \
+  "https://linkup-backend-oabq.onrender.com/socket.io/?EIO=4&transport=polling"
+```
+
+`/health` must include `realtime: "socket.io"` and `socketPath: "/socket.io"`. `/socket.io` must return `200`.
 
 For production deploys locally or elsewhere, build then start the compiled server:
 
