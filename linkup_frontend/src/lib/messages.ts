@@ -24,6 +24,7 @@ export interface ChatMessage {
   type?: string;
   content: string;
   mediaUrl?: string | null;
+  audioUrl?: string | null;
   mediaType?: string | null;
   duration?: number | null;
   senderId: string;
@@ -164,6 +165,64 @@ export async function uploadVoiceNote(file: File): Promise<{
 
 export async function sendVoiceMessage(
   userId: string,
+  file: File,
+  duration: number,
+): Promise<ChatMessage> {
+  const receiverId = userId.trim();
+
+  if (!receiverId) {
+    throw new ApiError("Select a chat first", 400);
+  }
+
+  if (duration < 1) {
+    throw new ApiError("Voice note duration is required", 400);
+  }
+
+  const token = getToken();
+
+  if (!token) {
+    throw new ApiError("Not authenticated", 401);
+  }
+
+  const formData = new FormData();
+  formData.append("type", "AUDIO");
+  formData.append("audioFile", file);
+  formData.append("duration", String(Math.floor(duration)));
+
+  const response = await fetch(
+    `${getApiBaseUrl()}/messages/${encodeURIComponent(receiverId)}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    },
+  );
+
+  let data: unknown = null;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      clearAuth();
+    }
+    throw new ApiError(
+      "Could not send voice note. Please try again.",
+      response.status,
+    );
+  }
+
+  return data as ChatMessage;
+}
+
+/** @deprecated Use sendVoiceMessage(userId, file, duration) */
+export async function sendVoiceMessageByUrl(
+  userId: string,
   payload: {
     mediaUrl: string;
     duration: number;
@@ -178,9 +237,10 @@ export async function sendVoiceMessage(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        type: "voice",
+        type: "AUDIO",
         content: payload.content ?? "",
         mediaUrl: payload.mediaUrl,
+        audioUrl: payload.mediaUrl,
         mediaType: "audio",
         duration: payload.duration,
       }),

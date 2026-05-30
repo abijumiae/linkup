@@ -55,8 +55,37 @@ export class MessagesService {
     if (normalized === 'audio') {
       return 'voice';
     }
+    if (normalized === 'text') {
+      return 'text';
+    }
 
     return normalized;
+  }
+
+  private serializeMessage(message: {
+    id: string;
+    type: string;
+    content: string;
+    mediaUrl: string | null;
+    mediaType: string | null;
+    duration: number | null;
+    senderId: string;
+    receiverId: string;
+    read: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+    sender: {
+      id: string;
+      name: string;
+      username: string;
+      avatarUrl: string | null;
+    };
+  }) {
+    const isAudio = message.type === 'voice';
+    return {
+      ...message,
+      audioUrl: isAudio ? message.mediaUrl : null,
+    };
   }
 
   async getConversations(userId: string) {
@@ -166,7 +195,7 @@ export class MessagesService {
 
     return {
       user: otherUser,
-      messages: page.reverse(),
+      messages: page.reverse().map((message) => this.serializeMessage(message)),
       hasMore,
     };
   }
@@ -245,7 +274,7 @@ export class MessagesService {
       this.realtimeEmitter.emitDirectMessage(message);
       this.notificationsService.emitDirectMessageAlert(message);
 
-      return message;
+      return this.serializeMessage(message);
     } catch (error) {
       if (
         error instanceof BadRequestException ||

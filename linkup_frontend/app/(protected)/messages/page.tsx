@@ -43,7 +43,6 @@ import {
   getMessagePreview,
   sendMessage,
   sendVoiceMessage,
-  uploadVoiceNote,
 } from "@/src/lib/messages";
 import VoiceNoteRecorder, {
   isVoiceRecordingSupported,
@@ -916,11 +915,11 @@ export default function MessagesPage() {
     setIsSending(true);
 
     try {
-      const uploaded = await uploadVoiceNote(file);
-      const created = await sendVoiceMessage(activeUser.id, {
-        mediaUrl: uploaded.url,
-        duration: durationSeconds,
-      });
+      const created = await sendVoiceMessage(
+        activeUser.id,
+        file,
+        durationSeconds,
+      );
 
       setMessages((current) => {
         if (current.some((item) => item.id === created.id)) {
@@ -1686,6 +1685,7 @@ export default function MessagesPage() {
                           text={message.content}
                           type={message.type}
                           mediaUrl={message.mediaUrl}
+                          audioUrl={message.audioUrl}
                           duration={message.duration}
                           time={formatMessageTime(message.createdAt)}
                           fromMe={message.senderId === currentUserId}

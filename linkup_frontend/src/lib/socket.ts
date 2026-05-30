@@ -70,6 +70,7 @@ export type ReceivedDirectMessage = {
     type?: string;
     content: string;
     mediaUrl?: string | null;
+    audioUrl?: string | null;
     mediaType?: string | null;
     duration?: number | null;
     senderId: string;
