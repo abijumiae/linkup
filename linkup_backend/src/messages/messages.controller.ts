@@ -31,6 +31,7 @@ export class MessagesController {
     return this.messagesService.getConversation(req.user.id, userId);
   }
 
+  @Post(':userId')
   async sendMessage(
     @Param('userId') userId: string,
     @Req() req: { user: SafeUser },

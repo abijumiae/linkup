@@ -942,10 +942,16 @@ export default function MessagesPage() {
         return;
       }
 
+      const routeUnavailable =
+        err instanceof ApiError &&
+        (err.status === 404 || err.message.includes("Cannot POST"));
+
       setError(
-        err instanceof ApiError
-          ? err.message
-          : "Could not send message. Please try again.",
+        routeUnavailable
+          ? "Message service is updating. Please try again."
+          : err instanceof ApiError
+            ? err.message
+            : "Could not send message. Please try again.",
       );
     } finally {
       setIsSending(false);
