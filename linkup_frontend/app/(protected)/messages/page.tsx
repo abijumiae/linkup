@@ -58,11 +58,16 @@ import {
   GroupCallParticipant,
   GroupCallSession,
 } from "@/src/lib/groupWebrtc";
-import AuthLoadingScreen from "../../components/AuthLoadingScreen";
 import ChatListItem from "../../components/ChatListItem";
 import EmojiPicker from "../../components/EmojiPicker";
 import LiveRoomCard from "../../components/LiveRoomCard";
 import MessageBubble from "../../components/MessageBubble";
+import ChatsEmptyState from "../../components/messages/ChatsEmptyState";
+import NewChatModal from "../../components/messages/NewChatModal";
+import {
+  ChatsListSkeleton,
+  ChatsThreadSkeleton,
+} from "../../components/messages/ChatsSkeleton";
 
 const CallOverlay = dynamic(() => import("../../components/CallOverlay"), {
   ssr: false,
@@ -132,6 +137,7 @@ export default function MessagesPage() {
   const [activeGroupMemberCount, setActiveGroupMemberCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [messageInput, setMessageInput] = useState("");
+  const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -258,7 +264,7 @@ export default function MessagesPage() {
         router.replace("/login");
         return [];
       }
-      setError("Unable to load chats. Please try again.");
+      setError("Chats are warming up. Try again shortly.");
       return [];
     }
   }, [router]);
@@ -585,7 +591,7 @@ export default function MessagesPage() {
 
     const onMessageError = (payload: { message?: string }) => {
       console.error("Socket message error:", payload);
-      setError(payload.message ?? "Could not send message. Please try again.");
+      showFeatureNotice("Could not send message. Please try again.");
     };
 
     const onRead = (payload: { readerId: string; peerId: string }) => {
@@ -1097,9 +1103,7 @@ export default function MessagesPage() {
       setError(
         routeUnavailable
           ? "Message service is updating. Please try again."
-          : err instanceof ApiError
-            ? err.message
-            : "Could not send message. Please try again.",
+          : "Could not send message. Please try again.",
       );
     } finally {
       setIsSending(false);
@@ -1319,21 +1323,18 @@ export default function MessagesPage() {
   function renderCallActions() {
     const isDirectChat = chatTab === "direct" && Boolean(activeUser);
     const isGroupChat = chatTab === "group" && Boolean(activeGroup);
+    const canShowCallPlaceholder = isDirectChat || isGroupChat;
 
     return (
       <>
         <button
           type="button"
           onClick={() => {
-            if (isDirectChat) {
-              void startDirectCall("audio");
-              return;
-            }
-            if (isGroupChat) {
-              void beginGroupCall("audio");
+            if (canShowCallPlaceholder) {
+              showFeatureNotice("Audio/video calls are getting ready.");
             }
           }}
-          disabled={!isDirectChat && !isGroupChat}
+          disabled={!canShowCallPlaceholder}
           className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-700 transition hover:border-brand-primary/30 hover:bg-brand-primary/5 disabled:opacity-40 dark:border-white/10 dark:bg-brand-dark dark:text-slate-200 dark:hover:bg-white/10"
           aria-label="Audio call"
         >
@@ -1342,15 +1343,11 @@ export default function MessagesPage() {
         <button
           type="button"
           onClick={() => {
-            if (isDirectChat) {
-              void startDirectCall("video");
-              return;
-            }
-            if (isGroupChat) {
-              void beginGroupCall("video");
+            if (canShowCallPlaceholder) {
+              showFeatureNotice("Audio/video calls are getting ready.");
             }
           }}
-          disabled={!isDirectChat && !isGroupChat}
+          disabled={!canShowCallPlaceholder}
           className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-700 transition hover:border-brand-primary/30 hover:bg-brand-primary/5 disabled:opacity-40 dark:border-white/10 dark:bg-brand-dark dark:text-slate-200 dark:hover:bg-white/10"
           aria-label="Video call"
         >
@@ -1369,7 +1366,30 @@ export default function MessagesPage() {
   }
 
   if (isLoading) {
-    return <AuthLoadingScreen message="Loading chats..." />;
+    return (
+      <div className="linkup-page overflow-x-hidden pb-24 lg:pb-8">
+        <div className="linkup-container-wide min-w-0">
+          <header className="linkup-panel mb-6 p-5 sm:p-7">
+            <div className="h-4 w-20 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
+            <div className="mt-3 h-8 w-32 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
+            <div className="mt-2 h-4 w-72 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
+          </header>
+          <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] xl:gap-6">
+            <aside className="linkup-panel p-4 sm:p-5">
+              <div className="h-6 w-24 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
+              <div className="mt-4 h-10 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
+              <div className="mt-4 h-10 animate-pulse rounded-full bg-slate-200 dark:bg-white/10" />
+              <div className="mt-4">
+                <ChatsListSkeleton />
+              </div>
+            </aside>
+            <main className="linkup-panel hidden lg:block">
+              <ChatsThreadSkeleton />
+            </main>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const filteredConversations = conversations.filter((conversation) => {
@@ -1439,7 +1459,7 @@ export default function MessagesPage() {
         </header>
 
         {error ? (
-          <p className="mb-4 rounded-3xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">
+          <p className="mb-4 rounded-3xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
             {error}
           </p>
         ) : null}
@@ -1460,22 +1480,22 @@ export default function MessagesPage() {
               <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
                 Chats
               </h2>
-              <Link
-                href={
-                  chatTab === "group"
-                    ? "/groups"
-                    : chatTab === "live"
-                      ? "/events"
-                      : "/explore"
-                }
-                className="shrink-0 rounded-full border border-brand-primary/25 bg-brand-primary/10 px-3 py-1.5 text-xs font-semibold text-brand-primary transition hover:bg-brand-primary/15 dark:text-brand-secondary"
-              >
-                {chatTab === "group"
-                  ? "Browse Groups"
-                  : chatTab === "live"
-                    ? "Happenings"
-                    : "New Chat"}
-              </Link>
+              {chatTab === "direct" ? (
+                <button
+                  type="button"
+                  onClick={() => setShowNewChatModal(true)}
+                  className="shrink-0 rounded-full border border-brand-primary/25 bg-brand-primary/10 px-3 py-1.5 text-xs font-semibold text-brand-primary transition hover:bg-brand-primary/15 dark:text-brand-secondary"
+                >
+                  New Chat
+                </button>
+              ) : (
+                <Link
+                  href={chatTab === "group" ? "/groups" : "/events"}
+                  className="shrink-0 rounded-full border border-brand-primary/25 bg-brand-primary/10 px-3 py-1.5 text-xs font-semibold text-brand-primary transition hover:bg-brand-primary/15 dark:text-brand-secondary"
+                >
+                  {chatTab === "group" ? "Browse Groups" : "Happenings"}
+                </Link>
+              )}
             </div>
 
             <div className="mt-4 rounded-full border border-slate-200/80 bg-slate-50 px-3 py-2.5 text-sm text-slate-600 dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-300">
@@ -1517,9 +1537,13 @@ export default function MessagesPage() {
             <div className="mt-4 min-h-0 flex-1 space-y-2.5 overflow-y-auto pr-0.5">
               {chatTab === "direct" ? (
                 filteredConversations.length === 0 ? (
-                  <p className="rounded-3xl border border-slate-200/80 bg-slate-50 p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-brand-dark/85 dark:text-slate-400">
-                    No chats yet. Start a new connection from Discover.
-                  </p>
+                  <ChatsEmptyState
+                    icon={MessageCircle}
+                    title="No chats yet"
+                    description="Start a conversation with someone from Discover."
+                    actionLabel="Go to Discover"
+                    actionHref="/explore"
+                  />
                 ) : (
                   filteredConversations.map((conversation) => (
                     <ChatListItem
@@ -1540,9 +1564,13 @@ export default function MessagesPage() {
                 )
               ) : chatTab === "group" ? (
                 filteredGroupChats.length === 0 ? (
-                  <p className="rounded-3xl border border-slate-200/80 bg-slate-50 p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-brand-dark/85 dark:text-slate-400">
-                    No group chats yet. Join a group to start chatting.
-                  </p>
+                  <ChatsEmptyState
+                    icon={Users}
+                    title="No group chats yet"
+                    description="Join a Hub to start group conversations."
+                    actionLabel="Explore Hubs"
+                    actionHref="/groups"
+                  />
                 ) : (
                   filteredGroupChats.map((chat) => (
                     <ChatListItem
@@ -1567,6 +1595,13 @@ export default function MessagesPage() {
                 )
               ) : (
                 <>
+                  <ChatsEmptyState
+                    icon={Radio}
+                    title="No live rooms active right now"
+                    description="Live rooms will appear here when your hubs or happenings go live."
+                    actionLabel="Explore Hubs"
+                    actionHref="/groups"
+                  />
                   {LIVE_PLACEHOLDER_ROOMS.map((room) => (
                     <LiveRoomCard
                       key={room.title}
@@ -1579,10 +1614,6 @@ export default function MessagesPage() {
                       }
                     />
                   ))}
-                  <p className="rounded-3xl border border-dashed border-slate-200/80 bg-slate-50/80 p-4 text-center text-sm text-slate-600 dark:border-white/10 dark:bg-brand-dark/60 dark:text-slate-400">
-                    Live rooms will appear here when your hubs or happenings go
-                    live.
-                  </p>
                 </>
               )}
             </div>
@@ -1627,9 +1658,7 @@ export default function MessagesPage() {
                             {activeUser.name}
                           </h2>
                           <p className="text-xs text-slate-500 dark:text-slate-400">
-                            {isDirectOnline
-                              ? "Online · Active now"
-                              : "Offline · Direct chat"}
+                            {isDirectOnline ? "Online" : "Offline"} · Direct chat
                           </p>
                         </div>
                       </>
@@ -1743,8 +1772,8 @@ export default function MessagesPage() {
                 </div>
 
                 {/* Input */}
-                <div className="relative border-t border-slate-200/80 bg-slate-50/90 px-3 py-3 dark:border-white/10 dark:bg-brand-dark/90 sm:px-4 sm:py-4">
-                  <div className="relative flex min-w-0 items-center gap-1.5 rounded-full border border-slate-200/80 bg-white px-2 py-2 dark:border-white/10 dark:bg-brand-dark sm:gap-2 sm:px-3 sm:py-2.5">
+                <div className="sticky bottom-0 border-t border-slate-200/80 bg-slate-50/95 px-3 py-3 backdrop-blur-sm dark:border-white/10 dark:bg-brand-dark/95 sm:px-4 sm:py-4">
+                  <div className="relative flex min-w-0 items-end gap-1.5 rounded-3xl border border-slate-200/80 bg-white px-2 py-2 shadow-sm dark:border-white/10 dark:bg-brand-dark sm:gap-2 sm:px-3 sm:py-2.5">
                     <button
                       type="button"
                       onClick={() => setShowEmoji((current) => !current)}
@@ -1783,7 +1812,7 @@ export default function MessagesPage() {
                         onRecordingChange={setIsVoiceRecording}
                       />
                     ) : null}
-                    <input
+                    <textarea
                       value={messageInput}
                       onChange={(event) =>
                         handleInputChange(event.target.value)
@@ -1794,7 +1823,8 @@ export default function MessagesPage() {
                           void handleSendMessage();
                         }
                       }}
-                      className="min-w-0 flex-1 bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500 sm:text-sm"
+                      rows={1}
+                      className="max-h-32 min-h-[2.25rem] min-w-0 flex-1 resize-none bg-transparent py-1.5 text-base text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500 sm:text-sm"
                       placeholder="Type your message..."
                     />
                     <button
@@ -1814,23 +1844,14 @@ export default function MessagesPage() {
                 </div>
               </div>
             ) : chatTab === "live" ? (
-              <div className="flex h-[min(72vh,760px)] flex-col items-center justify-center px-6 py-10 text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-gradient-to-br from-rose-500/15 to-brand-primary/15 text-rose-500">
-                  <Radio className="h-6 w-6" />
-                </div>
-                <h2 className="mt-5 text-xl font-semibold text-slate-900 dark:text-white">
-                  Live rooms
-                </h2>
-                <p className="mt-2 max-w-md text-sm text-slate-600 dark:text-slate-400">
-                  Live rooms will appear here when your hubs or happenings go
-                  live.
-                </p>
-                <Link
-                  href="/groups"
-                  className="mt-6 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20"
-                >
-                  Explore Hubs
-                </Link>
+              <div className="flex h-[min(72vh,760px)] flex-col items-center justify-center px-6 py-10">
+                <ChatsEmptyState
+                  icon={Radio}
+                  title="No live rooms active right now"
+                  description="Live rooms will appear here when your hubs or happenings go live."
+                  actionLabel="Explore Hubs"
+                  actionHref="/groups"
+                />
               </div>
             ) : (
               <div className="flex h-[min(72vh,760px)] items-center justify-center px-6 py-10">
@@ -1892,6 +1913,11 @@ export default function MessagesPage() {
           onToggleVideo={handleToggleGroupCallVideo}
         />
       ) : null}
+
+      <NewChatModal
+        isOpen={showNewChatModal}
+        onClose={() => setShowNewChatModal(false)}
+      />
 
       {process.env.NODE_ENV === "development" ? (
         <div className="fixed bottom-2 right-2 z-50 max-w-xs rounded-lg border border-slate-300/40 bg-white/90 p-2 text-[10px] leading-relaxed text-slate-600 shadow-sm dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-300">

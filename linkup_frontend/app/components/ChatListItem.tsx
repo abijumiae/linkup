@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 type ChatListItemProps = {
   name: string;
   lastMessage: string;
@@ -26,7 +28,7 @@ const badgeLabels: Record<NonNullable<ChatListItemProps["variant"]>, string> = {
   live: "Live",
 };
 
-export default function ChatListItem({
+function ChatListItemComponent({
   name,
   lastMessage,
   time,
@@ -43,10 +45,10 @@ export default function ChatListItem({
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full min-w-0 items-start justify-between gap-2 rounded-3xl border p-4 text-left transition duration-300 ${
+      className={`flex w-full min-w-0 items-start justify-between gap-2 rounded-3xl border p-4 text-left transition duration-200 active:scale-[0.99] ${
         active
-          ? "border-brand-primary/40 bg-gradient-to-r from-brand-primary/10 to-brand-secondary/5 shadow-sm shadow-brand-primary/10"
-          : "border-slate-200/80 bg-white hover:border-brand-primary/25 hover:bg-slate-50 dark:border-white/10 dark:bg-brand-dark/85 dark:hover:border-brand-secondary/30 dark:hover:bg-white/[0.04]"
+          ? "border-brand-primary/40 bg-gradient-to-r from-brand-primary/12 to-brand-secondary/8 shadow-md shadow-brand-primary/10 ring-1 ring-brand-primary/15"
+          : "border-slate-200/80 bg-white hover:border-brand-primary/25 hover:bg-slate-50/90 dark:border-white/10 dark:bg-brand-dark/85 dark:hover:border-brand-secondary/25 dark:hover:bg-white/[0.04]"
       }`}
     >
       <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -58,10 +60,6 @@ export default function ChatListItem({
               alt=""
               className="h-12 w-12 rounded-2xl object-cover ring-2 ring-brand-primary/15"
             />
-          ) : variant === "group" ? (
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white shadow-md shadow-brand-primary/20">
-              {getInitials(name)}
-            </div>
           ) : (
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white shadow-md shadow-brand-primary/20">
               {getInitials(name)}
@@ -70,7 +68,7 @@ export default function ChatListItem({
           {(online || live) && (
             <span
               className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-brand-dark ${
-                live ? "bg-rose-500 animate-pulse" : "bg-emerald-500"
+                live ? "animate-pulse bg-rose-500" : "bg-emerald-500"
               }`}
               aria-hidden
             />
@@ -107,12 +105,12 @@ export default function ChatListItem({
 
       <div className="flex shrink-0 flex-col items-end gap-2 pl-1 text-right">
         {time ? (
-          <span className="text-[11px] text-slate-500 dark:text-slate-400">
+          <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
             {time}
           </span>
         ) : null}
         {unread && unread > 0 ? (
-          <span className="rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+          <span className="min-w-[1.25rem] rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-2 py-0.5 text-center text-[10px] font-bold text-white shadow-sm">
             {unread > 99 ? "99+" : unread}
           </span>
         ) : null}
@@ -120,3 +118,8 @@ export default function ChatListItem({
     </button>
   );
 }
+
+const ChatListItem = memo(ChatListItemComponent);
+ChatListItem.displayName = "ChatListItem";
+
+export default ChatListItem;

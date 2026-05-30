@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { Pause, Play } from "lucide-react";
 import { resolveMediaUrl } from "@/src/lib/messages";
 
@@ -36,7 +36,7 @@ function isAudioMessage(
   );
 }
 
-export default function MessageBubble({
+function MessageBubbleComponent({
   text,
   time,
   fromMe,
@@ -85,10 +85,10 @@ export default function MessageBubble({
   return (
     <div className={`flex ${fromMe ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm leading-6 shadow-sm transition duration-300 sm:max-w-[80%] sm:px-5 sm:py-3.5 ${
+        className={`group relative max-w-[88%] rounded-[1.35rem] px-4 py-2.5 text-sm leading-6 shadow-sm transition duration-200 sm:max-w-[78%] sm:px-4 sm:py-3 ${
           fromMe
-            ? "bg-gradient-to-br from-brand-primary to-brand-secondary text-white shadow-brand-primary/20"
-            : "border border-slate-200/80 bg-white text-slate-700 dark:border-white/10 dark:bg-brand-dark/90 dark:text-slate-200"
+            ? "rounded-br-md bg-gradient-to-br from-brand-primary to-brand-secondary text-white shadow-brand-primary/20"
+            : "rounded-bl-md border border-slate-200/90 bg-white text-slate-800 dark:border-white/10 dark:bg-brand-dark/90 dark:text-slate-100"
         }`}
       >
         {!fromMe && senderName ? (
@@ -102,7 +102,7 @@ export default function MessageBubble({
             <button
               type="button"
               onClick={togglePlayback}
-              className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+              className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition ${
                 fromMe
                   ? "bg-white/20 text-white hover:bg-white/30"
                   : "bg-brand-primary/10 text-brand-primary hover:bg-brand-primary/15 dark:text-brand-secondary"
@@ -128,17 +128,22 @@ export default function MessageBubble({
           <p className="whitespace-pre-wrap break-words">{text}</p>
         ) : null}
 
-        <span
-          className={`mt-1.5 block text-right text-[10px] ${
-            fromMe ? "text-white/75" : "text-slate-500 dark:text-slate-400"
+        <div
+          className={`mt-1.5 flex items-center justify-end gap-1 text-[10px] ${
+            fromMe ? "text-white/70" : "text-slate-500 dark:text-slate-400"
           }`}
         >
-          {time}
+          <span>{time}</span>
           {fromMe && read !== undefined ? (
-            <span className="ml-1">{read ? " · Seen" : " · Sent"}</span>
+            <span className="font-medium">{read ? "· Seen" : "· Sent"}</span>
           ) : null}
-        </span>
+        </div>
       </div>
     </div>
   );
 }
+
+const MessageBubble = memo(MessageBubbleComponent);
+MessageBubble.displayName = "MessageBubble";
+
+export default MessageBubble;
