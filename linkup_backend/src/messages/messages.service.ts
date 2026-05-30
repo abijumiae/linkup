@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
   forwardRef,
 } from '@nestjs/common';
@@ -160,56 +161,80 @@ export class MessagesService {
     receiverId: string,
     dto: CreateMessageDto,
   ) {
-    if (senderId === receiverId) {
-      throw new BadRequestException('You cannot message yourself');
-    }
+    console.log('Send message request:', { senderId, receiverId });
 
-    const receiver = await this.prisma.user.findUnique({
-      where: { id: receiverId },
-    });
-
-    if (!receiver) {
-      throw new NotFoundException('User not found');
-    }
-
-    const messageType = dto.type ?? 'text';
-
-    if (messageType === 'voice') {
-      if (!dto.mediaUrl) {
-        throw new BadRequestException('Voice note media URL is required');
+    try {
+      if (!senderId) {
+        throw new BadRequestException('Unauthorized');
       }
-      if (!dto.duration || dto.duration < 1) {
-        throw new BadRequestException('Voice note duration is required');
+
+      if (!receiverId?.trim()) {
+        throw new BadRequestException('Receiver id is required');
       }
-    } else if (!dto.content?.trim()) {
-      throw new BadRequestException('Message content is required');
+
+      if (senderId === receiverId) {
+        throw new BadRequestException('You cannot message yourself');
+      }
+
+      const receiver = await this.prisma.user.findUnique({
+        where: { id: receiverId },
+        select: { id: true },
+      });
+
+      if (!receiver) {
+        throw new NotFoundException('Receiver not found');
+      }
+
+      const messageType = dto.type ?? 'text';
+
+      if (messageType === 'voice') {
+        if (!dto.mediaUrl) {
+          throw new BadRequestException('Voice note media URL is required');
+        }
+        if (!dto.duration || dto.duration < 1) {
+          throw new BadRequestException('Voice note duration is required');
+        }
+      } else if (!dto.content?.trim()) {
+        throw new BadRequestException('Message content is required');
+      }
+
+      const message = await this.prisma.message.create({
+        data: {
+          type: messageType,
+          content: dto.content?.trim() ?? '',
+          mediaUrl: dto.mediaUrl,
+          mediaType: dto.mediaType,
+          duration: dto.duration,
+          senderId,
+          receiverId,
+        },
+        include: messageInclude,
+      });
+
+      if (dto.marketplaceItemId) {
+        await this.notificationsService.notifyMarketplaceInquiry(
+          senderId,
+          receiverId,
+          dto.marketplaceItemId,
+        );
+      }
+
+      this.chatGateway.emitDirectMessage(message);
+      this.notificationsService.emitDirectMessageAlert(message);
+
+      return message;
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+
+      console.error('Send message failed:', error);
+      throw new InternalServerErrorException('Could not send message');
     }
-
-    const message = await this.prisma.message.create({
-      data: {
-        type: messageType,
-        content: dto.content?.trim() ?? '',
-        mediaUrl: dto.mediaUrl,
-        mediaType: dto.mediaType,
-        duration: dto.duration,
-        senderId,
-        receiverId,
-      },
-      include: messageInclude,
-    });
-
-    if (dto.marketplaceItemId) {
-      await this.notificationsService.notifyMarketplaceInquiry(
-        senderId,
-        receiverId,
-        dto.marketplaceItemId,
-      );
-    }
-
-    this.chatGateway.emitDirectMessage(message);
-    this.notificationsService.emitDirectMessageAlert(message);
-
-    return message;
   }
 
   async getGroupMessages(groupId: string, userId: string) {

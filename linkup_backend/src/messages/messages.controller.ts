@@ -5,6 +5,7 @@ import {
   Param,
   Post,
   Req,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -30,12 +31,15 @@ export class MessagesController {
     return this.messagesService.getConversation(req.user.id, userId);
   }
 
-  @Post(':userId')
-  sendMessage(
+  async sendMessage(
     @Param('userId') userId: string,
     @Req() req: { user: SafeUser },
     @Body() dto: CreateMessageDto,
   ) {
+    if (!req.user?.id) {
+      throw new UnauthorizedException('Unauthorized');
+    }
+
     return this.messagesService.sendMessage(req.user.id, userId, dto);
   }
 }

@@ -99,14 +99,25 @@ export async function sendMessage(
   content: string,
   options?: { marketplaceItemId?: string },
 ): Promise<ChatMessage> {
+  const receiverId = userId.trim();
+
+  if (!receiverId) {
+    throw new ApiError("Select a chat first", 400);
+  }
+
   return withAuth(() =>
-    apiRequest<ChatMessage>(`/messages/${userId}`, {
+    apiRequest<ChatMessage>(`/messages/${receiverId}`, {
       method: "POST",
-      headers: authHeaders(),
+      headers: {
+        ...authHeaders(),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
-        content,
+        content: content.trim(),
         type: "text",
-        marketplaceItemId: options?.marketplaceItemId,
+        ...(options?.marketplaceItemId
+          ? { marketplaceItemId: options.marketplaceItemId }
+          : {}),
       }),
     }),
   );

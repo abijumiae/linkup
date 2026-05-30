@@ -261,11 +261,23 @@ export default function MessagesPage() {
 
   const openConversation = useCallback(
     async (userId: string) => {
+      const peerId = userId.trim();
+
+      if (!peerId) {
+        setError("Select a chat first");
+        return;
+      }
+
+      if (peerId === currentUserId) {
+        setError("You cannot message yourself");
+        return;
+      }
+
       setError(null);
       setChatTab("direct");
 
       try {
-        const data = await fetchConversation(userId);
+        const data = await fetchConversation(peerId);
         setActiveUser(data.user);
         setActiveGroup(null);
         setActiveGroupMemberCount(0);
@@ -274,15 +286,15 @@ export default function MessagesPage() {
         setMobileView("chat");
         setConversations((current) =>
           current.map((conversation) =>
-            conversation.user.id === userId
+            conversation.user.id === peerId
               ? { ...conversation, unreadCount: 0 }
               : conversation,
           ),
         );
-        getSocket()?.emit("join_direct_chat", { otherUserId: userId });
+        getSocket()?.emit("join_direct_chat", { otherUserId: peerId });
         getSocket()?.emit("join_chat", {
           chatType: "direct",
-          targetId: userId,
+          targetId: peerId,
         });
         setTimeout(scrollToBottom, 50);
       } catch (err) {
@@ -297,7 +309,7 @@ export default function MessagesPage() {
         );
       }
     },
-    [router, scrollToBottom],
+    [router, scrollToBottom, currentUserId],
   );
 
   const openGroupConversation = useCallback(
@@ -479,6 +491,7 @@ export default function MessagesPage() {
     };
 
     const onMessageError = (payload: { message?: string }) => {
+      console.error("Socket message error:", payload);
       setError(payload.message ?? "Could not send message. Please try again.");
     };
 
@@ -767,7 +780,10 @@ export default function MessagesPage() {
   }
 
   async function handleSendVoiceNote(file: File, durationSeconds: number) {
-    if (!activeUser || chatTab !== "direct" || isSending) {
+    if (!activeUser?.id || chatTab !== "direct" || isSending) {
+      if (!activeUser?.id) {
+        setError("Select a chat first");
+      }
       return;
     }
 
@@ -776,31 +792,6 @@ export default function MessagesPage() {
 
     try {
       const uploaded = await uploadFile(file);
-      const socket = getSocket();
-      const canUseSocket = isSocketConnected() && socket;
-
-      if (canUseSocket) {
-        socket.emit("send_direct_message", {
-          receiverId: activeUser.id,
-          type: "voice",
-          content: "",
-          mediaUrl: uploaded.url,
-          mediaType: "audio",
-          duration: durationSeconds,
-        });
-        socket.emit("send_message", {
-          chatType: "direct",
-          receiverId: activeUser.id,
-          type: "voice",
-          content: "",
-          mediaUrl: uploaded.url,
-          mediaType: "audio",
-          duration: durationSeconds,
-        });
-        setTimeout(scrollToBottom, 50);
-        return;
-      }
-
       const created = await sendVoiceMessage(activeUser.id, {
         mediaUrl: uploaded.url,
         duration: durationSeconds,
@@ -830,12 +821,18 @@ export default function MessagesPage() {
       });
       setTimeout(scrollToBottom, 50);
     } catch (err) {
+      console.error("Send voice note failed:", err);
+
       if (err instanceof ApiError && err.status === 401) {
         router.replace("/login");
         return;
       }
-      setError("Could not send voice note. Please try again.");
-      throw err;
+
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : "Could not send voice note. Please try again.",
+      );
     } finally {
       setIsSending(false);
     }
@@ -913,10 +910,19 @@ export default function MessagesPage() {
       return;
     }
 
-    if (chatTab === "direct" && !activeUser) {
-      return;
+    if (chatTab === "direct") {
+      if (!activeUser?.id) {
+        setError("Select a chat first");
+        return;
+      }
+      if (activeUser.id === currentUserId) {
+        setError("You cannot message yourself");
+        return;
+      }
     }
-    if (chatTab === "group" && !activeGroup) {
+
+    if (chatTab === "group" && !activeGroup?.id) {
+      setError("Select a hub chat first");
       return;
     }
 
@@ -924,63 +930,23 @@ export default function MessagesPage() {
     setError(null);
     emitTypingStop();
 
-    const marketplaceItemId =
-      listingId && !marketplaceInquirySentRef.current ? listingId : undefined;
-    const socket = getSocket();
-    const canUseSocket =
-      isSocketConnected() &&
-      !marketplaceItemId &&
-      ((chatTab === "direct" && activeUser) ||
-        (chatTab === "group" && activeGroup));
-
     try {
-      if (canUseSocket && socket) {
-        if (chatTab === "direct" && activeUser) {
-          socket.emit("send_direct_message", {
-            receiverId: activeUser.id,
-            content: trimmed,
-          });
-        } else if (chatTab === "group" && activeGroup) {
-          socket.emit("send_group_message", {
-            groupId: activeGroup.id,
-            content: trimmed,
-          });
-        }
-        socket.emit("send_message", {
-          chatType: chatTab === "direct" ? "direct" : "group",
-          receiverId: activeUser?.id,
-          groupId: activeGroup?.id,
-          content: trimmed,
-        });
-        setMessageInput("");
-        setTimeout(scrollToBottom, 50);
-        return;
-      }
-
       await sendViaRest(trimmed);
       setMessageInput("");
       setTimeout(scrollToBottom, 50);
     } catch (err) {
+      console.error("Send message failed:", err);
+
       if (err instanceof ApiError && err.status === 401) {
         router.replace("/login");
         return;
       }
 
-      if (canUseSocket) {
-        try {
-          await sendViaRest(trimmed);
-          setMessageInput("");
-          setTimeout(scrollToBottom, 50);
-          return;
-        } catch (fallbackErr) {
-          if (fallbackErr instanceof ApiError && fallbackErr.status === 401) {
-            router.replace("/login");
-            return;
-          }
-        }
-      }
-
-      setError("Could not send message. Please try again.");
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : "Could not send message. Please try again.",
+      );
     } finally {
       setIsSending(false);
     }
