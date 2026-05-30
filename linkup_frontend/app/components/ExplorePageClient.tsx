@@ -21,7 +21,8 @@ import { ApiError } from "@/src/lib/api";
 import { getCurrentUser } from "@/src/lib/auth";
 import {
   DiscoverData,
-  fetchDiscover,
+  EMPTY_DISCOVER_DATA,
+  fetchDiscoverSafe,
   searchAll,
   SearchUser,
 } from "@/src/lib/discovery";
@@ -29,10 +30,7 @@ import { FeedPost } from "@/src/lib/posts";
 import DiscoverHubCard from "./discover/DiscoverHubCard";
 import DiscoverOpportunityCard from "./discover/DiscoverOpportunityCard";
 import DiscoverPersonCard from "./discover/DiscoverPersonCard";
-import {
-  DiscoverPageSkeleton,
-  DiscoverSectionSkeleton,
-} from "./discover/DiscoverSkeleton";
+import { DiscoverPageSkeleton } from "./discover/DiscoverSkeleton";
 import DiscoverTrendingCard from "./discover/DiscoverTrendingCard";
 import FeedPostCard from "./FeedPostCard";
 import SearchUserCard from "./SearchUserCard";
@@ -95,6 +93,14 @@ function SectionShell({
   );
 }
 
+function SectionEmpty({ message }: { message: string }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-slate-300/90 bg-slate-50/70 px-4 py-6 text-center text-sm text-slate-600 dark:border-white/15 dark:bg-brand-dark/50 dark:text-slate-400">
+      {message}
+    </div>
+  );
+}
+
 function DiscoverEmptyState({
   title = "Nothing trending yet",
   message = "Start by dropping a Spark or joining a Hub.",
@@ -154,15 +160,17 @@ export default function ExplorePageClient() {
   const [searchInput, setSearchInput] = useState(queryParam);
   const [activeQuery, setActiveQuery] = useState(queryParam);
   const [activeTab, setActiveTab] = useState<DiscoverTab>("all");
-  const [discover, setDiscover] = useState<DiscoverData | null>(null);
+  const [discover, setDiscover] = useState<DiscoverData>(EMPTY_DISCOVER_DATA);
   const [searchUsers, setSearchUsers] = useState<SearchUser[]>([]);
   const [searchPosts, setSearchPosts] = useState<FeedPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [dataWarning, setDataWarning] = useState<string | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   const loadDiscover = useCallback(async () => {
-    const data = await fetchDiscover();
-    setDiscover(data);
+    const result = await fetchDiscoverSafe();
+    setDiscover(result.data);
+    setDataWarning(result.warning);
   }, []);
 
   const loadSearch = useCallback(
@@ -170,13 +178,24 @@ export default function ExplorePageClient() {
       if (!query.trim()) {
         setSearchUsers([]);
         setSearchPosts([]);
+        setSearchError(null);
         await loadDiscover();
         return;
       }
 
-      const results = await searchAll(query);
-      setSearchUsers(results.users);
-      setSearchPosts(results.posts);
+      try {
+        const results = await searchAll(query);
+        setSearchUsers(results.users);
+        setSearchPosts(results.posts);
+        setSearchError(null);
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          throw err;
+        }
+        setSearchUsers([]);
+        setSearchPosts([]);
+        setSearchError("Search is warming up. Try again in a moment.");
+      }
     },
     [loadDiscover],
   );
@@ -184,7 +203,8 @@ export default function ExplorePageClient() {
   useEffect(() => {
     async function init() {
       setIsLoading(true);
-      setError(null);
+      setDataWarning(null);
+      setSearchError(null);
 
       try {
         if (queryParam.trim()) {
@@ -198,7 +218,8 @@ export default function ExplorePageClient() {
           router.replace("/login");
           return;
         }
-        setError("Could not load Discover right now. Please try again.");
+        setDiscover(EMPTY_DISCOVER_DATA);
+        setDataWarning("Discover data is warming up.");
       } finally {
         setIsLoading(false);
       }
@@ -237,10 +258,6 @@ export default function ExplorePageClient() {
   );
 
   const trendingCards = useMemo(() => {
-    if (!discover) {
-      return [];
-    }
-
     const cards = [];
 
     if (discover.sparks[0]) {
@@ -362,42 +379,44 @@ export default function ExplorePageClient() {
   }
 
   function renderDiscoverSections() {
-    if (!discover) {
-      return <DiscoverSectionSkeleton rows={4} />;
-    }
-
     const showAll = activeTab === "all";
     const sections: React.ReactNode[] = [];
 
-    if ((showAll || activeTab === "people") && people.length > 0) {
+    if (showAll || activeTab === "people") {
       sections.push(
         <SectionShell
           key="people"
           eyebrow="Connect"
           title="People to Connect"
           action={
-            <Link
-              href="/explore"
-              className="text-sm font-semibold text-brand-primary dark:text-brand-secondary"
-            >
-              See all →
-            </Link>
+            people.length > 0 ? (
+              <Link
+                href="/explore"
+                className="text-sm font-semibold text-brand-primary dark:text-brand-secondary"
+              >
+                See all →
+              </Link>
+            ) : undefined
           }
         >
-          <div className="space-y-3">
-            {people.map((user) => (
-              <DiscoverPersonCard
-                key={user.id}
-                user={user}
-                currentUserId={currentUserId}
-              />
-            ))}
-          </div>
+          {people.length > 0 ? (
+            <div className="space-y-3">
+              {people.map((user) => (
+                <DiscoverPersonCard
+                  key={user.id}
+                  user={user}
+                  currentUserId={currentUserId}
+                />
+              ))}
+            </div>
+          ) : (
+            <SectionEmpty message="No people suggestions yet." />
+          )}
         </SectionShell>,
       );
     }
 
-    if ((showAll || activeTab === "hubs") && discover.hubs.length > 0) {
+    if (showAll || activeTab === "hubs") {
       sections.push(
         <SectionShell
           key="hubs"
@@ -409,19 +428,27 @@ export default function ExplorePageClient() {
             </Link>
           }
         >
-          <div className="grid gap-4 sm:grid-cols-2">
-            {discover.hubs.map((hub) => (
-              <DiscoverHubCard key={hub.id} hub={hub} />
-            ))}
-          </div>
+          {discover.hubs.length > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {discover.hubs.map((hub) => (
+                <DiscoverHubCard key={hub.id} hub={hub} />
+              ))}
+            </div>
+          ) : (
+            <SectionEmpty message="No hubs to explore yet." />
+          )}
         </SectionShell>,
       );
     }
 
-    if ((showAll || activeTab === "sparks") && sparks.length > 0) {
+    if (showAll || activeTab === "sparks") {
       sections.push(
         <SectionShell key="sparks" eyebrow="Feed" title="Fresh Sparks">
-          {renderSparks(sparks)}
+          {sparks.length > 0 ? (
+            renderSparks(sparks)
+          ) : (
+            <SectionEmpty message="No fresh sparks yet." />
+          )}
         </SectionShell>,
       );
     }
@@ -571,11 +598,11 @@ export default function ExplorePageClient() {
           </div>
         </SectionShell>,
       );
-    }
-
-    if (sections.length === 0) {
-      return (
-        <DiscoverEmptyState message="Start by dropping a Spark or joining a Hub." />
+    } else if (showAll) {
+      sections.unshift(
+        <SectionShell key="trending" eyebrow="Trending" title="Trending Now">
+          <SectionEmpty message="Nothing trending yet. Start by dropping a Spark." />
+        </SectionShell>,
       );
     }
 
@@ -588,19 +615,15 @@ export default function ExplorePageClient() {
     }
 
     if (activeTab === "people" && people.length === 0) {
-      return (
-        <DiscoverEmptyState message="No people suggestions yet. Try searching above." />
-      );
+      return renderDiscoverSections();
     }
 
     if (activeTab === "sparks" && sparks.length === 0) {
-      return renderSparks([], "No sparks yet. Drop the first one from Pulse.");
+      return renderDiscoverSections();
     }
 
-    if (activeTab === "hubs" && (discover?.hubs.length ?? 0) === 0) {
-      return (
-        <DiscoverEmptyState message="No hubs yet. Create or join one to get started." />
-      );
+    if (activeTab === "hubs" && discover.hubs.length === 0) {
+      return renderDiscoverSections();
     }
 
     return renderDiscoverSections();
@@ -654,9 +677,15 @@ export default function ExplorePageClient() {
             </div>
           </header>
 
-          {error ? (
-            <p className="linkup-alert-error" role="alert">
-              {error}
+          {dataWarning ? (
+            <p className="linkup-alert-warning" role="status">
+              {dataWarning}
+            </p>
+          ) : null}
+
+          {searchError ? (
+            <p className="linkup-alert-warning" role="status">
+              {searchError}
             </p>
           ) : null}
 
@@ -691,7 +720,7 @@ export default function ExplorePageClient() {
             <aside className="min-w-0 space-y-6 xl:sticky xl:top-6 xl:self-start">
               <LocalPulseCard country={currentUser?.country} />
 
-              {!isSearchMode && discover ? (
+              {!isSearchMode ? (
                 <div className="linkup-panel p-5">
                   <p className="linkup-eyebrow">Trending Tags</p>
                   <h2 className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">
@@ -714,7 +743,7 @@ export default function ExplorePageClient() {
                 </div>
               ) : null}
 
-              {!isSearchMode && discover && discover.sparks.length > 0 ? (
+              {!isSearchMode ? (
                 <div className="linkup-panel p-5">
                   <div className="flex items-center gap-2">
                     <BarChart3 className="h-4 w-4 text-brand-primary dark:text-brand-secondary" />

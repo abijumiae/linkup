@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { FeedPost } from '../posts/posts.service';
@@ -125,7 +125,35 @@ const DISCOVER_TAGS = [
 
 @Injectable()
 export class DiscoveryService {
+  private readonly logger = new Logger(DiscoveryService.name);
+
   constructor(private readonly prisma: PrismaService) {}
+
+  private emptyDiscoverResponse(): DiscoverResponse {
+    return {
+      people: [],
+      sparks: [],
+      hubs: [],
+      watch: [],
+      market: [],
+      work: [],
+      happenings: [],
+      tags: DISCOVER_TAGS,
+    };
+  }
+
+  private async safeSection<T>(
+    label: string,
+    loader: () => Promise<T>,
+    fallback: T,
+  ): Promise<T> {
+    try {
+      return await loader();
+    } catch (error) {
+      this.logger.warn(`Discover section "${label}" failed`, error);
+      return fallback;
+    }
+  }
 
   async search(query: string, userId: string): Promise<SearchResults> {
     const q = query.trim();
@@ -199,140 +227,198 @@ export class DiscoveryService {
   }
 
   async getDiscover(userId: string): Promise<DiscoverResponse> {
-    const [peopleRows, sparkRows, groupRows, watchRows, marketRows, jobRows, eventRows] =
-      await Promise.all([
-        this.prisma.user.findMany({
-          where: { id: { not: userId } },
-          take: DISCOVER_LIMIT,
-          orderBy: { createdAt: 'desc' },
-          select: discoverUserSelect,
-        }),
-        this.prisma.post.findMany({
-          where: { visibility: 'PUBLIC', groupId: null },
-          take: DISCOVER_LIMIT,
-          orderBy: [{ likes: { _count: 'desc' } }, { createdAt: 'desc' }],
-          include: {
-            author: { select: authorSelect },
-            _count: { select: { likes: true, comments: true } },
-            likes: { where: { userId }, select: { id: true } },
-          },
-        }),
-        this.prisma.group.findMany({
-          take: DISCOVER_LIMIT,
-          orderBy: { members: { _count: 'desc' } },
-          include: {
-            _count: { select: { members: true } },
-            members: {
-              where: { userId },
-              select: { id: true },
-            },
-          },
-        }),
-        this.prisma.watchVideo.findMany({
-          where: { isPublished: true },
-          take: DISCOVER_LIMIT,
-          orderBy: { createdAt: 'desc' },
-          include: {
-            creator: {
-              select: {
-                id: true,
-                name: true,
-                username: true,
-                avatarUrl: true,
-              },
-            },
-          },
-        }),
-        this.prisma.marketplaceItem.findMany({
-          where: { status: 'ACTIVE' },
-          take: DISCOVER_LIMIT,
-          orderBy: { createdAt: 'desc' },
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            price: true,
-            currency: true,
-            category: true,
-            location: true,
-          },
-        }),
-        this.prisma.job.findMany({
-          where: { status: 'ACTIVE' },
-          take: DISCOVER_LIMIT,
-          orderBy: { createdAt: 'desc' },
-          select: {
-            id: true,
-            title: true,
-            company: true,
-            location: true,
-            jobType: true,
-          },
-        }),
-        this.prisma.event.findMany({
-          where: {
-            status: 'ACTIVE',
-            startDate: { gte: new Date() },
-          },
-          take: DISCOVER_LIMIT,
-          orderBy: { startDate: 'asc' },
-          include: {
-            _count: { select: { attendees: true } },
-          },
-        }),
+    try {
+      const [
+        peopleRows,
+        sparkRows,
+        groupRows,
+        watchRows,
+        marketRows,
+        jobRows,
+        eventRows,
+      ] = await Promise.all([
+        this.safeSection('people', () => this.loadDiscoverPeople(userId), []),
+        this.safeSection('sparks', () => this.loadDiscoverSparks(userId), []),
+        this.safeSection('hubs', () => this.loadDiscoverHubs(userId), []),
+        this.safeSection('watch', () => this.loadDiscoverWatch(), []),
+        this.safeSection('market', () => this.loadDiscoverMarket(), []),
+        this.safeSection('work', () => this.loadDiscoverWork(), []),
+        this.safeSection('happenings', () => this.loadDiscoverHappenings(), []),
       ]);
 
-    const peopleIds = peopleRows.map((user) => user.id);
-    const sparkAuthorIds = [...new Set(sparkRows.map((post) => post.authorId))];
+      const peopleIds = peopleRows.map((user) => user.id);
+      const sparkAuthorIds = [
+        ...new Set(sparkRows.map((post) => post.authorId)),
+      ];
 
-    const [peopleFollowing, sparkFollowing] = await Promise.all([
-      this.getFollowingSet(userId, peopleIds),
-      this.getFollowingSet(userId, sparkAuthorIds),
-    ]);
+      const [peopleFollowing, sparkFollowing] = await Promise.all([
+        this.safeSection(
+          'peopleFollowing',
+          () => this.getFollowingSet(userId, peopleIds),
+          new Set<string>(),
+        ),
+        this.safeSection(
+          'sparkFollowing',
+          () => this.getFollowingSet(userId, sparkAuthorIds),
+          new Set<string>(),
+        ),
+      ]);
 
-    return {
-      people: peopleRows.map((user) => ({
-        ...user,
-        isFollowingAuthor: peopleFollowing.has(user.id),
-      })),
-      sparks: sparkRows.map((post) => this.mapPost(post, sparkFollowing)),
-      hubs: groupRows.map((group) => ({
-        id: group.id,
-        name: group.name,
-        description: group.description,
-        membersCount: group._count.members,
-        category: 'Community',
-        isMember: group.members.length > 0,
-      })),
-      watch: watchRows.map((video) => ({
-        id: video.id,
-        title: video.title,
-        description: video.description,
-        thumbnailUrl: video.thumbnailUrl,
-        category: video.category,
-        duration: video.duration,
-        creator: video.creator,
-      })),
-      market: marketRows.map((item) => ({
-        id: item.id,
-        title: item.title,
-        description: item.description,
-        price: Number(item.price),
-        currency: item.currency,
-        category: item.category,
-        location: item.location,
-      })),
-      work: jobRows,
-      happenings: eventRows.map((event) => ({
-        id: event.id,
-        title: event.title,
-        location: event.location,
-        startDate: event.startDate.toISOString(),
-        category: event.category,
-        attendeesCount: event._count.attendees,
-      })),
-      tags: DISCOVER_TAGS,
-    };
+      return {
+        people: peopleRows.map((user) => ({
+          ...user,
+          isFollowingAuthor: peopleFollowing.has(user.id),
+        })),
+        sparks: sparkRows.map((post) => this.mapPost(post, sparkFollowing)),
+        hubs: groupRows,
+        watch: watchRows,
+        market: marketRows,
+        work: jobRows,
+        happenings: eventRows,
+        tags: DISCOVER_TAGS,
+      };
+    } catch (error) {
+      this.logger.warn('Discover aggregate failed', error);
+      return this.emptyDiscoverResponse();
+    }
+  }
+
+  private async loadDiscoverPeople(userId: string) {
+    return this.prisma.user.findMany({
+      where: { id: { not: userId } },
+      take: DISCOVER_LIMIT,
+      orderBy: { createdAt: 'desc' },
+      select: discoverUserSelect,
+    });
+  }
+
+  private async loadDiscoverSparks(userId: string) {
+    return this.prisma.post.findMany({
+      where: { visibility: 'PUBLIC', groupId: null },
+      take: DISCOVER_LIMIT,
+      orderBy: [{ likes: { _count: 'desc' } }, { createdAt: 'desc' }],
+      include: {
+        author: { select: authorSelect },
+        _count: { select: { likes: true, comments: true } },
+        likes: { where: { userId }, select: { id: true } },
+      },
+    });
+  }
+
+  private async loadDiscoverHubs(userId: string): Promise<DiscoverHub[]> {
+    const groupRows = await this.prisma.group.findMany({
+      take: DISCOVER_LIMIT,
+      orderBy: { members: { _count: 'desc' } },
+      include: {
+        _count: { select: { members: true } },
+        members: {
+          where: { userId },
+          select: { id: true },
+        },
+      },
+    });
+
+    return groupRows.map((group) => ({
+      id: group.id,
+      name: group.name,
+      description: group.description,
+      membersCount: group._count.members,
+      category: 'Community',
+      isMember: group.members.length > 0,
+    }));
+  }
+
+  private async loadDiscoverWatch(): Promise<DiscoverWatchItem[]> {
+    const watchRows = await this.prisma.watchVideo.findMany({
+      where: { isPublished: true },
+      take: DISCOVER_LIMIT,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    });
+
+    return watchRows.map((video) => ({
+      id: video.id,
+      title: video.title,
+      description: video.description,
+      thumbnailUrl: video.thumbnailUrl,
+      category: video.category,
+      duration: video.duration,
+      creator: video.creator,
+    }));
+  }
+
+  private async loadDiscoverMarket(): Promise<DiscoverMarketItem[]> {
+    const marketRows = await this.prisma.marketplaceItem.findMany({
+      where: { status: 'ACTIVE' },
+      take: DISCOVER_LIMIT,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        price: true,
+        currency: true,
+        category: true,
+        location: true,
+      },
+    });
+
+    return marketRows.map((item) => ({
+      id: item.id,
+      title: item.title,
+      description: item.description,
+      price: Number(item.price),
+      currency: item.currency,
+      category: item.category,
+      location: item.location,
+    }));
+  }
+
+  private async loadDiscoverWork(): Promise<DiscoverWorkItem[]> {
+    return this.prisma.job.findMany({
+      where: { status: 'ACTIVE' },
+      take: DISCOVER_LIMIT,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        title: true,
+        company: true,
+        location: true,
+        jobType: true,
+      },
+    });
+  }
+
+  private async loadDiscoverHappenings(): Promise<DiscoverHappening[]> {
+    const eventRows = await this.prisma.event.findMany({
+      where: {
+        status: 'ACTIVE',
+        startDate: { gte: new Date() },
+      },
+      take: DISCOVER_LIMIT,
+      orderBy: { startDate: 'asc' },
+      include: {
+        _count: { select: { attendees: true } },
+      },
+    });
+
+    return eventRows.map((event) => ({
+      id: event.id,
+      title: event.title,
+      location: event.location,
+      startDate: event.startDate.toISOString(),
+      category: event.category,
+      attendeesCount: event._count.attendees,
+    }));
   }
 
   private async getFollowingSet(userId: string, targetIds: string[]) {
