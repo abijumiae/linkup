@@ -1,5 +1,7 @@
 # Ignore common sensitive files and build artifacts
 .env
+.env.*
+!.env.example
 .env.local
 .env.production
 node_modules
@@ -15,6 +17,7 @@ linkup_backend/node_modules
 linkup_backend/dist
 linkup_backend/build
 linkup_backend/coverage
+linkup_backend/uploads
 linkup_frontend/node_modules
 linkup_frontend/.next
 linkup_frontend/out

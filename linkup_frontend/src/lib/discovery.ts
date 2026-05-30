@@ -11,7 +11,6 @@ export interface SearchUser {
   id: string;
   name: string;
   username: string;
-  email: string;
   avatarUrl: string | null;
   accountType: AccountType;
   isVerified: boolean;

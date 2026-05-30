@@ -67,7 +67,6 @@ export default function SearchUserCard({
             <p className="text-sm text-slate-600 dark:text-slate-400">
               @{user.username}
             </p>
-            <p className="truncate text-sm text-slate-500">{user.email}</p>
           </div>
         </div>
         {!isSelf ? (

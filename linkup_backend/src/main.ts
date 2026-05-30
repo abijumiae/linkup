@@ -4,8 +4,10 @@ import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import compression from 'compression';
 import express from 'express';
+import helmet from 'helmet';
 import { join } from 'path';
 import { AppModule } from './app.module';
+import { isOriginAllowed } from './common/cors.config';
 import { SocketIoAdapter } from './chat/socket-io.adapter';
 
 async function bootstrap() {
@@ -14,6 +16,13 @@ async function bootstrap() {
   const socketAdapter = new SocketIoAdapter(app);
   app.useWebSocketAdapter(socketAdapter);
   console.log('Socket.io adapter configured');
+
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
 
   app.use(
     compression({
@@ -39,7 +48,14 @@ async function bootstrap() {
   );
 
   app.enableCors({
-    origin: true,
+    origin: (origin, callback) => {
+      if (isOriginAllowed(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error('Not allowed by CORS'), false);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

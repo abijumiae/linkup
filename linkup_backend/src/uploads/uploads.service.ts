@@ -52,6 +52,36 @@ export function normalizeMimeType(mimetype: string): string {
   return mimetype.split(';')[0]?.trim().toLowerCase() ?? mimetype;
 }
 
+export function isAllowedUploadFile(
+  mimetype: string,
+  originalname?: string,
+): boolean {
+  const normalized = normalizeMimeType(mimetype);
+
+  if (
+    IMAGE_MIME_TYPES.has(normalized) ||
+    VIDEO_MIME_TYPES.has(normalized) ||
+    AUDIO_MIME_TYPES.has(normalized)
+  ) {
+    return true;
+  }
+
+  if (
+    (normalized === 'application/octet-stream' || !normalized) &&
+    originalname
+  ) {
+    const extension = extname(originalname).toLowerCase();
+    return (
+      AUDIO_EXTENSIONS.has(extension) ||
+      ['.jpg', '.jpeg', '.png', '.webp', '.mp4', '.webm', '.mov'].includes(
+        extension,
+      )
+    );
+  }
+
+  return false;
+}
+
 export type UploadMediaType = 'image' | 'video' | 'audio';
 
 export type UploadResult = {

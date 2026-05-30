@@ -9,6 +9,7 @@ import { RealtimeEmitter } from '../chat/realtime.emitter';
 import { CreateMomentDto } from './dto/create-moment.dto';
 
 const MOMENT_TTL_MS = 24 * 60 * 60 * 1000;
+const MOMENT_FEED_LIMIT = 100;
 
 const momentUserSelect = {
   id: true,
@@ -112,6 +113,7 @@ export class MomentsService {
       },
       include: { user: { select: momentUserSelect } },
       orderBy: { createdAt: 'desc' },
+      take: MOMENT_FEED_LIMIT,
     });
 
     if (moments.length === 0) {
@@ -135,6 +137,7 @@ export class MomentsService {
       },
       include: { user: { select: momentUserSelect } },
       orderBy: { createdAt: 'asc' },
+      take: MOMENT_FEED_LIMIT,
     });
 
     return moments.map((moment) => this.serializeMoment(moment));

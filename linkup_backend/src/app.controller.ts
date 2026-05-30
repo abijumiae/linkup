@@ -1,10 +1,12 @@
 import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { PrismaService } from './prisma/prisma.service';
 
 @Controller()
 export class AppController {
   constructor(private readonly prisma: PrismaService) {}
 
+  @SkipThrottle()
   @Get()
   root() {
     return {
@@ -14,18 +16,25 @@ export class AppController {
     };
   }
 
+  @SkipThrottle()
   @Get('health')
   async health() {
+    const timeoutMs = 5_000;
+
     try {
-      await this.prisma.$queryRaw`SELECT 1`;
+      await Promise.race([
+        this.prisma.$queryRaw`SELECT 1`,
+        new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Database health check timed out')), timeoutMs);
+        }),
+      ]);
+
       return {
         status: 'ok',
         service: 'linkup-backend',
         database: 'connected',
         realtime: 'socket.io',
         socketPath: '/socket.io',
-        deployCommit: process.env.RENDER_GIT_COMMIT ?? null,
-        deployBranch: process.env.RENDER_GIT_BRANCH ?? null,
         time: new Date().toISOString(),
       };
     } catch {

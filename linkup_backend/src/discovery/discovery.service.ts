@@ -16,7 +16,6 @@ const userSearchSelect = {
   id: true,
   name: true,
   username: true,
-  email: true,
   avatarUrl: true,
   accountType: true,
   isVerified: true,

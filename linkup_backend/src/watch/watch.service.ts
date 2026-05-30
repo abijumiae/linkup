@@ -13,6 +13,8 @@ const creatorSelect = {
   avatarUrl: true,
 } as const;
 
+const WATCH_LIST_LIMIT = 100;
+
 @Injectable()
 export class WatchService {
   constructor(private readonly prisma: PrismaService) {}
@@ -116,6 +118,7 @@ export class WatchService {
       where,
       include: { creator: { select: creatorSelect } },
       orderBy: { createdAt: 'desc' },
+      take: WATCH_LIST_LIMIT,
     });
 
     const viewCounts = await this.getViewCounts(videos.map((video) => video.id));
