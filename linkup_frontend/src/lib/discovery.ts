@@ -1,6 +1,11 @@
 import { getApiBaseUrl, ApiError, extractErrorMessage } from "./api";
 import { AccountType, clearAuth, getToken } from "./auth";
+import { fetchEventsSafe } from "./events";
+import { fetchGroups } from "./groups";
+import { fetchJobsSafe } from "./jobs";
+import { fetchMarketplaceItemsSafe } from "./marketplace";
 import { FeedPost } from "./posts";
+import { fetchWatchVideosSafe } from "./watch";
 
 export interface SearchUser {
   id: string;
@@ -176,49 +181,98 @@ export function normalizeDiscoverData(payload: unknown): DiscoverData {
   };
 }
 
+export function hasDiscoverContent(data: DiscoverData): boolean {
+  return (
+    data.people.length > 0 ||
+    data.sparks.length > 0 ||
+    data.hubs.length > 0 ||
+    data.watch.length > 0 ||
+    data.market.length > 0 ||
+    data.work.length > 0 ||
+    data.happenings.length > 0
+  );
+}
+
 async function fetchDiscoverEndpoint(path: "/discover" | "/explore") {
   const apiUrl = getApiBaseUrl();
   const token = getToken();
   const url = `${apiUrl}${path}`;
-
-  console.log("Discover API URL:", url);
-  console.log("Discover token exists:", !!token);
 
   const response = await fetch(url, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
 
   const text = await response.text();
-  console.log("Discover response status:", response.status);
-  console.log("Discover response body:", text);
 
   return { response, text, parsed: parseJsonBody(text) };
 }
 
-async function fetchExploreSparksFallback(): Promise<FeedPost[]> {
-  const { response, text, parsed } = await fetchDiscoverEndpoint("/explore");
+async function fetchDiscoverFromLegacyApis(): Promise<DiscoverData> {
+  const [
+    sparks,
+    groupsResult,
+    watchResult,
+    marketResult,
+    jobsResult,
+    eventsResult,
+  ] = await Promise.all([
+    fetchExplorePosts().catch(() => [] as FeedPost[]),
+    fetchGroups(1, 5).catch(() => ({ items: [], hasMore: false, page: 1, limit: 5 })),
+    fetchWatchVideosSafe(),
+    fetchMarketplaceItemsSafe({ limit: 5 }),
+    fetchJobsSafe({ limit: 5 }),
+    fetchEventsSafe({ limit: 5, timeframe: "upcoming" }),
+  ]);
 
-  if (response.status === 401) {
-    throw new ApiError("Not authenticated", 401);
-  }
-
-  if (!response.ok) {
-    return [];
-  }
-
-  if (Array.isArray(parsed)) {
-    return parsed as FeedPost[];
-  }
-
-  if (parsed && typeof parsed === "object" && Array.isArray((parsed as { sparks?: unknown }).sparks)) {
-    return (parsed as { sparks: FeedPost[] }).sparks;
-  }
-
-  console.warn("Discover explore fallback returned unexpected shape:", text);
-  return [];
+  return {
+    people: [],
+    sparks: sparks.slice(0, 5),
+    hubs: groupsResult.items.map((group) => ({
+      id: group.id,
+      name: group.name,
+      description: group.description,
+      membersCount: group.membersCount,
+      category: "Community",
+      isMember: group.isMember,
+    })),
+    watch: watchResult.items.slice(0, 5).map((video) => ({
+      id: video.id,
+      title: video.title,
+      description: video.description,
+      thumbnailUrl: video.thumbnailUrl,
+      category: video.category,
+      duration: video.duration,
+      creator: video.creator,
+    })),
+    market: marketResult.items.slice(0, 5).map((item) => ({
+      id: item.id,
+      title: item.title,
+      description: item.description,
+      price: item.price,
+      currency: item.currency,
+      category: item.category,
+      location: item.location,
+    })),
+    work: jobsResult.items.slice(0, 5).map((job) => ({
+      id: job.id,
+      title: job.title,
+      company: job.company,
+      location: job.location,
+      jobType: job.jobType,
+    })),
+    happenings: eventsResult.items.slice(0, 5).map((event) => ({
+      id: event.id,
+      title: event.title,
+      location: event.location,
+      startDate: event.startDate,
+      category: event.category,
+      attendeesCount: event.attendeesCount,
+    })),
+    tags: DEFAULT_DISCOVER_TAGS,
+  };
 }
 
-/** Loads discover data; never throws except 401. Falls back to /explore sparks when /discover is missing. */
+/** Loads discover data; never throws except 401. Falls back to section APIs when /discover is missing. */
 export async function fetchDiscoverSafe(): Promise<DiscoverLoadResult> {
   const token = getToken();
   if (!token) {
@@ -234,27 +288,20 @@ export async function fetchDiscoverSafe(): Promise<DiscoverLoadResult> {
     }
 
     if (response.ok) {
+      const data = normalizeDiscoverData(parsed);
       return {
-        data: normalizeDiscoverData(parsed),
+        data,
         warning: null,
         usedFallback: false,
       };
     }
 
-    if (response.status === 404) {
-      console.warn("Discover /discover not found — falling back to /explore");
-      const sparks = await fetchExploreSparksFallback();
-      return {
-        data: { ...EMPTY_DISCOVER_DATA, sparks },
-        warning: "Discover data is warming up.",
-        usedFallback: true,
-      };
-    }
-
-    const sparks = await fetchExploreSparksFallback().catch(() => [] as FeedPost[]);
+    const data = await fetchDiscoverFromLegacyApis();
     return {
-      data: { ...EMPTY_DISCOVER_DATA, sparks },
-      warning: "Discover data is warming up.",
+      data,
+      warning: hasDiscoverContent(data)
+        ? null
+        : "Discover data is warming up.",
       usedFallback: true,
     };
   } catch (error) {
@@ -262,12 +309,22 @@ export async function fetchDiscoverSafe(): Promise<DiscoverLoadResult> {
       throw error;
     }
 
-    console.warn("Discover load failed:", error);
-    return {
-      data: { ...EMPTY_DISCOVER_DATA },
-      warning: "Discover data is warming up.",
-      usedFallback: true,
-    };
+    try {
+      const data = await fetchDiscoverFromLegacyApis();
+      return {
+        data,
+        warning: hasDiscoverContent(data)
+          ? null
+          : "Discover data is warming up.",
+        usedFallback: true,
+      };
+    } catch {
+      return {
+        data: { ...EMPTY_DISCOVER_DATA },
+        warning: "Discover data is warming up.",
+        usedFallback: true,
+      };
+    }
   }
 }
 
