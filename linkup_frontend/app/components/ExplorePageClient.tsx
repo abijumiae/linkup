@@ -1,12 +1,16 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  BarChart3,
   Briefcase,
   CalendarDays,
+  Clapperboard,
   Compass,
+  Hash,
   Search,
   ShoppingBag,
   Sparkles,
@@ -15,203 +19,166 @@ import {
 } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import { getCurrentUser } from "@/src/lib/auth";
-import { fetchExplorePosts, searchAll, SearchUser } from "@/src/lib/discovery";
-import { FeedPost } from "@/src/lib/posts";
 import {
-  creatorSpotlight,
-  exploreCreators,
-  pulseTrendChips,
-} from "../data/linkupData";
-import AuthLoadingScreen from "./AuthLoadingScreen";
-import CreatorSpotlight from "./linkup/CreatorSpotlight";
-import LocalPulseCard from "./linkup/LocalPulseCard";
+  DiscoverData,
+  fetchDiscover,
+  searchAll,
+  SearchUser,
+} from "@/src/lib/discovery";
+import { FeedPost } from "@/src/lib/posts";
+import DiscoverHubCard from "./discover/DiscoverHubCard";
+import DiscoverOpportunityCard from "./discover/DiscoverOpportunityCard";
+import DiscoverPersonCard from "./discover/DiscoverPersonCard";
+import {
+  DiscoverPageSkeleton,
+  DiscoverSectionSkeleton,
+} from "./discover/DiscoverSkeleton";
+import DiscoverTrendingCard from "./discover/DiscoverTrendingCard";
 import FeedPostCard from "./FeedPostCard";
 import SearchUserCard from "./SearchUserCard";
+
+const LocalPulseCard = dynamic(() => import("./linkup/LocalPulseCard"), {
+  loading: () => (
+    <div className="linkup-panel h-48 animate-pulse p-5">
+      <div className="h-4 w-24 rounded-full bg-slate-200 dark:bg-white/10" />
+    </div>
+  ),
+});
 
 type DiscoverTab =
   | "all"
   | "people"
   | "sparks"
   | "hubs"
+  | "watch"
   | "market"
   | "work"
-  | "happenings";
+  | "happenings"
+  | "tags";
 
 const tabs: { id: DiscoverTab; label: string; icon: typeof TrendingUp }[] = [
   { id: "all", label: "All", icon: Compass },
   { id: "people", label: "People", icon: Users },
   { id: "sparks", label: "Sparks", icon: Sparkles },
   { id: "hubs", label: "Hubs", icon: Users },
+  { id: "watch", label: "Watch", icon: Clapperboard },
   { id: "market", label: "Market", icon: ShoppingBag },
   { id: "work", label: "Work", icon: Briefcase },
   { id: "happenings", label: "Happenings", icon: CalendarDays },
+  { id: "tags", label: "Tags", icon: Hash },
 ];
 
-function DiscoveryHub({
+function SectionShell({
+  eyebrow,
   title,
-  description,
-  href,
-  cta,
-  icon: Icon,
+  children,
+  action,
 }: {
+  eyebrow: string;
   title: string;
-  description: string;
-  href: string;
-  cta: string;
-  icon: typeof ShoppingBag;
+  children: React.ReactNode;
+  action?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center dark:border-white/15 dark:bg-brand-dark/60">
+    <section className="linkup-panel p-5 sm:p-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="linkup-eyebrow">{eyebrow}</p>
+          <h2 className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">
+            {title}
+          </h2>
+        </div>
+        {action}
+      </div>
+      <div className="mt-5">{children}</div>
+    </section>
+  );
+}
+
+function DiscoverEmptyState({
+  title = "Nothing trending yet",
+  message = "Start by dropping a Spark or joining a Hub.",
+}: {
+  title?: string;
+  message?: string;
+}) {
+  return (
+    <div className="linkup-empty p-10 text-center">
       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary dark:text-brand-secondary">
-        <Icon className="h-5 w-5" />
+        <Compass className="h-5 w-5" />
       </div>
       <h3 className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">
         {title}
       </h3>
       <p className="mx-auto mt-2 max-w-md text-sm text-slate-600 dark:text-slate-400">
-        {description}
+        {message}
       </p>
-      <Link
-        href={href}
-        className="mt-5 inline-flex rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover"
-      >
-        {cta}
-      </Link>
+      <div className="mt-5 flex flex-wrap justify-center gap-3">
+        <Link href="/home" className="linkup-btn-primary min-h-[44px]">
+          Drop Spark
+        </Link>
+        <Link href="/groups" className="linkup-btn-secondary min-h-[44px]">
+          Explore Hubs
+        </Link>
+      </div>
     </div>
   );
 }
 
-function DiscoverEmptyState({ message }: { message?: string }) {
-  return (
-    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center dark:border-white/15 dark:bg-brand-dark/60">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary dark:text-brand-secondary">
-        <Compass className="h-5 w-5" />
-      </div>
-      <h3 className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">
-        Nothing discovered yet
-      </h3>
-      <p className="mx-auto mt-2 max-w-md text-sm text-slate-600 dark:text-slate-400">
-        {message ??
-          "Try searching for people, sparks, hubs, or opportunities."}
-      </p>
-    </div>
-  );
+function formatEventDate(value: string) {
+  return new Date(value).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
 }
 
-function SectionHeading({ title }: { title: string }) {
-  return (
-    <h2 className="mb-4 text-sm font-semibold uppercase tracking-[0.25em] text-brand-primary dark:text-brand-secondary/80">
-      {title}
-    </h2>
-  );
-}
-
-function QuickConnectCards({
-  users,
-  currentUserId,
-}: {
-  users?: SearchUser[];
-  currentUserId: string | null;
-}) {
-  if (users && users.length > 0) {
-    return (
-      <div className="space-y-3">
-        {users.slice(0, 4).map((user) => (
-          <SearchUserCard key={user.id} user={user} currentUserId={currentUserId} />
-        ))}
-      </div>
-    );
+function formatPrice(price: number, currency: string) {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(price);
+  } catch {
+    return `${currency} ${price}`;
   }
-
-  return (
-    <div className="space-y-3">
-      {exploreCreators.map((name) => {
-        const initials = name
-          .split(" ")
-          .map((part) => part[0])
-          .join("")
-          .slice(0, 2)
-          .toUpperCase();
-        const username = name.toLowerCase().replace(/\s+/g, "");
-
-        return (
-          <div
-            key={name}
-            className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-white/10 dark:bg-brand-dark/60"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white">
-                {initials}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold text-slate-900 dark:text-white">
-                  {name}
-                </p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  @{username}
-                </p>
-              </div>
-            </div>
-            <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-              Search above to connect with people on LinkUp.
-            </p>
-          </div>
-        );
-      })}
-    </div>
-  );
 }
 
 export default function ExplorePageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryParam = searchParams.get("q") ?? "";
-  const currentUserId = getCurrentUser()?.id ?? null;
+  const currentUser = getCurrentUser();
+  const currentUserId = currentUser?.id ?? null;
 
   const [searchInput, setSearchInput] = useState(queryParam);
   const [activeQuery, setActiveQuery] = useState(queryParam);
   const [activeTab, setActiveTab] = useState<DiscoverTab>("all");
-  const [explorePosts, setExplorePosts] = useState<FeedPost[]>([]);
+  const [discover, setDiscover] = useState<DiscoverData | null>(null);
   const [searchUsers, setSearchUsers] = useState<SearchUser[]>([]);
   const [searchPosts, setSearchPosts] = useState<FeedPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadExplore = useCallback(async () => {
-    try {
-      const posts = await fetchExplorePosts();
-      setExplorePosts(posts);
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        router.replace("/login");
-        return;
-      }
-      setError("Unable to load discover sparks. Please try again.");
-    }
-  }, [router]);
+  const loadDiscover = useCallback(async () => {
+    const data = await fetchDiscover();
+    setDiscover(data);
+  }, []);
 
   const loadSearch = useCallback(
     async (query: string) => {
       if (!query.trim()) {
         setSearchUsers([]);
         setSearchPosts([]);
-        await loadExplore();
+        await loadDiscover();
         return;
       }
 
-      try {
-        const results = await searchAll(query);
-        setSearchUsers(results.users);
-        setSearchPosts(results.posts);
-      } catch (err) {
-        if (err instanceof ApiError && err.status === 401) {
-          router.replace("/login");
-          return;
-        }
-        setError("Unable to discover results. Please try again.");
-      }
+      const results = await searchAll(query);
+      setSearchUsers(results.users);
+      setSearchPosts(results.posts);
     },
-    [loadExplore, router],
+    [loadDiscover],
   );
 
   useEffect(() => {
@@ -219,18 +186,26 @@ export default function ExplorePageClient() {
       setIsLoading(true);
       setError(null);
 
-      if (queryParam.trim()) {
-        await loadSearch(queryParam);
-        setActiveTab("all");
-      } else {
-        await loadExplore();
+      try {
+        if (queryParam.trim()) {
+          await loadSearch(queryParam);
+          setActiveTab("all");
+        } else {
+          await loadDiscover();
+        }
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          router.replace("/login");
+          return;
+        }
+        setError("Could not load Discover right now. Please try again.");
+      } finally {
+        setIsLoading(false);
       }
-
-      setIsLoading(false);
     }
 
     void init();
-  }, [queryParam, loadExplore, loadSearch]);
+  }, [queryParam, loadDiscover, loadSearch, router]);
 
   useEffect(() => {
     setSearchInput(queryParam);
@@ -251,12 +226,90 @@ export default function ExplorePageClient() {
 
   const isSearchMode = activeQuery.trim().length > 0;
 
+  const sparks = useMemo(
+    () => (isSearchMode ? searchPosts : discover?.sparks ?? []),
+    [discover?.sparks, isSearchMode, searchPosts],
+  );
+
+  const people = useMemo(
+    () => (isSearchMode ? searchUsers : discover?.people ?? []),
+    [discover?.people, isSearchMode, searchUsers],
+  );
+
+  const trendingCards = useMemo(() => {
+    if (!discover) {
+      return [];
+    }
+
+    const cards = [];
+
+    if (discover.sparks[0]) {
+      cards.push({
+        key: "spark",
+        title: "Trending Spark",
+        description: discover.sparks[0].content.slice(0, 120),
+        cta: "View Spark",
+        href: "/explore",
+        icon: Sparkles,
+        accent: "primary" as const,
+      });
+    }
+
+    if (discover.hubs[0]) {
+      cards.push({
+        key: "hub",
+        title: "Rising Hub",
+        description: `${discover.hubs[0].name} · ${discover.hubs[0].membersCount} members`,
+        cta: "Explore Hub",
+        href: `/groups/${discover.hubs[0].id}`,
+        icon: Users,
+        accent: "secondary" as const,
+      });
+    }
+
+    if (discover.work[0]) {
+      cards.push({
+        key: "work",
+        title: "Hot Work Drop",
+        description: `${discover.work[0].title} at ${discover.work[0].company}`,
+        cta: "View Role",
+        href: `/jobs/${discover.work[0].id}`,
+        icon: Briefcase,
+        accent: "amber" as const,
+      });
+    }
+
+    if (discover.happenings[0]) {
+      cards.push({
+        key: "happening",
+        title: "Happening Today",
+        description: `${discover.happenings[0].title} · ${discover.happenings[0].location}`,
+        cta: "See Event",
+        href: `/events/${discover.happenings[0].id}`,
+        icon: CalendarDays,
+        accent: "pink" as const,
+      });
+    }
+
+    if (discover.watch[0]) {
+      cards.push({
+        key: "watch",
+        title: "Watch Pick",
+        description: discover.watch[0].title,
+        cta: "Watch Now",
+        href: `/watch/${discover.watch[0].id}`,
+        icon: Clapperboard,
+        accent: "emerald" as const,
+      });
+    }
+
+    return cards;
+  }, [discover]);
+
   function renderSparks(posts: FeedPost[], emptyMessage?: string) {
     if (posts.length === 0) {
       return (
-        <DiscoverEmptyState
-          message={emptyMessage ?? "Try searching for people, sparks, hubs, or opportunities."}
-        />
+        <DiscoverEmptyState message={emptyMessage ?? "Start by dropping a Spark or joining a Hub."} />
       );
     }
 
@@ -267,220 +320,347 @@ export default function ExplorePageClient() {
             key={post.id}
             post={post}
             currentUserId={currentUserId}
-            sparkLabels
+            pulseLabels
           />
         ))}
       </div>
     );
   }
 
-  function renderPeople() {
-    if (!isSearchMode) {
+  function renderSearchResults() {
+    const hasUsers = searchUsers.length > 0;
+    const hasSparks = searchPosts.length > 0;
+
+    if (!hasUsers && !hasSparks) {
       return (
-        <DiscoveryHub
-          title="Find people on LinkUp"
-          description="Discover by name, username, or email to connect with creators and professionals in your network."
-          href="/explore"
-          cta="Use discover search above"
-          icon={Users}
-        />
+        <DiscoverEmptyState message={`No results found for "${activeQuery}".`} />
       );
     }
 
-    if (searchUsers.length === 0) {
-      return <DiscoverEmptyState message="No people found for this search." />;
-    }
-
     return (
-      <div className="space-y-3">
-        {searchUsers.map((user) => (
-          <SearchUserCard
-            key={user.id}
-            user={user}
-            currentUserId={currentUserId}
-          />
-        ))}
+      <div className="space-y-8">
+        {hasUsers ? (
+          <SectionShell eyebrow="People" title="Matching people">
+            <div className="space-y-3">
+              {searchUsers.map((user) => (
+                <SearchUserCard
+                  key={user.id}
+                  user={user}
+                  currentUserId={currentUserId}
+                />
+              ))}
+            </div>
+          </SectionShell>
+        ) : null}
+        {hasSparks ? (
+          <SectionShell eyebrow="Sparks" title="Matching sparks">
+            {renderSparks(searchPosts)}
+          </SectionShell>
+        ) : null}
       </div>
     );
   }
 
-  function renderTabContent() {
-    if (activeTab === "all") {
-      if (isSearchMode) {
-        const hasUsers = searchUsers.length > 0;
-        const hasSparks = searchPosts.length > 0;
+  function renderDiscoverSections() {
+    if (!discover) {
+      return <DiscoverSectionSkeleton rows={4} />;
+    }
 
-        if (!hasUsers && !hasSparks) {
-          return <DiscoverEmptyState />;
-        }
+    const showAll = activeTab === "all";
+    const sections: React.ReactNode[] = [];
 
-        return (
-          <div className="space-y-8">
-            {hasUsers ? (
-              <section>
-                <SectionHeading title="People" />
-                <div className="space-y-3">
-                  {searchUsers.map((user) => (
-                    <SearchUserCard
-                      key={user.id}
-                      user={user}
-                      currentUserId={currentUserId}
-                    />
-                  ))}
-                </div>
-              </section>
-            ) : null}
-            {hasSparks ? (
-              <section>
-                <SectionHeading title="Sparks" />
-                {renderSparks(searchPosts)}
-              </section>
-            ) : null}
+    if ((showAll || activeTab === "people") && people.length > 0) {
+      sections.push(
+        <SectionShell
+          key="people"
+          eyebrow="Connect"
+          title="People to Connect"
+          action={
+            <Link
+              href="/explore"
+              className="text-sm font-semibold text-brand-primary dark:text-brand-secondary"
+            >
+              See all →
+            </Link>
+          }
+        >
+          <div className="space-y-3">
+            {people.map((user) => (
+              <DiscoverPersonCard
+                key={user.id}
+                user={user}
+                currentUserId={currentUserId}
+              />
+            ))}
           </div>
+        </SectionShell>,
+      );
+    }
+
+    if ((showAll || activeTab === "hubs") && discover.hubs.length > 0) {
+      sections.push(
+        <SectionShell
+          key="hubs"
+          eyebrow="Communities"
+          title="Explore Hubs"
+          action={
+            <Link href="/groups" className="linkup-btn-ghost min-h-[40px] text-xs">
+              Browse all
+            </Link>
+          }
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            {discover.hubs.map((hub) => (
+              <DiscoverHubCard key={hub.id} hub={hub} />
+            ))}
+          </div>
+        </SectionShell>,
+      );
+    }
+
+    if ((showAll || activeTab === "sparks") && sparks.length > 0) {
+      sections.push(
+        <SectionShell key="sparks" eyebrow="Feed" title="Fresh Sparks">
+          {renderSparks(sparks)}
+        </SectionShell>,
+      );
+    }
+
+    if (showAll || activeTab === "watch") {
+      sections.push(
+        <SectionShell
+          key="watch"
+          eyebrow="Watch"
+          title="Watch picks"
+          action={
+            <Link href="/watch" className="linkup-btn-ghost min-h-[40px] text-xs">
+              Open Watch
+            </Link>
+          }
+        >
+          {discover.watch.length > 0 ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {discover.watch.map((video) => (
+                <DiscoverOpportunityCard
+                  key={video.id}
+                  title={video.title}
+                  subtitle={video.description ?? "Stream from the LinkUp community."}
+                  meta={video.category ?? "Watch"}
+                  href={`/watch/${video.id}`}
+                  cta="Watch"
+                  icon={Clapperboard}
+                />
+              ))}
+            </div>
+          ) : (
+            <DiscoverEmptyState message="No watch picks yet. Check back soon." />
+          )}
+        </SectionShell>,
+      );
+    }
+
+    if (showAll || activeTab === "market" || activeTab === "work" || activeTab === "happenings") {
+      const opportunities = [];
+
+      if ((showAll || activeTab === "market") && discover.market.length > 0) {
+        opportunities.push(
+          ...discover.market.map((item) => (
+            <DiscoverOpportunityCard
+              key={`market-${item.id}`}
+              title={item.title}
+              subtitle={item.description}
+              meta={`${formatPrice(item.price, item.currency)} · ${item.category}`}
+              href={`/marketplace/${item.id}`}
+              cta="View listing"
+              icon={ShoppingBag}
+            />
+          )),
         );
       }
 
-      return renderSparks(
-        explorePosts,
-        explorePosts.length === 0
-          ? "Try searching for people, sparks, hubs, or opportunities."
-          : undefined,
+      if ((showAll || activeTab === "work") && discover.work.length > 0) {
+        opportunities.push(
+          ...discover.work.map((job) => (
+            <DiscoverOpportunityCard
+              key={`job-${job.id}`}
+              title={job.title}
+              subtitle={`${job.company} · ${job.location}`}
+              meta={job.jobType ?? "Work opportunity"}
+              href={`/jobs/${job.id}`}
+              cta="View role"
+              icon={Briefcase}
+            />
+          )),
+        );
+      }
+
+      if ((showAll || activeTab === "happenings") && discover.happenings.length > 0) {
+        opportunities.push(
+          ...discover.happenings.map((event) => (
+            <DiscoverOpportunityCard
+              key={`event-${event.id}`}
+              title={event.title}
+              subtitle={`${event.location} · ${formatEventDate(event.startDate)}`}
+              meta={`${event.attendeesCount} going`}
+              href={`/events/${event.id}`}
+              cta="View happening"
+              icon={CalendarDays}
+            />
+          )),
+        );
+      }
+
+      if (showAll || activeTab === "market" || activeTab === "work" || activeTab === "happenings") {
+        sections.push(
+          <SectionShell
+            key="opportunities"
+            eyebrow="Opportunities"
+            title={
+              activeTab === "market"
+                ? "Market listings"
+                : activeTab === "work"
+                  ? "Work opportunities"
+                  : activeTab === "happenings"
+                    ? "Upcoming happenings"
+                    : "Opportunities Around You"
+            }
+          >
+            {opportunities.length > 0 ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {opportunities}
+              </div>
+            ) : (
+              <DiscoverEmptyState message="No opportunities in this category yet." />
+            )}
+          </SectionShell>,
+        );
+      }
+    }
+
+    if (activeTab === "tags") {
+      sections.push(
+        <SectionShell key="tags" eyebrow="Topics" title="Trending topics">
+          <div className="flex flex-wrap gap-2">
+            {(discover.tags.length > 0 ? discover.tags : ["Tech", "Design"]).map(
+              (tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() =>
+                    router.push(`/explore?q=${encodeURIComponent(tag)}`)
+                  }
+                  className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-slate-200/90 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-brand-primary/35 hover:bg-brand-primary/5 active:scale-[0.98] dark:border-white/10 dark:bg-brand-dark/70 dark:text-slate-200 dark:hover:bg-brand-primary/10"
+                >
+                  <Hash className="h-3.5 w-3.5 text-brand-primary dark:text-brand-secondary" />
+                  {tag}
+                </button>
+              ),
+            )}
+          </div>
+        </SectionShell>,
       );
     }
 
-    if (activeTab === "sparks") {
-      const posts = isSearchMode ? searchPosts : explorePosts;
-      return renderSparks(
-        posts,
-        isSearchMode
-          ? "No sparks found for this search."
-          : "No sparks yet. Be the first to share something on the home feed.",
+    if (showAll && trendingCards.length > 0) {
+      sections.unshift(
+        <SectionShell key="trending" eyebrow="Trending" title="Trending Now">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {trendingCards.map(({ key, ...card }) => (
+              <DiscoverTrendingCard key={key} {...card} />
+            ))}
+          </div>
+        </SectionShell>,
       );
     }
 
-    if (activeTab === "people") {
-      return renderPeople();
-    }
-
-    if (activeTab === "hubs") {
+    if (sections.length === 0) {
       return (
-        <DiscoveryHub
-          title="Discover hubs"
-          description="Join communities, collaborate with others, and find hubs that match your interests."
-          href="/groups"
-          cta="Browse hubs"
-          icon={Users}
-        />
+        <DiscoverEmptyState message="Start by dropping a Spark or joining a Hub." />
       );
     }
 
-    if (activeTab === "market") {
-      const href = isSearchMode
-        ? `/marketplace?q=${encodeURIComponent(activeQuery)}`
-        : "/marketplace";
+    return <div className="space-y-6">{sections}</div>;
+  }
+
+  function renderTabContent() {
+    if (isSearchMode) {
+      return renderSearchResults();
+    }
+
+    if (activeTab === "people" && people.length === 0) {
       return (
-        <DiscoveryHub
-          title="Browse market"
-          description={
-            isSearchMode
-              ? `Continue discovering "${activeQuery}" in market listings.`
-              : "Find services, templates, and products shared by the community."
-          }
-          href={href}
-          cta={isSearchMode ? "Discover market" : "Open market"}
-          icon={ShoppingBag}
-        />
+        <DiscoverEmptyState message="No people suggestions yet. Try searching above." />
       );
     }
 
-    if (activeTab === "work") {
-      const href = isSearchMode
-        ? `/jobs?q=${encodeURIComponent(activeQuery)}`
-        : "/jobs";
+    if (activeTab === "sparks" && sparks.length === 0) {
+      return renderSparks([], "No sparks yet. Drop the first one from Pulse.");
+    }
+
+    if (activeTab === "hubs" && (discover?.hubs.length ?? 0) === 0) {
       return (
-        <DiscoveryHub
-          title="Discover work"
-          description={
-            isSearchMode
-              ? `Continue discovering "${activeQuery}" in work opportunities.`
-              : "Find open roles and opportunities posted by LinkUp members."
-          }
-          href={href}
-          cta={isSearchMode ? "Discover work" : "Open work"}
-          icon={Briefcase}
-        />
+        <DiscoverEmptyState message="No hubs yet. Create or join one to get started." />
       );
     }
 
-    const href = isSearchMode
-      ? `/events?q=${encodeURIComponent(activeQuery)}`
-      : "/events";
-    return (
-      <DiscoveryHub
-        title="Find happenings"
-        description={
-          isSearchMode
-            ? `Continue discovering "${activeQuery}" in upcoming happenings.`
-            : "See what's happening in the community and connect with people near you."
-        }
-        href={href}
-        cta={isSearchMode ? "Discover happenings" : "Open happenings"}
-        icon={CalendarDays}
-      />
-    );
+    return renderDiscoverSections();
   }
 
   if (isLoading) {
-    return <AuthLoadingScreen message="Loading discover..." />;
+    return (
+      <div className="linkup-page">
+        <div className="linkup-container-wide">
+          <DiscoverPageSkeleton />
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="linkup-page">
       <div className="linkup-container-wide">
         <div className="space-y-6">
-          <header className="linkup-panel p-6 sm:p-7">
-            <div className="flex flex-col gap-4">
+          <header className="linkup-panel relative overflow-hidden p-6 sm:p-7">
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-brand-primary/10 via-brand-secondary/5 to-transparent dark:from-brand-primary/15" />
+            <div className="relative flex flex-col gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-primary dark:text-brand-secondary/80">
-                  LinkUp Discover
-                </p>
-                <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">
+                <p className="linkup-eyebrow">LinkUp Discover</p>
+                <h1 className="linkup-title mt-3">
                   {isSearchMode ? `Results for "${activeQuery}"` : "Discover"}
                 </h1>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                  Find people, sparks, hubs, and opportunities across LinkUp.
+                <p className="linkup-subtitle max-w-3xl text-base leading-7">
+                  Find people, sparks, hubs, opportunities, and what&apos;s moving
+                  across LinkUp.
                 </p>
               </div>
               <form
                 onSubmit={handleSearchSubmit}
                 className="flex max-w-2xl flex-col gap-3 sm:flex-row sm:items-center"
               >
-                <div className="relative flex-1">
-                  <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <div className="linkup-input-shell flex-1 rounded-full py-2.5">
+                  <Search className="h-4 w-4 shrink-0 text-slate-400" />
                   <input
                     value={searchInput}
                     onChange={(event) => setSearchInput(event.target.value)}
-                    className="w-full rounded-full border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-100 dark:placeholder:text-slate-500"
-                    placeholder="Discover people, sparks, hubs, market, work..."
+                    className="linkup-input"
+                    placeholder="Search people, sparks, hubs, market, work..."
+                    aria-label="Discover search"
                   />
                 </div>
-                <button
-                  type="submit"
-                  className="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-6 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover"
-                >
-                  Discover
+                <button type="submit" className="linkup-btn-primary min-h-[44px] shrink-0 px-6">
+                  Search
                 </button>
               </form>
             </div>
           </header>
 
           {error ? (
-            <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">
+            <p className="linkup-alert-error" role="alert">
               {error}
             </p>
           ) : null}
 
-          <div className="linkup-panel p-3 shadow-lg sm:p-3">
+          <div className="linkup-panel p-3 sm:p-3">
             <div className="linkup-chip-row">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
@@ -491,10 +671,10 @@ export default function ExplorePageClient() {
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
-                    className={`inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    className={`inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition active:scale-[0.98] ${
                       isActive
                         ? "bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-md shadow-brand-primary/20"
-                        : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                        : "border border-slate-200/90 bg-white text-slate-700 hover:border-brand-primary/30 hover:bg-brand-primary/5 dark:border-white/10 dark:bg-brand-dark/70 dark:text-slate-200 dark:hover:bg-brand-primary/10"
                     }`}
                   >
                     <Icon className="h-4 w-4" />
@@ -505,89 +685,52 @@ export default function ExplorePageClient() {
             </div>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
-            <section>{renderTabContent()}</section>
+          <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
+            <div className="min-w-0">{renderTabContent()}</div>
 
-            <aside className="space-y-6">
-              <LocalPulseCard
-                country={getCurrentUser()?.country}
-              />
+            <aside className="min-w-0 space-y-6 xl:sticky xl:top-6 xl:self-start">
+              <LocalPulseCard country={currentUser?.country} />
 
-              <CreatorSpotlight creators={creatorSpotlight} />
-
-              <div className="linkup-panel p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-primary dark:text-brand-secondary/80">
-                  Pulse Trends
-                </p>
-                <h2 className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">
-                  What&apos;s pulsing now
-                </h2>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {pulseTrendChips.map((chip) => (
-                    <button
-                      key={chip}
-                      type="button"
-                      onClick={() => {
-                        router.push(
-                          `/explore?q=${encodeURIComponent(chip)}`,
-                        );
-                      }}
-                      className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1.5 text-sm text-slate-700 transition hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
-                    >
-                      {chip}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="linkup-panel p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-primary dark:text-brand-secondary/80">
-                  Quick Connect
-                </p>
-                <h2 className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">
-                  {isSearchMode && searchUsers.length > 0
-                    ? "People you may know"
-                    : "Suggested connections"}
-                </h2>
-                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                  {isSearchMode && searchUsers.length > 0
-                    ? `${searchUsers.length} match${searchUsers.length === 1 ? "" : "es"} from your search.`
-                    : "Discover creators and professionals across LinkUp."}
-                </p>
-                <div className="mt-4">
-                  <QuickConnectCards
-                    users={
-                      isSearchMode && searchUsers.length > 0
-                        ? searchUsers
-                        : undefined
-                    }
-                    currentUserId={currentUserId}
-                  />
-                </div>
-                {isSearchMode && searchUsers.length > 4 ? (
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("people")}
-                    className="mt-4 text-sm font-semibold text-brand-primary transition hover:text-brand-primary-hover dark:text-brand-secondary dark:hover:text-brand-light"
-                  >
-                    View all people →
-                  </button>
-                ) : null}
-              </div>
-
-              {!isSearchMode && explorePosts.length > 0 ? (
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg dark:border-white/10 dark:bg-brand-dark/80">
-                  <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-                    Discover sparks
+              {!isSearchMode && discover ? (
+                <div className="linkup-panel p-5">
+                  <p className="linkup-eyebrow">Trending Tags</p>
+                  <h2 className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">
+                    Topics on LinkUp
                   </h2>
-                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                    {explorePosts.length} public spark
-                    {explorePosts.length === 1 ? "" : "s"} trending right now.
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {discover.tags.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() =>
+                          router.push(`/explore?q=${encodeURIComponent(tag)}`)
+                        }
+                        className="rounded-full border border-slate-200/90 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:border-brand-primary/30 hover:bg-brand-primary/5 dark:border-white/10 dark:bg-brand-dark/70 dark:text-slate-300 dark:hover:bg-brand-primary/10"
+                      >
+                        #{tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {!isSearchMode && discover && discover.sparks.length > 0 ? (
+                <div className="linkup-panel p-5">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-brand-primary dark:text-brand-secondary" />
+                    <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+                      Pulse snapshot
+                    </h2>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                    {discover.sparks.length} trending spark
+                    {discover.sparks.length === 1 ? "" : "s"} · {discover.hubs.length}{" "}
+                    active hub{discover.hubs.length === 1 ? "" : "s"}
                   </p>
                   <button
                     type="button"
                     onClick={() => setActiveTab("sparks")}
-                    className="mt-4 text-sm font-semibold text-brand-primary transition hover:text-brand-primary-hover dark:text-brand-secondary dark:hover:text-brand-light"
+                    className="mt-4 text-sm font-semibold text-brand-primary dark:text-brand-secondary"
                   >
                     View sparks →
                   </button>

@@ -17,4 +17,9 @@ export class DiscoveryController {
   explore(@Req() req: { user: SafeUser }) {
     return this.discoveryService.getExplore(req.user.id);
   }
+
+  @Get('discover')
+  discover(@Req() req: { user: SafeUser }) {
+    return this.discoveryService.getDiscover(req.user.id);
+  }
 }

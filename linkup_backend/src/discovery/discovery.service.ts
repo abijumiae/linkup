@@ -35,6 +35,93 @@ export type SearchResults = {
 
 const EXPLORE_LIMIT = 30;
 const SEARCH_LIMIT = 20;
+const DISCOVER_LIMIT = 5;
+
+const discoverUserSelect = {
+  id: true,
+  name: true,
+  username: true,
+  avatarUrl: true,
+  accountType: true,
+  isVerified: true,
+} satisfies Prisma.UserSelect;
+
+export type DiscoverPerson = Prisma.UserGetPayload<{
+  select: typeof discoverUserSelect;
+}> & {
+  isFollowingAuthor: boolean;
+};
+
+export type DiscoverHub = {
+  id: string;
+  name: string;
+  description: string;
+  membersCount: number;
+  category: string;
+  isMember: boolean;
+};
+
+export type DiscoverWatchItem = {
+  id: string;
+  title: string;
+  description: string | null;
+  thumbnailUrl: string | null;
+  category: string | null;
+  duration: number | null;
+  creator: {
+    id: string;
+    name: string;
+    username: string;
+    avatarUrl: string | null;
+  } | null;
+};
+
+export type DiscoverMarketItem = {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  currency: string;
+  category: string;
+  location: string | null;
+};
+
+export type DiscoverWorkItem = {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  jobType: string | null;
+};
+
+export type DiscoverHappening = {
+  id: string;
+  title: string;
+  location: string;
+  startDate: string;
+  category: string | null;
+  attendeesCount: number;
+};
+
+export type DiscoverResponse = {
+  people: DiscoverPerson[];
+  sparks: FeedPost[];
+  hubs: DiscoverHub[];
+  watch: DiscoverWatchItem[];
+  market: DiscoverMarketItem[];
+  work: DiscoverWorkItem[];
+  happenings: DiscoverHappening[];
+  tags: string[];
+};
+
+const DISCOVER_TAGS = [
+  'Tech',
+  'Business',
+  'Design',
+  'Learning',
+  'Community',
+  'Startup',
+];
 
 @Injectable()
 export class DiscoveryService {
@@ -109,6 +196,143 @@ export class DiscoveryService {
     const followingSet = await this.getFollowingSet(userId, authorIds);
 
     return posts.map((post) => this.mapPost(post, followingSet));
+  }
+
+  async getDiscover(userId: string): Promise<DiscoverResponse> {
+    const [peopleRows, sparkRows, groupRows, watchRows, marketRows, jobRows, eventRows] =
+      await Promise.all([
+        this.prisma.user.findMany({
+          where: { id: { not: userId } },
+          take: DISCOVER_LIMIT,
+          orderBy: { createdAt: 'desc' },
+          select: discoverUserSelect,
+        }),
+        this.prisma.post.findMany({
+          where: { visibility: 'PUBLIC', groupId: null },
+          take: DISCOVER_LIMIT,
+          orderBy: [{ likes: { _count: 'desc' } }, { createdAt: 'desc' }],
+          include: {
+            author: { select: authorSelect },
+            _count: { select: { likes: true, comments: true } },
+            likes: { where: { userId }, select: { id: true } },
+          },
+        }),
+        this.prisma.group.findMany({
+          take: DISCOVER_LIMIT,
+          orderBy: { members: { _count: 'desc' } },
+          include: {
+            _count: { select: { members: true } },
+            members: {
+              where: { userId },
+              select: { id: true },
+            },
+          },
+        }),
+        this.prisma.watchVideo.findMany({
+          where: { isPublished: true },
+          take: DISCOVER_LIMIT,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            creator: {
+              select: {
+                id: true,
+                name: true,
+                username: true,
+                avatarUrl: true,
+              },
+            },
+          },
+        }),
+        this.prisma.marketplaceItem.findMany({
+          where: { status: 'ACTIVE' },
+          take: DISCOVER_LIMIT,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            price: true,
+            currency: true,
+            category: true,
+            location: true,
+          },
+        }),
+        this.prisma.job.findMany({
+          where: { status: 'ACTIVE' },
+          take: DISCOVER_LIMIT,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            title: true,
+            company: true,
+            location: true,
+            jobType: true,
+          },
+        }),
+        this.prisma.event.findMany({
+          where: {
+            status: 'ACTIVE',
+            startDate: { gte: new Date() },
+          },
+          take: DISCOVER_LIMIT,
+          orderBy: { startDate: 'asc' },
+          include: {
+            _count: { select: { attendees: true } },
+          },
+        }),
+      ]);
+
+    const peopleIds = peopleRows.map((user) => user.id);
+    const sparkAuthorIds = [...new Set(sparkRows.map((post) => post.authorId))];
+
+    const [peopleFollowing, sparkFollowing] = await Promise.all([
+      this.getFollowingSet(userId, peopleIds),
+      this.getFollowingSet(userId, sparkAuthorIds),
+    ]);
+
+    return {
+      people: peopleRows.map((user) => ({
+        ...user,
+        isFollowingAuthor: peopleFollowing.has(user.id),
+      })),
+      sparks: sparkRows.map((post) => this.mapPost(post, sparkFollowing)),
+      hubs: groupRows.map((group) => ({
+        id: group.id,
+        name: group.name,
+        description: group.description,
+        membersCount: group._count.members,
+        category: 'Community',
+        isMember: group.members.length > 0,
+      })),
+      watch: watchRows.map((video) => ({
+        id: video.id,
+        title: video.title,
+        description: video.description,
+        thumbnailUrl: video.thumbnailUrl,
+        category: video.category,
+        duration: video.duration,
+        creator: video.creator,
+      })),
+      market: marketRows.map((item) => ({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        price: Number(item.price),
+        currency: item.currency,
+        category: item.category,
+        location: item.location,
+      })),
+      work: jobRows,
+      happenings: eventRows.map((event) => ({
+        id: event.id,
+        title: event.title,
+        location: event.location,
+        startDate: event.startDate.toISOString(),
+        category: event.category,
+        attendeesCount: event._count.attendees,
+      })),
+      tags: DISCOVER_TAGS,
+    };
   }
 
   private async getFollowingSet(userId: string, targetIds: string[]) {
