@@ -163,6 +163,7 @@ export class MomentsService {
     }
 
     await this.prisma.moment.delete({ where: { id: momentId } });
+    this.realtime.emitMomentDeleted(momentId, userId);
     return { success: true };
   }
 

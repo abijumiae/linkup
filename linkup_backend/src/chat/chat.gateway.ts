@@ -576,38 +576,76 @@ export class ChatGateway
     return this.onlineUsers.has(userId);
   }
 
+  private resolveCallTarget(payload?: {
+    peerId?: string;
+    targetUserId?: string;
+  }): string | undefined {
+    return payload?.targetUserId ?? payload?.peerId;
+  }
+
   @SubscribeMessage('call_offer')
   handleCallOffer(
     @ConnectedSocket() client: AuthedSocket,
     @MessageBody()
     payload: {
-      peerId: string;
-      sdp: unknown;
+      peerId?: string;
+      targetUserId?: string;
+      sdp?: unknown;
+      offer?: unknown;
       callType?: 'audio' | 'video';
     },
   ) {
-    this.relayToPeer(client, payload?.peerId, 'call_offer', {
-      sdp: payload.sdp,
-      callType: payload.callType ?? 'video',
+    const peerId = this.resolveCallTarget(payload);
+    const sdp = payload?.sdp ?? payload?.offer;
+    if (!peerId || !sdp) {
+      client.emit('call_error', { message: 'Invalid call offer payload' });
+      return;
+    }
+
+    this.relayToPeer(client, peerId, 'call_offer', {
+      sdp,
+      callType: payload?.callType ?? 'video',
     });
   }
 
   @SubscribeMessage('call_answer')
   handleCallAnswer(
     @ConnectedSocket() client: AuthedSocket,
-    @MessageBody() payload: { peerId: string; sdp: unknown },
+    @MessageBody()
+    payload: {
+      peerId?: string;
+      targetUserId?: string;
+      sdp?: unknown;
+      answer?: unknown;
+    },
   ) {
-    this.relayToPeer(client, payload?.peerId, 'call_answer', {
-      sdp: payload.sdp,
-    });
+    const peerId = this.resolveCallTarget(payload);
+    const sdp = payload?.sdp ?? payload?.answer;
+    if (!peerId || !sdp) {
+      client.emit('call_error', { message: 'Invalid call answer payload' });
+      return;
+    }
+
+    this.relayToPeer(client, peerId, 'call_answer', { sdp });
   }
 
   @SubscribeMessage('ice_candidate')
   handleIceCandidate(
     @ConnectedSocket() client: AuthedSocket,
-    @MessageBody() payload: { peerId: string; candidate: unknown },
+    @MessageBody()
+    payload: {
+      peerId?: string;
+      targetUserId?: string;
+      candidate?: unknown;
+    },
   ) {
-    this.relayToPeer(client, payload?.peerId, 'ice_candidate', {
+    const peerId = this.resolveCallTarget(payload);
+    if (!peerId || payload?.candidate === undefined) {
+      client.emit('call_error', { message: 'Invalid ICE candidate payload' });
+      return;
+    }
+
+    this.relayToPeer(client, peerId, 'ice_candidate', {
       candidate: payload.candidate,
     });
   }
@@ -615,9 +653,29 @@ export class ChatGateway
   @SubscribeMessage('call_end')
   handleCallEnd(
     @ConnectedSocket() client: AuthedSocket,
-    @MessageBody() payload: { peerId: string },
+    @MessageBody() payload: { peerId?: string; targetUserId?: string },
   ) {
-    this.relayToPeer(client, payload?.peerId, 'call_end', {});
+    const peerId = this.resolveCallTarget(payload);
+    if (!peerId) {
+      client.emit('call_error', { message: 'Call end requires a target user' });
+      return;
+    }
+
+    this.relayToPeer(client, peerId, 'call_end', {});
+  }
+
+  @SubscribeMessage('call_reject')
+  handleCallReject(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody() payload: { peerId?: string; targetUserId?: string },
+  ) {
+    const peerId = this.resolveCallTarget(payload);
+    if (!peerId) {
+      client.emit('call_error', { message: 'Call reject requires a target user' });
+      return;
+    }
+
+    this.relayToPeer(client, peerId, 'call_rejected', {});
   }
 
   /** @deprecated Use call_offer */
@@ -879,6 +937,10 @@ export class ChatGateway
 
     if (event === 'call_end') {
       this.server.to(getUserRoom(peerId)).emit('call_ended', payload);
+    }
+
+    if (event === 'call_rejected') {
+      this.server.to(getUserRoom(peerId)).emit('call_reject', payload);
     }
   }
 

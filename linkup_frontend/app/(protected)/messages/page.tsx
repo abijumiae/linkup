@@ -45,7 +45,9 @@ import {
   sendVoiceMessage,
 } from "@/src/lib/messages";
 import { uploadFile } from "@/src/lib/uploads";
-import VoiceNoteRecorder from "@/src/components/VoiceNoteRecorder";
+import VoiceNoteRecorder, {
+  isVoiceRecordingSupported,
+} from "@/src/components/VoiceNoteRecorder";
 import { formatTimeAgo } from "@/src/lib/posts";
 import {
   CallSession,
@@ -679,6 +681,16 @@ export default function MessagesPage() {
       setCallStatus("incoming");
     };
 
+    const onCallRejected = (payload: { fromUserId: string }) => {
+      if (
+        callPeerId === payload.fromUserId ||
+        incomingCallRef.current?.fromUserId === payload.fromUserId
+      ) {
+        showFeatureNotice("Call declined.");
+        resetCallState();
+      }
+    };
+
     const onCallEnded = (payload: { fromUserId: string }) => {
       if (
         callPeerId === payload.fromUserId ||
@@ -753,6 +765,8 @@ export default function MessagesPage() {
     socket.on("incoming_call", onCallOffer);
     socket.on("call_end", onCallEnded);
     socket.on("call_ended", onCallEnded);
+    socket.on("call_rejected", onCallRejected);
+    socket.on("call_reject", onCallRejected);
     socket.on("group_call_user_joined", onGroupCallUserJoined);
     socket.on("group_call_user_left", onGroupCallUserLeft);
     socket.on("group_call_ended", onGroupCallEnded);
@@ -776,6 +790,8 @@ export default function MessagesPage() {
       socket.off("incoming_call", onCallOffer);
       socket.off("call_end", onCallEnded);
       socket.off("call_ended", onCallEnded);
+      socket.off("call_rejected", onCallRejected);
+      socket.off("call_reject", onCallRejected);
       socket.off("group_call_user_joined", onGroupCallUserJoined);
       socket.off("group_call_user_left", onGroupCallUserLeft);
       socket.off("group_call_ended", onGroupCallEnded);
@@ -1162,7 +1178,10 @@ export default function MessagesPage() {
 
   function declineIncomingCall() {
     if (callPeerId) {
-      getSocket()?.emit("call_end", { peerId: callPeerId });
+      getSocket()?.emit("call_reject", {
+        peerId: callPeerId,
+        targetUserId: callPeerId,
+      });
     }
     resetCallState();
   }
@@ -1707,15 +1726,7 @@ export default function MessagesPage() {
                 </div>
 
                 {/* Input */}
-                <div className="border-t border-slate-200/80 bg-slate-50/90 px-3 py-3 dark:border-white/10 dark:bg-brand-dark/90 sm:px-4 sm:py-4">
-                  {chatTab === "direct" && activeUser ? (
-                    <VoiceNoteRecorder
-                      disabled={!activeUser}
-                      isSending={isSending}
-                      onSend={handleSendVoiceNote}
-                      onError={setError}
-                    />
-                  ) : null}
+                <div className="relative border-t border-slate-200/80 bg-slate-50/90 px-3 py-3 dark:border-white/10 dark:bg-brand-dark/90 sm:px-4 sm:py-4">
                   <div className="relative flex min-w-0 items-center gap-1.5 rounded-full border border-slate-200/80 bg-white px-2 py-2 dark:border-white/10 dark:bg-brand-dark sm:gap-2 sm:px-3 sm:py-2.5">
                     <button
                       type="button"
@@ -1743,6 +1754,17 @@ export default function MessagesPage() {
                     >
                       <Paperclip className="h-5 w-5" />
                     </button>
+                    {chatTab === "direct" &&
+                    activeUser &&
+                    isVoiceRecordingSupported() ? (
+                      <VoiceNoteRecorder
+                        variant="icon"
+                        disabled={!activeUser}
+                        isSending={isSending}
+                        onSend={handleSendVoiceNote}
+                        onError={setError}
+                      />
+                    ) : null}
                     <input
                       value={messageInput}
                       onChange={(event) =>

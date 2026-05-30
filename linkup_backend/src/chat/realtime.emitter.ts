@@ -55,6 +55,10 @@ export class RealtimeEmitter {
     this.emitToRoom('pulse', 'moment_created', moment);
   }
 
+  emitMomentDeleted(momentId: string, userId: string) {
+    this.emitToRoom('pulse', 'moment_deleted', { momentId, userId });
+  }
+
   emitNewMessageNotification(
     recipientId: string,
     payload: { peerId: string; message: unknown },

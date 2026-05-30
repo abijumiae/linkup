@@ -34,6 +34,11 @@ const AUDIO_MIME_TYPES = new Set([
   'audio/x-wav',
 ]);
 
+/** Strip codec parameters (e.g. audio/webm;codecs=opus → audio/webm). */
+export function normalizeMimeType(mimetype: string): string {
+  return mimetype.split(';')[0]?.trim().toLowerCase() ?? mimetype;
+}
+
 export type UploadMediaType = 'image' | 'video' | 'audio';
 
 export type UploadResult = {
@@ -68,7 +73,7 @@ export class UploadsService {
       throw new BadRequestException('No file uploaded');
     }
 
-    const mediaType = this.resolveMediaType(file.mimetype);
+    const mediaType = this.resolveMediaType(normalizeMimeType(file.mimetype));
     this.validateSize(file.size, mediaType);
 
     if (this.useCloudinary) {
@@ -111,6 +116,7 @@ export class UploadsService {
   }
 
   private safeExtension(originalname: string, mimetype: string): string {
+    const normalized = normalizeMimeType(mimetype);
     const fromName = extname(originalname).toLowerCase();
     const allowed = new Set([
       '.jpg',
@@ -130,7 +136,7 @@ export class UploadsService {
       return fromName;
     }
 
-    switch (mimetype) {
+    switch (normalized) {
       case 'image/jpeg':
         return '.jpg';
       case 'image/png':
@@ -165,7 +171,10 @@ export class UploadsService {
   ): Promise<UploadResult> {
     await mkdir(this.uploadDir, { recursive: true });
 
-    const extension = this.safeExtension(file.originalname, file.mimetype);
+    const extension = this.safeExtension(
+      file.originalname,
+      normalizeMimeType(file.mimetype),
+    );
     const filename = `${randomUUID()}${extension}`;
     const destination = join(this.uploadDir, filename);
 

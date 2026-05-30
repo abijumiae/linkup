@@ -34,9 +34,18 @@ const AUDIO_TYPES = new Set([
 
 const MAX_AUDIO_BYTES = 10 * 1024 * 1024;
 
+/** Strip codec parameters (e.g. audio/webm;codecs=opus → audio/webm). */
+export function normalizeMimeType(mimetype: string): string {
+  return mimetype.split(";")[0]?.trim().toLowerCase() ?? mimetype;
+}
+
+function isAllowedMime(mimetype: string, allowed: Set<string>): boolean {
+  return allowed.has(normalizeMimeType(mimetype));
+}
+
 export function validateMediaFile(file: File): string | null {
-  const isImage = IMAGE_TYPES.has(file.type);
-  const isVideo = VIDEO_TYPES.has(file.type);
+  const isImage = isAllowedMime(file.type, IMAGE_TYPES);
+  const isVideo = isAllowedMime(file.type, VIDEO_TYPES);
 
   if (!isImage && !isVideo) {
     return "Use JPEG, PNG, WebP, MP4, WebM, or MOV files.";
@@ -54,9 +63,9 @@ export function validateMediaFile(file: File): string | null {
 }
 
 export function validateUploadFile(file: File): string | null {
-  const isImage = IMAGE_TYPES.has(file.type);
-  const isVideo = VIDEO_TYPES.has(file.type);
-  const isAudio = AUDIO_TYPES.has(file.type);
+  const isImage = isAllowedMime(file.type, IMAGE_TYPES);
+  const isVideo = isAllowedMime(file.type, VIDEO_TYPES);
+  const isAudio = isAllowedMime(file.type, AUDIO_TYPES);
 
   if (!isImage && !isVideo && !isAudio) {
     return "Unsupported file type.";

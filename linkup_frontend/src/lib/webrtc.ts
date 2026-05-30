@@ -89,6 +89,8 @@ export class CallSession {
       this.options.socket.on("call_answer", this.handleAnswer);
       this.options.socket.on("ice_candidate", this.handleIceCandidate);
       this.options.socket.on("call_end", this.handleRemoteEnd);
+      this.options.socket.on("call_rejected", this.handleRemoteReject);
+      this.options.socket.on("call_ended", this.handleRemoteEnd);
 
       if (this.options.isInitiator) {
         const offer = await this.peerConnection.createOffer({
@@ -109,7 +111,7 @@ export class CallSession {
       }
     } catch {
       this.options.onError(
-        "Could not access your camera or microphone. Check permissions and try again.",
+        "Camera or microphone permission is required.",
       );
       this.end(false);
     }
@@ -219,6 +221,26 @@ export class CallSession {
     this.end(false);
   };
 
+  private handleRemoteReject = (payload: { fromUserId: string }) => {
+    if (payload.fromUserId !== this.options.peerId) {
+      return;
+    }
+    this.options.onError("Call declined.");
+    this.end(false);
+  };
+
+  reject() {
+    if (this.ended) {
+      return;
+    }
+
+    this.options.socket.emit("call_reject", {
+      peerId: this.options.peerId,
+      targetUserId: this.options.peerId,
+    });
+    this.end(false);
+  }
+
   toggleAudio(): boolean {
     this.audioEnabled = !this.audioEnabled;
     this.localStream?.getAudioTracks().forEach((track) => {
@@ -257,6 +279,8 @@ export class CallSession {
     this.options.socket.off("call_answer", this.handleAnswer);
     this.options.socket.off("ice_candidate", this.handleIceCandidate);
     this.options.socket.off("call_end", this.handleRemoteEnd);
+    this.options.socket.off("call_rejected", this.handleRemoteReject);
+    this.options.socket.off("call_ended", this.handleRemoteEnd);
 
     this.localStream?.getTracks().forEach((track) => track.stop());
     this.peerConnection?.close();

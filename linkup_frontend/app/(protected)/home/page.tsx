@@ -308,9 +308,31 @@ export default function HomeDashboardPage() {
 
     socket.on("moment_created", onMomentCreated);
 
+    const onMomentDeleted = (payload: { momentId?: string; userId?: string }) => {
+      if (!payload?.momentId) {
+        return;
+      }
+
+      setMomentGroups((current) => {
+        const next = current
+          .map((group) => ({
+            ...group,
+            moments: group.moments.filter(
+              (moment) => moment.id !== payload.momentId,
+            ),
+          }))
+          .filter((group) => group.moments.length > 0);
+
+        return next;
+      });
+    };
+
+    socket.on("moment_deleted", onMomentDeleted);
+
     return () => {
       socket.off("spark_created", onSparkCreated);
       socket.off("moment_created", onMomentCreated);
+      socket.off("moment_deleted", onMomentDeleted);
     };
   }, [socket, currentUserId]);
 
