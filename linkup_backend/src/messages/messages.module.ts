@@ -6,7 +6,7 @@ import { MessagesController } from './messages.controller';
 import { MessagesService } from './messages.service';
 
 @Module({
-  imports: [NotificationsModule, forwardRef(() => ChatModule)],
+  imports: [forwardRef(() => NotificationsModule), forwardRef(() => ChatModule)],
   controllers: [MessagesController, ChatsController],
   providers: [MessagesService],
   exports: [MessagesService],

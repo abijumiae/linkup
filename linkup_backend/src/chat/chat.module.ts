@@ -8,7 +8,7 @@ import { WsAuthService } from './ws-auth.service';
 
 @Module({
   imports: [
-    UsersModule,
+    forwardRef(() => UsersModule),
     forwardRef(() => MessagesModule),
     JwtModule.register({
       secret: process.env.JWT_SECRET,
