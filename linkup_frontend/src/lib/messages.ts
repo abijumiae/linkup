@@ -114,7 +114,6 @@ export async function sendMessage(
       },
       body: JSON.stringify({
         content: content.trim(),
-        type: "text",
         ...(options?.marketplaceItemId
           ? { marketplaceItemId: options.marketplaceItemId }
           : {}),
@@ -134,7 +133,10 @@ export async function sendVoiceMessage(
   return withAuth(() =>
     apiRequest<ChatMessage>(`/messages/${userId}`, {
       method: "POST",
-      headers: authHeaders(),
+      headers: {
+        ...authHeaders(),
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
         type: "voice",
         content: payload.content ?? "",

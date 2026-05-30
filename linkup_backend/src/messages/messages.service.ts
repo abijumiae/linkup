@@ -194,6 +194,10 @@ export class MessagesService {
         if (!dto.duration || dto.duration < 1) {
           throw new BadRequestException('Voice note duration is required');
         }
+      } else if (messageType === 'image' || messageType === 'video') {
+        if (!dto.mediaUrl) {
+          throw new BadRequestException('Media URL is required');
+        }
       } else if (!dto.content?.trim()) {
         throw new BadRequestException('Message content is required');
       }
@@ -202,9 +206,9 @@ export class MessagesService {
         data: {
           type: messageType,
           content: dto.content?.trim() ?? '',
-          mediaUrl: dto.mediaUrl,
-          mediaType: dto.mediaType,
-          duration: dto.duration,
+          mediaUrl: dto.mediaUrl ?? null,
+          mediaType: dto.mediaType ?? null,
+          duration: dto.duration ?? null,
           senderId,
           receiverId,
         },

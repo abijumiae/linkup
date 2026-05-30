@@ -1,14 +1,14 @@
+import { Transform, Type } from 'class-transformer';
 import {
   IsIn,
   IsInt,
-  IsNotEmpty,
   IsOptional,
   IsString,
   IsUrl,
   Min,
+  MinLength,
   ValidateIf,
 } from 'class-validator';
-import { Transform } from 'class-transformer';
 
 export class CreateMessageDto {
   @Transform(({ obj, value }: { obj: Record<string, unknown>; value?: string }) => {
@@ -20,7 +20,7 @@ export class CreateMessageDto {
   })
   @ValidateIf((dto: CreateMessageDto) => (dto.type ?? 'text') !== 'voice')
   @IsString()
-  @IsNotEmpty()
+  @MinLength(1)
   content?: string;
 
   @IsOptional()
@@ -32,18 +32,23 @@ export class CreateMessageDto {
   text?: string;
 
   @IsOptional()
-  @IsIn(['text', 'voice'])
-  type?: 'text' | 'voice';
+  @IsString()
+  @IsIn(['text', 'voice', 'image', 'video'])
+  type?: 'text' | 'voice' | 'image' | 'video';
 
-  @ValidateIf((dto: CreateMessageDto) => dto.type === 'voice')
+  @ValidateIf(
+    (dto: CreateMessageDto) =>
+      dto.type === 'voice' || dto.type === 'image' || dto.type === 'video',
+  )
   @IsUrl()
   mediaUrl?: string;
 
   @IsOptional()
-  @IsIn(['audio'])
-  mediaType?: 'audio';
+  @IsString()
+  mediaType?: string;
 
   @ValidateIf((dto: CreateMessageDto) => dto.type === 'voice')
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   duration?: number;
