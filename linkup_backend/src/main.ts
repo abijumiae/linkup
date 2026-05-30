@@ -4,6 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import compression from 'compression';
+import express from 'express';
 import { join } from 'path';
 import { AppModule } from './app.module';
 
@@ -13,6 +14,7 @@ async function bootstrap() {
 
   app.use(compression());
 
+  app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads/',
   });

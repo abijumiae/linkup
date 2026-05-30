@@ -12,6 +12,7 @@ import { ChatGateway } from '../chat/chat.gateway';
 import { RealtimeEmitter } from '../chat/realtime.emitter';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { UploadsService } from '../uploads/uploads.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 
 const userSelect = {
@@ -42,6 +43,7 @@ export class MessagesService {
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
     private readonly realtimeEmitter: RealtimeEmitter,
+    private readonly uploadsService: UploadsService,
     @Inject(forwardRef(() => ChatGateway))
     private readonly chatGateway: ChatGateway,
   ) {}
@@ -86,6 +88,14 @@ export class MessagesService {
       ...message,
       audioUrl: isAudio ? message.mediaUrl : null,
     };
+  }
+
+  async uploadAudio(file: Express.Multer.File, _userId: string) {
+    if (!file || file.size < 1) {
+      throw new BadRequestException('No audio file uploaded');
+    }
+
+    return this.uploadsService.uploadFile(file);
   }
 
   async getConversations(userId: string) {
