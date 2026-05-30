@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   buildChatAlertPayload,
   buildRealtimeAlertPayload,
+  mapNotificationTypeToAlertCategory,
 } from './alert.util';
 
 const actorSelect = {
@@ -252,11 +253,44 @@ export class NotificationsService {
     const page = buildPaginatedResult(notifications, pagination);
 
     return {
-      notifications: page.items,
+      notifications: page.items.map((notification) =>
+        this.serializeListNotification(notification),
+      ),
       unreadCount,
       page: page.page,
       limit: page.limit,
       hasMore: page.hasMore,
+    };
+  }
+
+  private serializeListNotification(
+    notification: Prisma.NotificationGetPayload<{
+      include: typeof notificationInclude;
+    }>,
+  ) {
+    const targetId =
+      notification.postId ??
+      notification.groupId ??
+      notification.marketplaceItemId ??
+      notification.jobId ??
+      notification.eventId ??
+      null;
+
+    return {
+      id: notification.id,
+      type: notification.type,
+      message: notification.message,
+      actor: notification.actor,
+      targetId,
+      postId: notification.postId,
+      groupId: notification.groupId,
+      marketplaceItemId: notification.marketplaceItemId,
+      jobId: notification.jobId,
+      eventId: notification.eventId,
+      read: notification.read,
+      isRead: notification.read,
+      createdAt: notification.createdAt.toISOString(),
+      alertCategory: mapNotificationTypeToAlertCategory(notification.type),
     };
   }
 
@@ -273,7 +307,7 @@ export class NotificationsService {
       where: { id: notificationId },
       data: { read: true },
       include: notificationInclude,
-    });
+    }).then((notification) => this.serializeListNotification(notification));
   }
 
   async markAllAsRead(recipientId: string) {

@@ -12,6 +12,7 @@ import {
   Tag,
   Trash2,
   User,
+  Link2,
 } from "lucide-react";
 import { useAuth } from "@/src/lib/AuthProvider";
 import { ApiError } from "@/src/lib/api";
@@ -22,7 +23,7 @@ import {
   LANGUAGES,
 } from "@/src/lib/profileOptions";
 import {
-  fetchUserProfile,
+  fetchUserProfileSafe,
   ProfileUser,
   updateUserProfile,
   UpdateProfilePayload,
@@ -35,6 +36,7 @@ import {
   type BrowserAlertStatus,
 } from "@/src/lib/browserNotifications";
 import SettingsSection from "../../components/SettingsSection";
+import SettingsPageSkeleton from "../../components/settings/SettingsSkeleton";
 import { ThemeToggle } from "../../components/ThemeToggle";
 
 type Visibility = "PUBLIC" | "PRIVATE";
@@ -43,16 +45,19 @@ const LOCAL_PREFS_KEY = "linkup_settings_ui_prefs_v1";
 
 type LocalUiPrefs = {
   profession: string;
+  whatImBuilding: string;
   interests: string;
   openToConnect: string;
   visibility: Visibility;
   allowMessages: MessagePolicy;
   showCountry: boolean;
+  showOnlineStatus: boolean;
   showLocalPulse: boolean;
   notifyMessages: boolean;
   notifyLikesComments: boolean;
   notifyFollows: boolean;
-  notifyUpdates: boolean;
+  notifyHubs: boolean;
+  notifyWorkHappening: boolean;
   browserAlertsEnabled: boolean;
 };
 
@@ -107,6 +112,7 @@ export default function SettingsPage() {
   const [profileUser, setProfileUser] = useState<ProfileUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [warning, setWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -119,16 +125,19 @@ export default function SettingsPage() {
 
   // UI-only preferences (no backend wiring requested / unknown support)
   const [profession, setProfession] = useState("");
+  const [whatImBuilding, setWhatImBuilding] = useState("");
   const [interests, setInterests] = useState("");
   const [openToConnect, setOpenToConnect] = useState("");
   const [visibility, setVisibility] = useState<Visibility>("PUBLIC");
   const [allowMessages, setAllowMessages] = useState<MessagePolicy>("EVERYONE");
   const [showCountry, setShowCountry] = useState(true);
+  const [showOnlineStatus, setShowOnlineStatus] = useState(true);
   const [showLocalPulse, setShowLocalPulse] = useState(true);
   const [notifyMessages, setNotifyMessages] = useState(true);
   const [notifyLikesComments, setNotifyLikesComments] = useState(true);
   const [notifyFollows, setNotifyFollows] = useState(true);
-  const [notifyUpdates, setNotifyUpdates] = useState(false);
+  const [notifyHubs, setNotifyHubs] = useState(true);
+  const [notifyWorkHappening, setNotifyWorkHappening] = useState(true);
   const [browserAlertsEnabled, setBrowserAlertsEnabledState] = useState(false);
   const [browserAlertStatus, setBrowserAlertStatus] =
     useState<BrowserAlertStatus>("default");
@@ -147,9 +156,10 @@ export default function SettingsPage() {
     setSuccess(null);
 
     try {
-      const user = await fetchUserProfile();
+      const { user, warning: profileWarning } = await fetchUserProfileSafe();
       setProfileUser(user);
       setUser(user);
+      setWarning(profileWarning);
 
       setName(user.name ?? "");
       setUsername(user.username ?? "");
@@ -161,7 +171,7 @@ export default function SettingsPage() {
         handleAuthFailure();
         return;
       }
-      setError("Unable to load settings. Please try again.");
+      setWarning("Settings are warming up. Try again shortly.");
     } finally {
       setIsLoading(false);
     }
@@ -186,6 +196,9 @@ export default function SettingsPage() {
 
       const parsed = JSON.parse(stored) as Partial<LocalUiPrefs>;
       if (typeof parsed.profession === "string") setProfession(parsed.profession);
+      if (typeof parsed.whatImBuilding === "string") {
+        setWhatImBuilding(parsed.whatImBuilding);
+      }
       if (typeof parsed.interests === "string") setInterests(parsed.interests);
       if (typeof parsed.openToConnect === "string") {
         setOpenToConnect(parsed.openToConnect);
@@ -201,6 +214,9 @@ export default function SettingsPage() {
         setAllowMessages(parsed.allowMessages);
       }
       if (typeof parsed.showCountry === "boolean") setShowCountry(parsed.showCountry);
+      if (typeof parsed.showOnlineStatus === "boolean") {
+        setShowOnlineStatus(parsed.showOnlineStatus);
+      }
       if (typeof parsed.showLocalPulse === "boolean") {
         setShowLocalPulse(parsed.showLocalPulse);
       }
@@ -209,7 +225,15 @@ export default function SettingsPage() {
         setNotifyLikesComments(parsed.notifyLikesComments);
       }
       if (typeof parsed.notifyFollows === "boolean") setNotifyFollows(parsed.notifyFollows);
-      if (typeof parsed.notifyUpdates === "boolean") setNotifyUpdates(parsed.notifyUpdates);
+      if (typeof parsed.notifyHubs === "boolean") setNotifyHubs(parsed.notifyHubs);
+      if (typeof parsed.notifyWorkHappening === "boolean") {
+        setNotifyWorkHappening(parsed.notifyWorkHappening);
+      } else {
+        const legacy = parsed as Partial<LocalUiPrefs & { notifyUpdates?: boolean }>;
+        if (typeof legacy.notifyUpdates === "boolean") {
+          setNotifyWorkHappening(legacy.notifyUpdates);
+        }
+      }
       if (typeof parsed.browserAlertsEnabled === "boolean") {
         setBrowserAlertsEnabledState(parsed.browserAlertsEnabled);
       }
@@ -244,25 +268,28 @@ export default function SettingsPage() {
 
     try {
       await updateUserProfile(payload);
-      const updated = await fetchUserProfile();
+      const { user: updated } = await fetchUserProfileSafe();
       setProfileUser(updated);
       setUser(updated);
       const localPrefs: LocalUiPrefs = {
         profession,
+        whatImBuilding,
         interests,
         openToConnect,
         visibility,
         allowMessages,
         showCountry,
+        showOnlineStatus,
         showLocalPulse,
         notifyMessages,
         notifyLikesComments,
         notifyFollows,
-        notifyUpdates,
+        notifyHubs,
+        notifyWorkHappening,
         browserAlertsEnabled,
       };
       localStorage.setItem(LOCAL_PREFS_KEY, JSON.stringify(localPrefs));
-      setSuccess("Settings saved successfully.");
+      setSuccess("Settings saved");
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         handleAuthFailure();
@@ -322,36 +349,18 @@ export default function SettingsPage() {
     setBrowserAlertMessage("Browser alerts turned off.");
   }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-[60vh] bg-slate-50 px-4 py-10 text-slate-900 dark:bg-brand-dark dark:text-slate-100">
-        <div className="mx-auto max-w-6xl">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg dark:border-white/10 dark:bg-brand-dark/80">
-            Loading settings...
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!uiPrefsReady) {
-    return (
-      <div className="min-h-[60vh] bg-slate-50 px-4 py-10 text-slate-900 dark:bg-brand-dark dark:text-slate-100">
-        <div className="mx-auto max-w-6xl">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg dark:border-white/10 dark:bg-brand-dark/80">
-            Loading settings...
-          </div>
-        </div>
-      </div>
-    );
+  if (isLoading || !uiPrefsReady) {
+    return <SettingsPageSkeleton />;
   }
 
   if (!profileUser) {
     return (
-      <div className="min-h-[60vh] bg-slate-50 px-4 py-10 text-slate-900 dark:bg-brand-dark dark:text-slate-100">
-        <div className="mx-auto max-w-6xl">
-          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-700 dark:text-rose-200">
-            {error ?? "Settings unavailable."}
+      <div className="linkup-page">
+        <div className="linkup-container">
+          <div className="linkup-panel p-8 text-center">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              {warning ?? error ?? "Settings unavailable."}
+            </p>
           </div>
         </div>
       </div>
@@ -373,17 +382,23 @@ export default function SettingsPage() {
           <p className="linkup-eyebrow">LinkUp</p>
           <h1 className="linkup-title mt-3">Settings</h1>
           <p className="linkup-subtitle">
-            Tune your account, LinkUp Card, privacy, alerts, and appearance — all in one place.
+            Manage your account, privacy, appearance, alerts, and LinkUp
+            preferences.
           </p>
         </header>
 
+        {warning ? (
+          <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+            {warning}
+          </div>
+        ) : null}
         {success ? (
           <div className="mb-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-200">
             {success}
           </div>
         ) : null}
         {error ? (
-          <div className="mb-6 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-200">
+          <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
             {error}
           </div>
         ) : null}
@@ -444,7 +459,12 @@ export default function SettingsPage() {
                 </p>
               </div>
             </div>
+          </SettingsSection>
 
+          <SettingsSection
+            title="Language & Region"
+            description="Set your country and preferred language across LinkUp."
+          >
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block space-y-2">
                 <span className={labelClass}>Country</span>
@@ -507,7 +527,7 @@ export default function SettingsPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block space-y-2">
-                <span className={labelClass}>Profession / title</span>
+                <span className={labelClass}>What I do</span>
                 <div className={inputShell}>
                   <User className="h-4 w-4 shrink-0 text-slate-500" />
                   <input
@@ -521,31 +541,45 @@ export default function SettingsPage() {
               </label>
 
               <label className="block space-y-2">
-                <span className={labelClass}>Interests / tags</span>
+                <span className={labelClass}>What I&apos;m building</span>
                 <div className={inputShell}>
                   <Tag className="h-4 w-4 shrink-0 text-slate-500" />
                   <input
                     className={inputClass}
-                    value={interests}
-                    onChange={(e) => setInterests(e.target.value)}
-                    placeholder="design, startups, ai"
+                    value={whatImBuilding}
+                    onChange={(e) => setWhatImBuilding(e.target.value)}
+                    placeholder="e.g. A creator marketplace for MENA"
                     disabled={isSaving}
                   />
                 </div>
-                {interestsList.length ? (
-                  <div className="flex flex-wrap gap-2">
-                    {interestsList.map((t) => (
-                      <span
-                        key={t}
-                        className="rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-medium text-brand-primary dark:text-brand-secondary"
-                      >
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
               </label>
             </div>
+
+            <label className="block space-y-2">
+              <span className={labelClass}>Interests / tags</span>
+              <div className={inputShell}>
+                <Tag className="h-4 w-4 shrink-0 text-slate-500" />
+                <input
+                  className={inputClass}
+                  value={interests}
+                  onChange={(e) => setInterests(e.target.value)}
+                  placeholder="design, startups, ai"
+                  disabled={isSaving}
+                />
+              </div>
+              {interestsList.length ? (
+                <div className="flex flex-wrap gap-2">
+                  {interestsList.map((t) => (
+                    <span
+                      key={t}
+                      className="rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-medium text-brand-primary dark:text-brand-secondary"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </label>
 
             <label className="block space-y-2">
               <span className={labelClass}>Open to connect for</span>
@@ -612,6 +646,13 @@ export default function SettingsPage() {
               disabled={isSaving}
             />
             <ToggleRow
+              label="Show online status"
+              description="Let connections see when you're active on LinkUp."
+              checked={showOnlineStatus}
+              onChange={setShowOnlineStatus}
+              disabled={isSaving}
+            />
+            <ToggleRow
               label="Local Pulse"
               description="Show what's moving near you on Pulse and Discover using your country."
               checked={showLocalPulse}
@@ -647,10 +688,17 @@ export default function SettingsPage() {
                 disabled={isSaving}
               />
               <ToggleRow
-                label="Work & happening updates"
+                label="Hub alerts"
+                description="When someone joins or engages with your hubs."
+                checked={notifyHubs}
+                onChange={setNotifyHubs}
+                disabled={isSaving}
+              />
+              <ToggleRow
+                label="Work & happening alerts"
                 description="Opportunities from Work and Happenings across your network."
-                checked={notifyUpdates}
-                onChange={setNotifyUpdates}
+                checked={notifyWorkHappening}
+                onChange={setNotifyWorkHappening}
                 disabled={isSaving}
               />
             </div>
@@ -733,6 +781,34 @@ export default function SettingsPage() {
               <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
                 Current language label: {formatLanguageLabel(profileUser.language)}
               </p>
+            </div>
+          </SettingsSection>
+
+          <SettingsSection
+            title="Connected Accounts"
+            description="Link external accounts for faster sign-in and recovery."
+          >
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-brand-dark/70">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Link2 className="h-4 w-4 text-brand-primary dark:text-brand-secondary" />
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                      Google
+                    </p>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                    Connect Google later for faster sign-in and account recovery.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled
+                  className="linkup-btn-secondary min-h-[44px] shrink-0 opacity-60"
+                >
+                  Connect Google
+                </button>
+              </div>
             </div>
           </SettingsSection>
 

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   Bell,
   Briefcase,
@@ -16,6 +17,8 @@ type NotificationItemProps = {
   message: string;
   time: string;
   unread?: boolean;
+  href?: string | null;
+  actionLabel?: string;
   onMarkRead?: () => void;
 };
 
@@ -24,7 +27,7 @@ const iconMap = {
   COMMENT: MessageCircle,
   FOLLOW: UserPlus,
   GROUP_JOIN: Users,
-  MARKETPLACE_INQUIRY: MessageCircle,
+  MARKETPLACE_INQUIRY: ShoppingBag,
   JOB_APPLICATION: Briefcase,
   EVENT_JOIN: CalendarDays,
 };
@@ -34,7 +37,7 @@ const typeLabelMap: Record<NotificationType, string> = {
   COMMENT: "Reply",
   FOLLOW: "Connect",
   GROUP_JOIN: "Hub",
-  MARKETPLACE_INQUIRY: "Chat",
+  MARKETPLACE_INQUIRY: "Market",
   JOB_APPLICATION: "Work",
   EVENT_JOIN: "Happening",
 };
@@ -73,6 +76,8 @@ export default function NotificationItem({
   message,
   time,
   unread = false,
+  href,
+  actionLabel,
   onMarkRead,
 }: NotificationItemProps) {
   const Icon = iconMap[type] ?? Bell;
@@ -80,10 +85,10 @@ export default function NotificationItem({
 
   return (
     <article
-      className={`rounded-xl border p-4 transition duration-200 ${
+      className={`linkup-panel p-4 transition duration-200 ${
         unread
-          ? "border-brand-primary/30 bg-brand-primary/5 shadow-sm dark:bg-brand-primary/10"
-          : "border-slate-200 bg-white dark:border-white/10 dark:bg-brand-dark/70"
+          ? "border-brand-primary/30 bg-brand-primary/5 dark:bg-brand-primary/10"
+          : ""
       }`}
     >
       <div className="flex items-start gap-4">
@@ -126,17 +131,27 @@ export default function NotificationItem({
             {message}
           </p>
           <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{time}</p>
-        </div>
 
-        {unread && onMarkRead ? (
-          <button
-            type="button"
-            onClick={onMarkRead}
-            className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
-          >
-            Mark read
-          </button>
-        ) : null}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {href && actionLabel ? (
+              <Link
+                href={href}
+                className="linkup-btn-secondary inline-flex min-h-[40px] items-center px-4 py-2 text-xs"
+              >
+                {actionLabel}
+              </Link>
+            ) : null}
+            {unread && onMarkRead ? (
+              <button
+                type="button"
+                onClick={onMarkRead}
+                className="inline-flex min-h-[40px] items-center rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
+              >
+                Mark read
+              </button>
+            ) : null}
+          </div>
+        </div>
       </div>
     </article>
   );

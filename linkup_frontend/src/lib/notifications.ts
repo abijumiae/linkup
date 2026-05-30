@@ -30,10 +30,16 @@ export interface Notification {
   id: string;
   type: NotificationType;
   message: string;
-  recipientId: string;
-  actorId: string;
-  postId: string | null;
+  recipientId?: string;
+  actorId?: string;
+  postId?: string | null;
+  groupId?: string | null;
+  marketplaceItemId?: string | null;
+  jobId?: string | null;
+  eventId?: string | null;
+  targetId?: string | null;
   read: boolean;
+  isRead?: boolean;
   createdAt: string;
   actor: NotificationActor;
   alertCategory?: AlertCategory;
@@ -77,6 +83,33 @@ export async function fetchUnreadCount(): Promise<{ unreadCount: number }> {
       headers: authHeaders(),
     }),
   );
+}
+
+export async function fetchNotificationsSafe(
+  page = 1,
+  limit = 20,
+): Promise<{
+  data: NotificationsResponse;
+  warning: string | null;
+}> {
+  try {
+    const data = await fetchNotifications(page, limit);
+    return { data, warning: null };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      throw error;
+    }
+    return {
+      data: {
+        notifications: [],
+        unreadCount: 0,
+        page,
+        limit,
+        hasMore: false,
+      },
+      warning: "Alerts are warming up. Try again shortly.",
+    };
+  }
 }
 
 export async function fetchNotifications(
