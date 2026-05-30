@@ -129,7 +129,18 @@ export const marketplaceListings = [
   },
 ];
 
-export const jobTypes = ["Remote", "On-site", "Hybrid"];
+export const jobTypes = [
+  "Remote",
+  "Full-time",
+  "Part-time",
+  "Freelance",
+  "Internship",
+  "Projects",
+  "Creator",
+  "Local",
+  "Hybrid",
+  "On-site",
+];
 export const jobsList = [
   {
     title: "Senior Product Designer",

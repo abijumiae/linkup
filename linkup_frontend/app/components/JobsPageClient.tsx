@@ -1,17 +1,30 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Briefcase, MapPin, Plus, Search, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Briefcase, FileText, Plus, Search } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
-import { createJob, fetchJobs, Job, JobsFilters } from "@/src/lib/jobs";
-import { jobTypes } from "../data/linkupData";
-import AuthLoadingScreen from "./AuthLoadingScreen";
-import JobCard from "./JobCard";
+import {
+  fetchJobsSafe,
+  fetchMyApplicationsSafe,
+  Job,
+  MyJobApplication,
+} from "@/src/lib/jobs";
+import {
+  matchesWorkCategory,
+  parseJobSkills,
+  sortWorkJobs,
+  WORK_CATEGORY_CHIPS,
+  WORK_SORT_OPTIONS,
+  WorkCategoryChip,
+  WorkSort,
+} from "@/src/lib/workConstants";
 import JobApplyModal from "./JobApplyModal";
-
-const inputClass =
-  "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-brand-primary/60 dark:border-white/10 dark:bg-brand-dark dark:text-white dark:placeholder:text-slate-500 dark:focus:border-brand-primary/50";
+import JobCard from "./JobCard";
+import PostWorkModal from "./work/PostWorkModal";
+import WorkSidebar from "./work/WorkSidebar";
+import { WorkCardSkeleton } from "./work/WorkSkeleton";
 
 function WorkEmptyState({
   title,
@@ -25,9 +38,9 @@ function WorkEmptyState({
   onPost?: () => void;
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center dark:border-white/15 dark:bg-brand-dark/60">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary dark:text-brand-secondary">
-        <Briefcase className="h-5 w-5" />
+    <div className="rounded-3xl border border-dashed border-slate-300/90 bg-gradient-to-br from-white to-slate-50/80 p-10 text-center dark:border-white/15 dark:from-brand-dark/80 dark:to-brand-dark/60">
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-primary/15 to-brand-secondary/15 text-brand-primary dark:text-brand-secondary">
+        <Briefcase className="h-6 w-6" />
       </div>
       <h3 className="mt-4 text-base font-semibold text-slate-900 dark:text-white">
         {title}
@@ -39,7 +52,7 @@ function WorkEmptyState({
         <button
           type="button"
           onClick={onPost}
-          className="mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover"
+          className="linkup-btn-primary mt-5 inline-flex min-h-[44px] items-center gap-2"
         >
           <Plus className="h-4 w-4" />
           Post Work
@@ -49,442 +62,520 @@ function WorkEmptyState({
   );
 }
 
-function JobSkeleton() {
+function WorkSection({
+  title,
+  subtitle,
+  jobs,
+  onApply,
+  applyingJobId,
+  compact,
+}: {
+  title: string;
+  subtitle?: string;
+  jobs: Job[];
+  onApply: (id: string) => void;
+  applyingJobId: string | null;
+  compact?: boolean;
+}) {
+  if (jobs.length === 0) {
+    return null;
+  }
+
   return (
-    <div className="animate-pulse rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-brand-dark/80">
-      <div className="h-4 w-2/3 rounded bg-slate-200 dark:bg-white/10" />
-      <div className="mt-2 h-3 w-1/2 rounded bg-slate-200 dark:bg-white/10" />
-      <div className="mt-4 h-3 w-full rounded bg-slate-200 dark:bg-white/10" />
-      <div className="mt-2 h-3 w-5/6 rounded bg-slate-200 dark:bg-white/10" />
-      <div className="mt-5 h-9 w-full rounded-full bg-slate-200 dark:bg-white/10" />
-    </div>
+    <section className="mb-10">
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+          {title}
+        </h2>
+        {subtitle ? (
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+            {subtitle}
+          </p>
+        ) : null}
+      </div>
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {jobs.map((job) => (
+          <JobCard
+            key={job.id}
+            job={job}
+            compact={compact}
+            isApplying={applyingJobId === job.id}
+            onApply={onApply}
+          />
+        ))}
+      </div>
+    </section>
   );
 }
 
 export default function JobsPageClient() {
   const router = useRouter();
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const [allJobs, setAllJobs] = useState<Job[]>([]);
+  const [myApplications, setMyApplications] = useState<MyJobApplication[]>([]);
   const [listPage, setListPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchInput, setSearchInput] = useState("");
-  const [locationInput, setLocationInput] = useState("");
-  const [activeJobType, setActiveJobType] = useState<string | null>(null);
+  const [locationFilter, setLocationFilter] = useState("");
+  const [workTypeFilter, setWorkTypeFilter] = useState("");
+  const [experienceFilter, setExperienceFilter] = useState("");
+  const [salaryFilter, setSalaryFilter] = useState("");
+  const [activeCategory, setActiveCategory] = useState<WorkCategoryChip | null>(
+    null,
+  );
+  const [activeSort, setActiveSort] = useState<WorkSort>("newest");
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
   const [applyJobId, setApplyJobId] = useState<string | null>(null);
   const [applyingJobId, setApplyingJobId] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    title: "",
-    company: "",
-    description: "",
-    location: "",
-    jobType: jobTypes[0] ?? "Remote",
-    salary: "",
-    requirements: "",
-    contactEmail: "",
-  });
+  const [showApplications, setShowApplications] = useState(false);
 
-  function buildFilters(overrides?: Partial<JobsFilters>): JobsFilters {
-    return {
-      q: searchInput.trim() || undefined,
-      location: locationInput.trim() || undefined,
-      jobType: activeJobType ?? undefined,
-      ...overrides,
-    };
-  }
+  const loadData = useCallback(async (page = 1, append = false) => {
+    const [{ items, hasMore: more, warning: jobsWarning }, appsResult] =
+      await Promise.all([
+        fetchJobsSafe({ page, limit: 24, sort: activeSort }),
+        fetchMyApplicationsSafe(),
+      ]);
 
-  const loadJobs = useCallback(async (filters: JobsFilters, page = 1, append = false) => {
-    try {
-      const data = await fetchJobs({ ...filters, page, limit: 20 });
-      setJobs((current) =>
-        append ? [...current, ...data.items] : data.items,
-      );
-      setListPage(page);
-      setHasMore(data.hasMore);
-      setError(null);
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        router.replace("/login");
-        return;
-      }
-      setError("Unable to load work opportunities. Please try again.");
-    }
-  }, [router]);
+    setAllJobs((current) => (append ? [...current, ...items] : items));
+    setListPage(page);
+    setHasMore(more);
+    setMyApplications(appsResult.applications);
+    setWarning(jobsWarning ?? appsResult.warning);
+  }, [activeSort]);
 
   useEffect(() => {
     async function init() {
       setIsLoading(true);
-      await loadJobs({});
-      setIsLoading(false);
+      try {
+        await loadData();
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          router.replace("/login");
+        }
+      } finally {
+        setIsLoading(false);
+      }
     }
     void init();
-  }, [loadJobs]);
+  }, [loadData, router]);
 
-  const handleSearch = async (event: FormEvent) => {
-    event.preventDefault();
-    setIsLoading(true);
-    await loadJobs(buildFilters());
-    setIsLoading(false);
-  };
+  const filteredJobs = useMemo(() => {
+    let result = [...allJobs];
 
-  const handleJobTypeFilter = async (jobType: string | null) => {
-    setActiveJobType(jobType);
-    setIsLoading(true);
-    await loadJobs(buildFilters({ jobType: jobType ?? undefined }));
-    setIsLoading(false);
-  };
-
-  const handleCreate = async (event: FormEvent) => {
-    event.preventDefault();
-    setCreateError(null);
-    setIsCreating(true);
-
-    try {
-      const created = await createJob({
-        title: form.title.trim(),
-        company: form.company.trim(),
-        description: form.description.trim(),
-        location: form.location.trim(),
-        jobType: form.jobType.trim() || undefined,
-        salary: form.salary.trim() || undefined,
-        requirements: form.requirements.trim() || undefined,
-        contactEmail: form.contactEmail.trim() || undefined,
-      });
-      setJobs((prev) => [
-        created,
-        ...prev.filter((job) => job.id !== created.id),
-      ]);
-      setShowCreateModal(false);
-      setForm({
-        title: "",
-        company: "",
-        description: "",
-        location: "",
-        jobType: jobTypes[0] ?? "Remote",
-        salary: "",
-        requirements: "",
-        contactEmail: "",
-      });
-    } catch (err) {
-      setCreateError(
-        err instanceof ApiError ? err.message : "Unable to post work.",
+    if (searchInput.trim()) {
+      const q = searchInput.trim().toLowerCase();
+      result = result.filter(
+        (job) =>
+          job.title.toLowerCase().includes(q) ||
+          job.company.toLowerCase().includes(q) ||
+          job.description.toLowerCase().includes(q) ||
+          (job.requirements?.toLowerCase().includes(q) ?? false) ||
+          job.poster.name.toLowerCase().includes(q),
       );
-    } finally {
-      setIsCreating(false);
     }
-  };
+
+    if (locationFilter.trim()) {
+      const loc = locationFilter.trim().toLowerCase();
+      result = result.filter((job) =>
+        job.location.toLowerCase().includes(loc),
+      );
+    }
+
+    if (workTypeFilter.trim()) {
+      const type = workTypeFilter.trim().toLowerCase();
+      result = result.filter(
+        (job) => job.jobType?.toLowerCase() === type,
+      );
+    }
+
+    if (salaryFilter.trim()) {
+      const salary = salaryFilter.trim().toLowerCase();
+      result = result.filter((job) =>
+        job.salary?.toLowerCase().includes(salary),
+      );
+    }
+
+    if (experienceFilter.trim()) {
+      const exp = experienceFilter.trim().toLowerCase();
+      result = result.filter((job) =>
+        job.requirements?.toLowerCase().includes(exp),
+      );
+    }
+
+    if (activeCategory && activeCategory !== "All") {
+      result = result.filter((job) => matchesWorkCategory(job, activeCategory));
+    }
+
+    return sortWorkJobs(result, activeSort);
+  }, [
+    allJobs,
+    searchInput,
+    locationFilter,
+    workTypeFilter,
+    experienceFilter,
+    salaryFilter,
+    activeCategory,
+    activeSort,
+  ]);
+
+  const trendingSkills = useMemo(() => {
+    const skills = new Set<string>();
+    for (const job of allJobs) {
+      for (const skill of parseJobSkills(job.requirements)) {
+        skills.add(skill);
+        if (skills.size >= 8) {
+          break;
+        }
+      }
+    }
+    return Array.from(skills);
+  }, [allJobs]);
+
+  const featured = useMemo(
+    () => sortWorkJobs(allJobs, "trending").slice(0, 3),
+    [allJobs],
+  );
+  const fresh = useMemo(
+    () => sortWorkJobs(allJobs, "newest").slice(0, 6),
+    [allJobs],
+  );
+  const remotePicks = useMemo(
+    () =>
+      allJobs
+        .filter((job) => matchesWorkCategory(job, "Remote"))
+        .slice(0, 3),
+    [allJobs],
+  );
+  const projects = useMemo(
+    () =>
+      allJobs
+        .filter(
+          (job) =>
+            job.jobType?.toLowerCase() === "projects" ||
+            job.jobType?.toLowerCase() === "freelance",
+        )
+        .slice(0, 3),
+    [allJobs],
+  );
+
+  const hasSearchQuery =
+    searchInput.trim().length > 0 ||
+    locationFilter.trim().length > 0 ||
+    workTypeFilter.trim().length > 0;
 
   const handleApplied = (jobId: string) => {
-    setJobs((prev) =>
+    setAllJobs((prev) =>
       prev.map((job) =>
         job.id === jobId ? { ...job, hasApplied: true } : job,
       ),
     );
     setApplyJobId(null);
     setApplyingJobId(null);
+    void fetchMyApplicationsSafe().then((result) =>
+      setMyApplications(result.applications),
+    );
   };
-
-  if (isLoading && jobs.length === 0) {
-    return <AuthLoadingScreen message="Loading work..." />;
-  }
 
   return (
     <div className="linkup-page">
       <div className="linkup-container-wide">
-        <header className="mb-8 linkup-panel p-6 sm:p-7">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <header className="linkup-panel mb-6 p-6 sm:p-7">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-primary dark:text-brand-secondary/80">
-                LinkUp Work
-              </p>
-              <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">
-                Work
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-                Find opportunities, projects, and roles from your network.
+              <p className="linkup-eyebrow">LinkUp</p>
+              <h1 className="linkup-title mt-2">Work</h1>
+              <p className="linkup-subtitle mt-2">
+                Find roles, projects, collaborations, and opportunities across
+                your network.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowCreateModal(true)}
-              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover"
-            >
-              <Plus className="h-4 w-4" />
-              Post Work
-            </button>
-          </div>
-
-          <form onSubmit={handleSearch} className="mt-6 space-y-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="relative flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-brand-dark/80">
-                <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  className="w-full bg-transparent pl-10 text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
-                  placeholder="Search work..."
-                />
-              </div>
-              <div className="relative flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-brand-dark/80">
-                <MapPin className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  value={locationInput}
-                  onChange={(e) => setLocationInput(e.target.value)}
-                  className="w-full bg-transparent pl-10 text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
-                  placeholder="Filter by location"
-                />
-              </div>
+            <div className="flex flex-wrap gap-2">
               <button
-                type="submit"
-                disabled={isLoading}
-                className="h-11 rounded-full border border-slate-200 bg-slate-100 px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-200 disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+                type="button"
+                onClick={() => setShowApplications((v) => !v)}
+                className="linkup-btn-secondary inline-flex min-h-[44px] items-center gap-2 px-5"
               >
-                {isLoading ? "Searching…" : "Search"}
+                <FileText className="h-4 w-4" />
+                My Applications
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(true)}
+                className="linkup-btn-primary inline-flex min-h-[44px] items-center gap-2 px-5"
+              >
+                <Plus className="h-4 w-4" />
+                Post Work
               </button>
             </div>
-          </form>
+          </div>
+
+          <div className="mt-6">
+            <div className="relative rounded-2xl border border-slate-200/90 bg-slate-50/80 px-4 py-3 dark:border-white/10 dark:bg-brand-dark/70">
+              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="w-full bg-transparent pl-10 text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100"
+                placeholder="Search roles, projects, skills, companies..."
+              />
+            </div>
+          </div>
+
+          <div className="mt-4 linkup-chip-row">
+            <div className="flex min-w-min gap-2">
+              {WORK_CATEGORY_CHIPS.map((category) => {
+                const isActive =
+                  category === "All"
+                    ? !activeCategory || activeCategory === "All"
+                    : activeCategory === category;
+
+                return (
+                  <button
+                    key={category}
+                    type="button"
+                    onClick={() =>
+                      setActiveCategory(category === "All" ? null : category)
+                    }
+                    className={`shrink-0 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
+                      isActive
+                        ? "bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-md shadow-brand-primary/20"
+                        : "border border-slate-200/90 bg-white text-slate-700 dark:border-white/10 dark:bg-brand-dark/70 dark:text-slate-200"
+                    }`}
+                  >
+                    {category}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <input
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
+              placeholder="Location"
+              className="rounded-xl border border-slate-200/90 bg-white px-3 py-2.5 text-sm dark:border-white/10 dark:bg-brand-dark/70 dark:text-white"
+            />
+            <input
+              value={workTypeFilter}
+              onChange={(e) => setWorkTypeFilter(e.target.value)}
+              placeholder="Work type"
+              className="rounded-xl border border-slate-200/90 bg-white px-3 py-2.5 text-sm dark:border-white/10 dark:bg-brand-dark/70 dark:text-white"
+            />
+            <input
+              value={experienceFilter}
+              onChange={(e) => setExperienceFilter(e.target.value)}
+              placeholder="Experience / skills"
+              className="rounded-xl border border-slate-200/90 bg-white px-3 py-2.5 text-sm dark:border-white/10 dark:bg-brand-dark/70 dark:text-white"
+            />
+            <input
+              value={salaryFilter}
+              onChange={(e) => setSalaryFilter(e.target.value)}
+              placeholder="Salary / budget"
+              className="rounded-xl border border-slate-200/90 bg-white px-3 py-2.5 text-sm dark:border-white/10 dark:bg-brand-dark/70 dark:text-white"
+            />
+          </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => handleJobTypeFilter(null)}
-              className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
-                activeJobType === null
-                  ? "border-brand-primary/50 bg-brand-primary text-white shadow-md shadow-brand-primary/20 dark:bg-brand-primary"
-                  : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
-              }`}
-            >
-              All work types
-            </button>
-            {jobTypes.map((type) => (
+            {WORK_SORT_OPTIONS.map((option) => (
               <button
-                key={type}
+                key={option.value}
                 type="button"
-                onClick={() => handleJobTypeFilter(type)}
-                className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
-                  activeJobType === type
-                    ? "border-brand-primary/50 bg-brand-primary text-white shadow-md shadow-brand-primary/20 dark:bg-brand-primary"
-                    : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                onClick={() => setActiveSort(option.value)}
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                  activeSort === option.value
+                    ? "border-brand-primary/40 bg-brand-primary/10 text-brand-primary dark:text-brand-secondary"
+                    : "border-slate-200 bg-slate-50 text-slate-600 dark:border-white/10 dark:bg-brand-dark/60 dark:text-slate-300"
                 }`}
               >
-                {type}
+                {option.label}
               </button>
             ))}
           </div>
         </header>
 
-        {error ? (
-          <p className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">
-            {error}
+        {warning ? (
+          <p className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+            {warning}
           </p>
         ) : null}
 
-        {isLoading && jobs.length > 0 ? (
-          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <JobSkeleton key={index} />
-            ))}
-          </div>
-        ) : jobs.length === 0 ? (
-          <WorkEmptyState
-            title="No work opportunities yet"
-            description="Post the first opportunity and help people grow."
-            showPostButton
-            onPost={() => setShowCreateModal(true)}
-          />
-        ) : (
-          <>
-            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-              {jobs.map((job) => (
-                <JobCard
-                  key={job.id}
-                  job={job}
-                  isApplying={applyingJobId === job.id}
-                  onApply={(id) => setApplyJobId(id)}
-                />
-              ))}
-            </div>
-            {hasMore ? (
-              <div className="mt-8 text-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLoadingMore(true);
-                    void loadJobs(buildFilters(), listPage + 1, true).finally(
-                      () => setLoadingMore(false),
-                    );
-                  }}
-                  disabled={loadingMore}
-                  className="linkup-btn-secondary min-h-[44px] transition-all duration-200 ease-out disabled:opacity-60"
-                >
-                  {loadingMore ? "Loading..." : "Load more opportunities"}
-                </button>
-              </div>
-            ) : null}
-          </>
-        )}
-      </div>
-
-      {showCreateModal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-brand-dark/80 p-4 backdrop-blur-sm">
-          <div className="my-8 w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-brand-dark">
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
-                  Post Work
+        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="min-w-0">
+            {showApplications ? (
+              <section className="mb-10">
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+                  Your Applications
                 </h2>
                 <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                  Share a role, project, or opportunity with your network.
+                  Track roles and projects you&apos;ve applied to.
                 </p>
+                {myApplications.length === 0 ? (
+                  <div className="mt-6">
+                    <WorkEmptyState
+                      title="Your applications will appear here"
+                      description="Apply to opportunities and track your progress in one place."
+                    />
+                  </div>
+                ) : (
+                  <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                    {myApplications.map((application) => (
+                      <Link
+                        key={application.id}
+                        href={`/jobs/${application.jobId}`}
+                        className="linkup-panel block p-5 transition hover:border-brand-primary/25"
+                      >
+                        <p className="text-xs font-semibold uppercase tracking-wide text-brand-primary dark:text-brand-secondary">
+                          {application.status}
+                        </p>
+                        <h3 className="mt-2 font-semibold text-slate-900 dark:text-white">
+                          {application.job.title}
+                        </h3>
+                        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                          {application.job.company}
+                        </p>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </section>
+            ) : null}
+
+            {isLoading ? (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <WorkCardSkeleton key={index} />
+                ))}
               </div>
-              <button
-                type="button"
-                onClick={() => setShowCreateModal(false)}
-                className="rounded-full p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <label className="block space-y-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  Title
-                </span>
-                <input
-                  required
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  placeholder="Role or project title"
-                  className={inputClass}
-                />
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  Company
-                </span>
-                <input
-                  required
-                  value={form.company}
-                  onChange={(e) =>
-                    setForm({ ...form, company: e.target.value })
-                  }
-                  placeholder="Company name"
-                  className={inputClass}
-                />
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  Description
-                </span>
-                <textarea
-                  required
-                  value={form.description}
-                  onChange={(e) =>
-                    setForm({ ...form, description: e.target.value })
-                  }
-                  rows={4}
-                  placeholder="Role overview and responsibilities"
-                  className={`${inputClass} resize-none`}
-                />
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  Location
-                </span>
-                <input
-                  required
-                  value={form.location}
-                  onChange={(e) =>
-                    setForm({ ...form, location: e.target.value })
-                  }
-                  placeholder="City, country, or Remote"
-                  className={inputClass}
-                />
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  Work type
-                </span>
-                <select
-                  value={form.jobType}
-                  onChange={(e) =>
-                    setForm({ ...form, jobType: e.target.value })
-                  }
-                  className={inputClass}
-                >
-                  {jobTypes.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  Salary (optional)
-                </span>
-                <input
-                  value={form.salary}
-                  onChange={(e) => setForm({ ...form, salary: e.target.value })}
-                  placeholder="e.g. $80k – $100k"
-                  className={inputClass}
-                />
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  Requirements (optional)
-                </span>
-                <textarea
-                  value={form.requirements}
-                  onChange={(e) =>
-                    setForm({ ...form, requirements: e.target.value })
-                  }
-                  rows={3}
-                  placeholder="Skills and qualifications"
-                  className={`${inputClass} resize-none`}
-                />
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  Contact email (optional)
-                </span>
-                <input
-                  type="email"
-                  value={form.contactEmail}
-                  onChange={(e) =>
-                    setForm({ ...form, contactEmail: e.target.value })
-                  }
-                  placeholder="hiring@company.com"
-                  className={inputClass}
-                />
-              </label>
-              {createError ? (
-                <p className="text-sm text-red-600 dark:text-red-300">
-                  {createError}
-                </p>
-              ) : null}
-              <button
-                type="submit"
-                disabled={isCreating}
-                className="w-full rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary py-3 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover disabled:opacity-50"
-              >
-                {isCreating ? "Posting…" : "Post Work"}
-              </button>
-            </form>
+            ) : filteredJobs.length === 0 ? (
+              <WorkEmptyState
+                title={
+                  hasSearchQuery
+                    ? "No matching opportunities found"
+                    : "No opportunities yet"
+                }
+                description={
+                  hasSearchQuery
+                    ? "Try different keywords or filters."
+                    : "Work drops will appear here as your network grows."
+                }
+                showPostButton={!hasSearchQuery}
+                onPost={() => setShowCreateModal(true)}
+              />
+            ) : (
+              <>
+                {!hasSearchQuery && !activeCategory ? (
+                  <>
+                    <WorkSection
+                      title="Featured Opportunities"
+                      subtitle="High-interest roles and projects from your network"
+                      jobs={featured}
+                      onApply={setApplyJobId}
+                      applyingJobId={applyingJobId}
+                      compact
+                    />
+                    <WorkSection
+                      title="Fresh Work Drops"
+                      subtitle="Newest opportunities just posted"
+                      jobs={fresh}
+                      onApply={setApplyJobId}
+                      applyingJobId={applyingJobId}
+                    />
+                    <WorkSection
+                      title="Remote Picks"
+                      jobs={remotePicks}
+                      onApply={setApplyJobId}
+                      applyingJobId={applyingJobId}
+                      compact
+                    />
+                    <WorkSection
+                      title="Projects & Collaborations"
+                      jobs={projects}
+                      onApply={setApplyJobId}
+                      applyingJobId={applyingJobId}
+                      compact
+                    />
+                  </>
+                ) : (
+                  <section>
+                    <h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-white">
+                      Results
+                    </h2>
+                    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                      {filteredJobs.map((job) => (
+                        <JobCard
+                          key={job.id}
+                          job={job}
+                          isApplying={applyingJobId === job.id}
+                          onApply={setApplyJobId}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {hasMore && !hasSearchQuery && !activeCategory ? (
+                  <div className="mt-8 text-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLoadingMore(true);
+                        void loadData(listPage + 1, true).finally(() =>
+                          setLoadingMore(false),
+                        );
+                      }}
+                      disabled={loadingMore}
+                      className="linkup-btn-secondary min-h-[44px] disabled:opacity-60"
+                    >
+                      {loadingMore ? "Loading…" : "Load more opportunities"}
+                    </button>
+                  </div>
+                ) : null}
+              </>
+            )}
+          </div>
+
+          <div className="hidden xl:block">
+            <WorkSidebar
+              trendingSkills={trendingSkills}
+              activeCategory={activeCategory}
+              onCategorySelect={(category) =>
+                setActiveCategory(category as WorkCategoryChip | null)
+              }
+            />
           </div>
         </div>
-      ) : null}
+
+        <div className="mt-8 xl:hidden">
+          <WorkSidebar
+            trendingSkills={trendingSkills}
+            activeCategory={activeCategory}
+            onCategorySelect={(category) =>
+              setActiveCategory(category as WorkCategoryChip | null)
+            }
+          />
+        </div>
+      </div>
+
+      <PostWorkModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreated={(created) => {
+          setAllJobs((prev) => [
+            created,
+            ...prev.filter((job) => job.id !== created.id),
+          ]);
+        }}
+      />
 
       {applyJobId ? (
         <JobApplyModal
           jobId={applyJobId}
           onClose={() => setApplyJobId(null)}
           onApplied={handleApplied}
-          onApplyingChange={(id) => setApplyingJobId(id)}
+          onApplyingChange={setApplyingJobId}
         />
       ) : null}
     </div>

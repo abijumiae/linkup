@@ -92,6 +92,7 @@ export interface JobsFilters {
   q?: string;
   location?: string;
   jobType?: string;
+  sort?: "newest" | "trending" | "best_match";
   page?: number;
   limit?: number;
 }
@@ -119,6 +120,46 @@ async function withAuth<T>(request: () => Promise<T>): Promise<T> {
   }
 }
 
+export async function fetchJobsSafe(
+  filters: JobsFilters = {},
+): Promise<{
+  items: Job[];
+  hasMore: boolean;
+  warning: string | null;
+}> {
+  try {
+    const data = await fetchJobs(filters);
+    return { items: data.items, hasMore: data.hasMore, warning: null };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      throw error;
+    }
+    return {
+      items: [],
+      hasMore: false,
+      warning: "Work drops are warming up. Try again shortly.",
+    };
+  }
+}
+
+export async function fetchMyApplicationsSafe(): Promise<{
+  applications: MyJobApplication[];
+  warning: string | null;
+}> {
+  try {
+    const applications = await fetchMyApplications();
+    return { applications, warning: null };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      throw error;
+    }
+    return {
+      applications: [],
+      warning: "Your applications are warming up.",
+    };
+  }
+}
+
 export async function fetchJobs(
   filters: JobsFilters = {},
 ): Promise<PaginatedResponse<Job>> {
@@ -126,6 +167,7 @@ export async function fetchJobs(
   if (filters.q?.trim()) params.set("q", filters.q.trim());
   if (filters.location?.trim()) params.set("location", filters.location.trim());
   if (filters.jobType?.trim()) params.set("jobType", filters.jobType.trim());
+  if (filters.sort) params.set("sort", filters.sort);
   if (filters.page) params.set("page", String(filters.page));
   if (filters.limit) params.set("limit", String(filters.limit));
 

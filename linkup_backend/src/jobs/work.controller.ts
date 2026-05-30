@@ -17,9 +17,9 @@ import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
 import { JobsService } from './jobs.service';
 
-@Controller('jobs')
+@Controller('work')
 @UseGuards(JwtAuthGuard)
-export class JobsController {
+export class WorkController {
   constructor(private readonly jobsService: JobsService) {}
 
   @Post()

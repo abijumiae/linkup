@@ -52,6 +52,7 @@ export type JobsQuery = {
   q?: string;
   location?: string;
   jobType?: string;
+  sort?: string;
   page?: string;
   limit?: string;
 };
@@ -107,9 +108,11 @@ export class JobsService {
       ];
     }
 
+    const orderBy = this.resolveSortOrder(query.sort);
+
     const jobs = await this.prisma.job.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy,
       skip: pagination.skip,
       take: pagination.limit + 1,
       include: jobInclude,
@@ -260,6 +263,19 @@ export class JobsService {
         },
       },
     });
+  }
+
+  private resolveSortOrder(
+    sort?: string,
+  ): Prisma.JobOrderByWithRelationInput {
+    switch (sort) {
+      case 'trending':
+        return { applications: { _count: 'desc' } };
+      case 'best_match':
+      case 'newest':
+      default:
+        return { createdAt: 'desc' };
+    }
   }
 
   private async getOwnedJob(id: string, userId: string) {
