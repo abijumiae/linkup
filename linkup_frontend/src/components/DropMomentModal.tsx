@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ImagePlus, Loader2, Sparkles, X } from "lucide-react";
 import { createMoment } from "@/src/lib/moments";
+import { ApiError } from "@/src/lib/api";
 import { uploadFile, validateMediaFile } from "@/src/lib/uploads";
 
 export const MOMENT_BACKGROUNDS = [
@@ -144,11 +145,15 @@ export default function DropMomentModal({
         onClose();
       }, 700);
     } catch (submitError) {
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Could not drop moment. Try again.",
-      );
+      if (submitError instanceof ApiError && submitError.status === 404) {
+        setError("Moments are warming up. Restart the backend and try again.");
+      } else {
+        setError(
+          submitError instanceof Error
+            ? submitError.message
+            : "Could not drop moment. Try again.",
+        );
+      }
     } finally {
       setIsSubmitting(false);
     }

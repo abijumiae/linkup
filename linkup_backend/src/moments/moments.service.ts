@@ -62,9 +62,7 @@ export class MomentsService {
     const hasMedia = Boolean(dto.mediaUrl?.trim());
 
     if (!hasContent && !hasMedia) {
-      throw new BadRequestException(
-        'Add text, an image, or a video to drop a moment.',
-      );
+      throw new BadRequestException('Moment content or media is required');
     }
 
     const now = new Date();

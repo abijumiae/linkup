@@ -38,7 +38,7 @@ import MomentsStrip from "@/src/components/MomentsStrip";
 import DropMomentModal from "@/src/components/DropMomentModal";
 import MomentViewer from "@/src/components/MomentViewer";
 import {
-  fetchMomentsFeed,
+  fetchMomentsFeedSafe,
   Moment,
   MomentGroup,
 } from "@/src/lib/moments";
@@ -184,14 +184,21 @@ export default function HomeDashboardPage() {
   const [showLocalPulse, setShowLocalPulse] = useState(true);
   const [momentGroups, setMomentGroups] = useState<MomentGroup[]>([]);
   const [momentsLoading, setMomentsLoading] = useState(true);
+  const [momentsWarning, setMomentsWarning] = useState<string | null>(null);
   const [dropMomentOpen, setDropMomentOpen] = useState(false);
   const [viewerGroupIndex, setViewerGroupIndex] = useState<number | null>(null);
 
   const loadMoments = () => {
     setMomentsLoading(true);
-    fetchMomentsFeed()
-      .then((data) => setMomentGroups(data.groups))
-      .catch(() => setMomentGroups([]))
+    fetchMomentsFeedSafe()
+      .then(({ groups, warning }) => {
+        setMomentGroups(groups);
+        setMomentsWarning(warning);
+      })
+      .catch(() => {
+        setMomentGroups([]);
+        setMomentsWarning("Moments are warming up.");
+      })
       .finally(() => setMomentsLoading(false));
   };
 
@@ -529,6 +536,12 @@ export default function HomeDashboardPage() {
             {sparkNotice ? (
               <p className="rounded-3xl border border-brand-primary/25 bg-brand-primary/10 px-4 py-3 text-sm text-brand-primary dark:text-brand-secondary">
                 {sparkNotice}
+              </p>
+            ) : null}
+
+            {momentsWarning ? (
+              <p className="rounded-3xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+                {momentsWarning}
               </p>
             ) : null}
 

@@ -48,6 +48,7 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   await app.listen(port);
   console.log(`LinkUp backend running on port ${port}`);
+  console.log('POST /moments available for authenticated moment drops');
   console.log('POST /uploads available for authenticated media uploads');
   console.log('Socket.io gateway available at /socket.io');
 }

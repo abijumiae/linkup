@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Trash2, X } from "lucide-react";
 import type { Moment, MomentGroup } from "@/src/lib/moments";
 import { deleteMoment } from "@/src/lib/moments";
+import { resolveMediaUrl } from "@/src/lib/messages";
 
 type MomentViewerProps = {
   groups: MomentGroup[];
@@ -137,6 +138,7 @@ export default function MomentViewer({
   const isTextOnly =
     currentMoment.mediaType === "text" ||
     (!currentMoment.mediaUrl && Boolean(currentMoment.content));
+  const mediaSrc = resolveMediaUrl(currentMoment.mediaUrl);
 
   const handleDelete = async () => {
     if (!isOwner || isDeleting) {
@@ -223,19 +225,19 @@ export default function MomentViewer({
 
         <div className="relative mx-auto flex h-[calc(100dvh-7rem)] max-h-[720px] w-full max-w-md flex-col overflow-hidden px-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <div className="relative flex-1 overflow-hidden rounded-3xl bg-slate-900 shadow-2xl ring-1 ring-white/10">
-            {currentMoment.mediaType === "image" && currentMoment.mediaUrl ? (
+            {currentMoment.mediaType === "image" && mediaSrc ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={currentMoment.mediaUrl}
-                alt=""
+                src={mediaSrc}
+                alt={currentMoment.content ?? "Moment image"}
                 className="h-full w-full object-contain sm:object-cover"
               />
             ) : null}
 
-            {currentMoment.mediaType === "video" && currentMoment.mediaUrl ? (
+            {currentMoment.mediaType === "video" && mediaSrc ? (
               <video
                 key={currentMoment.id}
-                src={currentMoment.mediaUrl}
+                src={mediaSrc}
                 className="h-full w-full object-contain sm:object-cover"
                 controls
                 playsInline

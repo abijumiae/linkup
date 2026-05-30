@@ -46,7 +46,22 @@ export async function fetchMomentsFeedSafe(): Promise<{
     if (error instanceof ApiError && error.status === 401) {
       throw error;
     }
-    return { groups: [], warning: null };
+    return { groups: [], warning: "Moments are warming up." };
+  }
+}
+
+export async function fetchMyMomentsSafe(): Promise<{
+  moments: Moment[];
+  warning: string | null;
+}> {
+  try {
+    const moments = await apiRequest<Moment[]>("/moments/me");
+    return { moments: moments ?? [], warning: null };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      throw error;
+    }
+    return { moments: [], warning: "Moments are warming up." };
   }
 }
 
