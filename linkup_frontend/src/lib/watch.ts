@@ -1,4 +1,4 @@
-import { apiRequest } from "./api";
+import { apiRequest, ApiError } from "./api";
 
 export type WatchCreator = {
   id: string;
@@ -31,6 +31,9 @@ export type WatchVideo = {
   watchProgress?: number;
   watchCompleted?: boolean;
   lastWatchedAt?: string;
+  viewsCount?: number;
+  likesCount?: number;
+  commentsCount?: number;
 };
 
 export type CreateWatchVideoInput = {
@@ -143,6 +146,9 @@ export const DEMO_WATCH_VIDEOS: WatchVideo[] = [
       username: "linkupstudios",
       avatarUrl: null,
     },
+    viewsCount: 12400,
+    likesCount: 890,
+    commentsCount: 42,
   },
   {
     id: "demo-elephants",
@@ -167,6 +173,9 @@ export const DEMO_WATCH_VIDEOS: WatchVideo[] = [
       username: "pulsecollective",
       avatarUrl: null,
     },
+    viewsCount: 8200,
+    likesCount: 612,
+    commentsCount: 28,
   },
   {
     id: "demo-forrest",
@@ -191,6 +200,9 @@ export const DEMO_WATCH_VIDEOS: WatchVideo[] = [
       username: "nightshift",
       avatarUrl: null,
     },
+    viewsCount: 5600,
+    likesCount: 401,
+    commentsCount: 19,
   },
   {
     id: "demo-podcast",
@@ -215,6 +227,9 @@ export const DEMO_WATCH_VIDEOS: WatchVideo[] = [
       username: "linkupaudio",
       avatarUrl: null,
     },
+    viewsCount: 3100,
+    likesCount: 256,
+    commentsCount: 11,
   },
 ];
 
@@ -231,6 +246,38 @@ export function mergeWithDemoVideos(videos: WatchVideo[]): WatchVideo[] {
     return videos;
   }
   return DEMO_WATCH_VIDEOS;
+}
+
+export async function fetchWatchVideosSafe(
+  filters: WatchFilters = {},
+): Promise<{ items: WatchVideo[]; warning: string | null }> {
+  try {
+    const items = await fetchWatchVideos(filters);
+    return { items, warning: null };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      throw error;
+    }
+    return {
+      items: [],
+      warning: "Watch is warming up. Try again shortly.",
+    };
+  }
+}
+
+export async function fetchContinueWatchingSafe(): Promise<{
+  items: WatchVideo[];
+  warning: string | null;
+}> {
+  try {
+    const items = await fetchContinueWatching();
+    return { items, warning: null };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      throw error;
+    }
+    return { items: [], warning: null };
+  }
 }
 
 export async function fetchWatchVideos(

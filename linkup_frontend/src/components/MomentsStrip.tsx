@@ -82,7 +82,7 @@ export default function MomentsStrip({
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
             {hasAnyMoments
               ? "Tap a circle to view — live for 24 hours."
-              : "No Moments yet. Drop the first moment."}
+              : "No moments yet. Share your first one."}
           </p>
         </div>
       </div>

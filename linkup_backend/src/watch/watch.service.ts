@@ -40,6 +40,7 @@ export class WatchService {
       } | null;
     },
     progress?: { progress: number; completed: boolean } | null,
+    counts?: { viewsCount?: number },
   ) {
     return {
       id: video.id,
@@ -57,7 +58,26 @@ export class WatchService {
       updatedAt: video.updatedAt.toISOString(),
       creator: video.creator,
       progress: progress ?? null,
+      viewsCount: counts?.viewsCount ?? 0,
+      likesCount: 0,
+      commentsCount: 0,
     };
+  }
+
+  private async getViewCounts(
+    videoIds: string[],
+  ): Promise<Map<string, number>> {
+    if (videoIds.length === 0) {
+      return new Map();
+    }
+
+    const rows = await this.prisma.watchProgress.groupBy({
+      by: ['videoId'],
+      where: { videoId: { in: videoIds }, progress: { gt: 0 } },
+      _count: { userId: true },
+    });
+
+    return new Map(rows.map((row) => [row.videoId, row._count.userId]));
   }
 
   async findAll(filters: {
@@ -98,8 +118,14 @@ export class WatchService {
       orderBy: { createdAt: 'desc' },
     });
 
+    const viewCounts = await this.getViewCounts(videos.map((video) => video.id));
+
     if (!filters.userId) {
-      return videos.map((video) => this.serializeVideo(video));
+      return videos.map((video) =>
+        this.serializeVideo(video, null, {
+          viewsCount: viewCounts.get(video.id) ?? 0,
+        }),
+      );
     }
 
     const progressRows = await this.prisma.watchProgress.findMany({
@@ -117,7 +143,9 @@ export class WatchService {
     );
 
     return videos.map((video) =>
-      this.serializeVideo(video, progressMap.get(video.id)),
+      this.serializeVideo(video, progressMap.get(video.id), {
+        viewsCount: viewCounts.get(video.id) ?? 0,
+      }),
     );
   }
 
@@ -142,7 +170,11 @@ export class WatchService {
       }
     }
 
-    return this.serializeVideo(video, progress);
+    const viewCounts = await this.getViewCounts([id]);
+
+    return this.serializeVideo(video, progress, {
+      viewsCount: viewCounts.get(id) ?? 0,
+    });
   }
 
   async create(userId: string, dto: CreateWatchVideoDto) {

@@ -1,4 +1,4 @@
-import { apiRequest } from "./api";
+import { apiRequest, ApiError } from "./api";
 
 export type MomentUser = {
   id: string;
@@ -34,6 +34,21 @@ export type CreateMomentInput = {
   mediaType?: "image" | "video" | "text";
   background?: string;
 };
+
+export async function fetchMomentsFeedSafe(): Promise<{
+  groups: MomentGroup[];
+  warning: string | null;
+}> {
+  try {
+    const feed = await fetchMomentsFeed();
+    return { groups: feed.groups ?? [], warning: null };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      throw error;
+    }
+    return { groups: [], warning: null };
+  }
+}
 
 export async function fetchMomentsFeed(): Promise<MomentsFeed> {
   return apiRequest<MomentsFeed>("/moments");
