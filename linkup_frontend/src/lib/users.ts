@@ -1,11 +1,13 @@
 import { apiRequest, ApiError } from "./api";
-import { clearAuth, getToken, saveUser, User } from "./auth";
+import { clearAuth, getCurrentUser, getToken, saveUser, User } from "./auth";
 
 export interface ProfileUser extends User {
   bio?: string | null;
   followersCount: number;
   followingCount: number;
   postsCount: number;
+  hubsCount?: number;
+  workCount?: number;
 }
 
 export interface UserPost {
@@ -30,6 +32,7 @@ export interface UpdateProfilePayload {
   avatarUrl?: string;
   coverUrl?: string;
   bio?: string;
+  accountType?: User["accountType"];
 }
 
 function authHeaders(): HeadersInit {
@@ -62,8 +65,55 @@ export async function fetchUserProfile(): Promise<ProfileUser> {
     });
 
     saveUser(data.user);
-    return data.user;
+    return {
+      ...data.user,
+      hubsCount: data.user.hubsCount ?? 0,
+      workCount: data.user.workCount ?? 0,
+    };
   });
+}
+
+export function profileFromCachedUser(user: User): ProfileUser {
+  return {
+    ...user,
+    followersCount: 0,
+    followingCount: 0,
+    postsCount: 0,
+    hubsCount: 0,
+    workCount: 0,
+  };
+}
+
+export async function fetchUserProfileSafe(): Promise<{
+  user: ProfileUser;
+  warning: string | null;
+}> {
+  try {
+    const user = await fetchUserProfile();
+    return { user, warning: null };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      throw error;
+    }
+
+    const cached = getCurrentUser();
+    if (cached) {
+      return {
+        user: profileFromCachedUser(cached),
+        warning: "Profile data is warming up.",
+      };
+    }
+
+    throw error;
+  }
+}
+
+export async function fetchMyPostsSafe(): Promise<UserPost[]> {
+  try {
+    return await fetchMyPosts();
+  } catch {
+    return [];
+  }
 }
 
 export async function fetchMyPosts(): Promise<UserPost[]> {

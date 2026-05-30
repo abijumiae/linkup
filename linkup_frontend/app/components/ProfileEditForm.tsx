@@ -1,11 +1,11 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { FileText, Globe, Save, User, X } from "lucide-react";
+import { FileText, Globe, Link2, Save, User, X } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
-import { User as AuthUser } from "@/src/lib/auth";
+import { AccountType, User as AuthUser } from "@/src/lib/auth";
 import MediaUploader from "@/src/components/MediaUploader";
-import { COUNTRIES, LANGUAGES } from "@/src/lib/profileOptions";
+import { ACCOUNT_TYPES, COUNTRIES, LANGUAGES } from "@/src/lib/profileOptions";
 import { UpdateProfilePayload } from "@/src/lib/users";
 
 type ProfileEditFormProps = {
@@ -13,6 +13,7 @@ type ProfileEditFormProps = {
   isSaving: boolean;
   onCancel: () => void;
   onSubmit: (payload: UpdateProfilePayload) => Promise<void>;
+  variant?: "inline" | "modal";
 };
 
 export default function ProfileEditForm({
@@ -20,12 +21,14 @@ export default function ProfileEditForm({
   isSaving,
   onCancel,
   onSubmit,
+  variant = "inline",
 }: ProfileEditFormProps) {
   const [name, setName] = useState(user.name);
   const [username, setUsername] = useState(user.username);
   const [bio, setBio] = useState(user.bio ?? "");
   const [country, setCountry] = useState(user.country ?? "United Arab Emirates");
   const [language, setLanguage] = useState(user.language ?? "en");
+  const [accountType, setAccountType] = useState<AccountType>(user.accountType);
   const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl ?? "");
   const [coverUrl, setCoverUrl] = useState(user.coverUrl ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +39,7 @@ export default function ProfileEditForm({
     setBio(user.bio ?? "");
     setCountry(user.country ?? "United Arab Emirates");
     setLanguage(user.language ?? "en");
+    setAccountType(user.accountType);
     setAvatarUrl(user.avatarUrl ?? "");
     setCoverUrl(user.coverUrl ?? "");
     setError(null);
@@ -52,6 +56,7 @@ export default function ProfileEditForm({
         bio: bio.trim() || undefined,
         country: country.trim() || undefined,
         language: language.trim() || undefined,
+        accountType,
         avatarUrl: avatarUrl.trim() || undefined,
         coverUrl: coverUrl.trim() || undefined,
       });
@@ -73,30 +78,37 @@ export default function ProfileEditForm({
   const labelClass =
     "text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-300";
 
+  const shellClass =
+    variant === "modal"
+      ? ""
+      : "rounded-2xl border border-slate-200 bg-white p-5 shadow-lg shadow-slate-950/5 dark:border-white/10 dark:bg-brand-dark/80 dark:shadow-slate-950/20 sm:p-6";
+
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg shadow-slate-950/5 dark:border-white/10 dark:bg-brand-dark/80 dark:shadow-slate-950/20 sm:p-6">
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-brand-primary dark:text-brand-secondary">
-            Edit profile
-          </p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-900 dark:text-white">
-            Update your LinkUp Card
-          </h2>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            Refresh who you are, what you do, and how people connect with you.
-          </p>
+    <section className={shellClass}>
+      {variant === "inline" ? (
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-brand-primary dark:text-brand-secondary">
+              Edit profile
+            </p>
+            <h2 className="mt-1 text-xl font-semibold text-slate-900 dark:text-white">
+              Update your LinkUp Card
+            </h2>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+              Refresh who you are, what you do, and how people connect with you.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isSaving}
+            className="inline-flex items-center gap-2 self-start rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-100 disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+          >
+            <X className="h-4 w-4" />
+            Cancel
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={isSaving}
-          className="inline-flex items-center gap-2 self-start rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-100 disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
-        >
-          <X className="h-4 w-4" />
-          Cancel
-        </button>
-      </div>
+      ) : null}
 
       <form className="space-y-4" onSubmit={handleSubmit}>
         {error ? (
@@ -112,13 +124,24 @@ export default function ProfileEditForm({
               label="Upload avatar"
               accept="image"
               disabled={isSaving}
-              value={
-                avatarUrl
-                  ? { url: avatarUrl, type: "image" }
-                  : null
-              }
+              value={avatarUrl ? { url: avatarUrl, type: "image" } : null}
               onChange={(value) => setAvatarUrl(value?.url ?? "")}
             />
+            <label className="block space-y-1.5">
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                Or paste avatar URL
+              </span>
+              <div className={inputShell}>
+                <Link2 className="h-4 w-4 shrink-0 text-slate-500" />
+                <input
+                  className={inputClass}
+                  value={avatarUrl}
+                  onChange={(event) => setAvatarUrl(event.target.value)}
+                  placeholder="https://..."
+                  disabled={isSaving}
+                />
+              </div>
+            </label>
           </div>
           <div className="space-y-2">
             <span className={labelClass}>Cover image</span>
@@ -126,11 +149,24 @@ export default function ProfileEditForm({
               label="Upload cover"
               accept="image"
               disabled={isSaving}
-              value={
-                coverUrl ? { url: coverUrl, type: "image" } : null
-              }
+              value={coverUrl ? { url: coverUrl, type: "image" } : null}
               onChange={(value) => setCoverUrl(value?.url ?? "")}
             />
+            <label className="block space-y-1.5">
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                Or paste cover URL
+              </span>
+              <div className={inputShell}>
+                <Link2 className="h-4 w-4 shrink-0 text-slate-500" />
+                <input
+                  className={inputClass}
+                  value={coverUrl}
+                  onChange={(event) => setCoverUrl(event.target.value)}
+                  placeholder="https://..."
+                  disabled={isSaving}
+                />
+              </div>
+            </label>
           </div>
         </div>
 
@@ -165,7 +201,7 @@ export default function ProfileEditForm({
         </div>
 
         <label className="block space-y-2">
-          <span className={labelClass}>Who I am</span>
+          <span className={labelClass}>Bio</span>
           <div className={`${inputShell} items-start py-3`}>
             <FileText className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
             <textarea
@@ -219,19 +255,38 @@ export default function ProfileEditForm({
           </label>
         </div>
 
+        <label className="block space-y-2">
+          <span className={labelClass}>Account type</span>
+          <div className={inputShell}>
+            <User className="h-4 w-4 shrink-0 text-slate-500" />
+            <select
+              className={selectClass}
+              value={accountType}
+              onChange={(event) => setAccountType(event.target.value as AccountType)}
+              disabled={isSaving}
+            >
+              {ACCOUNT_TYPES.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </label>
+
         <div className="flex flex-wrap justify-end gap-3 pt-2">
           <button
             type="button"
             onClick={onCancel}
             disabled={isSaving}
-            className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+            className="linkup-btn-secondary min-h-[44px] px-5"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isSaving}
-            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover disabled:cursor-not-allowed disabled:opacity-60"
+            className="linkup-btn-primary min-h-[44px] px-5 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Save className="h-4 w-4" />
             {isSaving ? "Saving..." : "Save profile"}

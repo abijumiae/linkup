@@ -17,6 +17,8 @@ export type ProfileUser = SafeUser & {
   followersCount: number;
   followingCount: number;
   postsCount: number;
+  hubsCount: number;
+  workCount: number;
 };
 
 export type UserPost = {
@@ -208,10 +210,13 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    const [followersCount, followingCount, postsCount] = await Promise.all([
+    const [followersCount, followingCount, postsCount, hubsCount, workCount] =
+      await Promise.all([
       this.prisma.follow.count({ where: { followingId: userId } }),
       this.prisma.follow.count({ where: { followerId: userId } }),
       this.prisma.post.count({ where: { authorId: userId } }),
+      this.prisma.groupMember.count({ where: { userId } }),
+      this.prisma.job.count({ where: { posterId: userId, status: 'ACTIVE' } }),
     ]);
 
     return {
@@ -219,6 +224,8 @@ export class UsersService {
       followersCount,
       followingCount,
       postsCount,
+      hubsCount,
+      workCount,
     };
   }
 
@@ -282,6 +289,7 @@ export class UsersService {
         username: dto.username,
         country: dto.country,
         language: dto.language,
+        accountType: dto.accountType,
         avatarUrl: dto.avatarUrl,
         coverUrl: dto.coverUrl,
         bio: dto.bio,

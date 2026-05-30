@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsUrl } from 'class-validator';
+import { IsIn, IsOptional, IsString, IsUrl } from 'class-validator';
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -16,6 +16,10 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   language?: string;
+
+  @IsOptional()
+  @IsIn(['PERSONAL', 'CREATOR', 'BUSINESS', 'STUDENT', 'PROFESSIONAL'])
+  accountType?: 'PERSONAL' | 'CREATOR' | 'BUSINESS' | 'STUDENT' | 'PROFESSIONAL';
 
   @IsOptional()
   @IsUrl()
