@@ -10,8 +10,8 @@ type LegalDocumentShellProps = {
 
 export default function LegalDocumentShell({
   children,
-  backHref = "/login",
-  backLabel = "Back to login",
+  backHref = "/",
+  backLabel = "Back to Home",
 }: LegalDocumentShellProps) {
   return (
     <div className="linkup-page min-h-screen bg-gradient-to-br from-slate-50 via-white to-brand-primary/5 text-slate-900 dark:from-brand-dark dark:via-brand-dark dark:to-brand-dark dark:text-white">
@@ -23,7 +23,7 @@ export default function LegalDocumentShell({
         <ThemeToggle />
       </div>
 
-      <div className="linkup-container relative max-w-4xl py-8 sm:py-10">
+      <div className="relative mx-auto w-full max-w-[900px] px-3 py-8 sm:px-6 sm:py-10">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <Link
             href={backHref}

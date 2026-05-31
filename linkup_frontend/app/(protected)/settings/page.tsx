@@ -894,7 +894,7 @@ export default function SettingsPage() {
             title="Legal"
             description="Review LinkUp terms and privacy information."
           >
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <Link
                 href="/terms"
                 target="_blank"
@@ -931,6 +931,22 @@ export default function SettingsPage() {
                   </p>
                 </div>
               </Link>
+              <a
+                href="mailto:admin@thelinkupzone.com"
+                className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-4 transition hover:border-brand-primary/30 hover:bg-slate-50 dark:border-white/10 dark:bg-brand-dark/70 dark:hover:border-brand-secondary/30 dark:hover:bg-white/[0.04] sm:col-span-2 lg:col-span-1"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-brand-primary dark:text-brand-secondary" />
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                      Contact Support
+                    </p>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    admin@thelinkupzone.com
+                  </p>
+                </div>
+              </a>
             </div>
           </SettingsSection>
 
