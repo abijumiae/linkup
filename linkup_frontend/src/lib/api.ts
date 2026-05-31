@@ -25,7 +25,7 @@ export function getBackendUnreachableMessage(): string {
   return "Cannot reach the backend. Please try again shortly.";
 }
 
-export function resolveMediaUrl(url?: string | null): string | undefined {
+export function toAbsoluteMediaUrl(url?: string | null): string | undefined {
   if (!url) {
     return undefined;
   }
@@ -39,6 +39,10 @@ export function resolveMediaUrl(url?: string | null): string | undefined {
   }
 
   return url;
+}
+
+export function resolveMediaUrl(url?: string | null): string | undefined {
+  return toAbsoluteMediaUrl(url);
 }
 
 function getStoredToken(): string | null {

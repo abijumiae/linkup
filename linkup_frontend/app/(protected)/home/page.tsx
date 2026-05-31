@@ -29,6 +29,7 @@ import {
   FeedPost as ApiFeedPost,
   formatAccountType,
   formatTimeAgo,
+  getCreatePostErrorMessage,
 } from "../../../src/lib/posts";
 import DailySparkCard from "../../components/linkup/DailySparkCard";
 import PulseMeter from "../../components/linkup/PulseMeter";
@@ -562,8 +563,8 @@ export default function HomeDashboardPage() {
         const withoutDuplicate = current.filter((post) => post.id !== mapped.id);
         return [mapped, ...withoutDuplicate.filter((post) => !post.isStatic)];
       });
-    } catch {
-      setError("Could not drop your Spark. Please try again.");
+    } catch (err) {
+      setError(getCreatePostErrorMessage(err));
     } finally {
       setIsSubmitting(false);
     }

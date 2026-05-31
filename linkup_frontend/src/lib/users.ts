@@ -1,4 +1,4 @@
-import { apiRequest, ApiError } from "./api";
+import { apiRequest, ApiError, toAbsoluteMediaUrl } from "./api";
 import { clearAuth, getCurrentUser, getToken, saveUser, User } from "./auth";
 
 export interface ProfileUser extends User {
@@ -135,11 +135,17 @@ export async function fetchMyPosts(): Promise<UserPost[]> {
 export async function updateUserProfile(
   payload: UpdateProfilePayload,
 ): Promise<User> {
+  const body: UpdateProfilePayload = {
+    ...payload,
+    avatarUrl: toAbsoluteMediaUrl(payload.avatarUrl),
+    coverUrl: toAbsoluteMediaUrl(payload.coverUrl),
+  };
+
   return withAuth(async () => {
     const data = await apiRequest<{ user: User }>("/users/me", {
       method: "PATCH",
       headers: authHeaders(),
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     });
 
     saveUser(data.user);

@@ -1,4 +1,4 @@
-import { apiRequest, ApiError } from "./api";
+import { apiRequest, ApiError, toAbsoluteMediaUrl } from "./api";
 import { apiWarningFromError } from "./apiWarnings";
 
 export type MomentUser = {
@@ -79,9 +79,14 @@ export async function fetchUserMoments(userId: string): Promise<Moment[]> {
 }
 
 export async function createMoment(input: CreateMomentInput): Promise<Moment> {
+  const body: CreateMomentInput = {
+    ...input,
+    mediaUrl: toAbsoluteMediaUrl(input.mediaUrl),
+  };
+
   return apiRequest<Moment>("/moments", {
     method: "POST",
-    body: JSON.stringify(input),
+    body: JSON.stringify(body),
   });
 }
 

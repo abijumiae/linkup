@@ -1,4 +1,4 @@
-import { apiRequest, ApiError } from "./api";
+import { apiRequest, ApiError, toAbsoluteMediaUrl } from "./api";
 import { PaginatedResponse, unwrapPaginated } from "./pagination";
 import { AccountType, clearAuth, getToken } from "./auth";
 
@@ -91,12 +91,41 @@ async function withAuth<T>(request: () => Promise<T>): Promise<T> {
   }
 }
 
+function normalizeCreatePostPayload(
+  payload: CreatePostPayload,
+): CreatePostPayload {
+  return {
+    ...payload,
+    imageUrl: toAbsoluteMediaUrl(payload.imageUrl),
+    videoUrl: toAbsoluteMediaUrl(payload.videoUrl),
+    mediaUrl: toAbsoluteMediaUrl(payload.mediaUrl),
+  };
+}
+
+export function getCreatePostErrorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.status === 400) {
+    const message = error.message.toLowerCase();
+    if (
+      message.includes("mediaurl") ||
+      message.includes("imageurl") ||
+      message.includes("videourl") ||
+      message.includes("url address")
+    ) {
+      return "Media URL format is invalid. Please re-upload and try again.";
+    }
+  }
+
+  return "Could not drop your Spark. Please try again.";
+}
+
 export async function createPost(payload: CreatePostPayload): Promise<Post> {
+  const body = normalizeCreatePostPayload(payload);
+
   return withAuth(() =>
     apiRequest<Post>("/posts", {
       method: "POST",
       headers: authHeaders(),
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     }),
   );
 }
