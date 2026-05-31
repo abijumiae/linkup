@@ -174,6 +174,7 @@ export default function HomeDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [sparkNotice, setSparkNotice] = useState<string | null>(null);
+  const [pendingSpark, setPendingSpark] = useState<ApiFeedPost | null>(null);
   const [sparkDroppedToday, setSparkDroppedToday] = useState(false);
   const [pulseCounts, setPulseCounts] = useState({
     sparks: 0,
@@ -307,29 +308,95 @@ export default function HomeDashboardPage() {
 
     socket.emit("join_pulse");
 
+    const updatePostStats = (
+      postId: string,
+      patch: Partial<Pick<ApiFeedPost, "likeCount" | "commentCount" | "saved">>,
+    ) => {
+      setPosts((current) =>
+        current.map((item) => {
+          if (item.id !== postId || !item.apiPost) {
+            return item;
+          }
+
+          const apiPost = { ...item.apiPost, ...patch };
+          return {
+            ...item,
+            liked: patch.likeCount != null ? item.liked : item.liked,
+            apiPost,
+            stats: {
+              ...item.stats,
+              likes: patch.likeCount ?? item.stats.likes,
+              comments: patch.commentCount ?? item.stats.comments,
+            },
+          };
+        }),
+      );
+    };
+
+    const queueIncomingSpark = (post: ApiFeedPost) => {
+      if (post.authorId === currentUserId) {
+        return;
+      }
+
+      setPendingSpark(post);
+      setSparkNotice("New Spark available");
+    };
+
     const onSparkCreated = (post: ApiFeedPost) => {
       if (!post?.id) {
         setSparkNotice("New Spark available");
         return;
       }
+      queueIncomingSpark(post);
+    };
 
-      const mapped = mapPostToFeedPost({
-        ...post,
-        likeCount: post.likeCount ?? 0,
-        commentCount: post.commentCount ?? 0,
-        liked: post.liked ?? false,
-        saved: post.saved ?? false,
-        isFollowingAuthor: post.isFollowingAuthor ?? false,
-      });
+    const onPostCreated = onSparkCreated;
 
-      setPosts((current) => {
-        const withoutDuplicate = current.filter((item) => item.id !== mapped.id);
-        return [mapped, ...withoutDuplicate.filter((item) => !item.isStatic)];
-      });
-      setSparkNotice("New Spark available");
+    const onPostBoosted = (payload: {
+      postId?: string;
+      boostCount?: number;
+      likeCount?: number;
+    }) => {
+      if (!payload?.postId) {
+        return;
+      }
+      const count = payload.boostCount ?? payload.likeCount ?? 0;
+      updatePostStats(payload.postId, { likeCount: count });
+    };
+
+    const onPostUnboosted = onPostBoosted;
+
+    const onPostCommented = (payload: {
+      postId?: string;
+      commentCount?: number;
+    }) => {
+      if (!payload?.postId || payload.commentCount == null) {
+        return;
+      }
+      updatePostStats(payload.postId, { commentCount: payload.commentCount });
+    };
+
+    const onPostSaved = (payload: { postId?: string; userId?: string }) => {
+      if (!payload?.postId || payload.userId !== currentUserId) {
+        return;
+      }
+      updatePostStats(payload.postId, { saved: true });
+    };
+
+    const onPostUnsaved = (payload: { postId?: string; userId?: string }) => {
+      if (!payload?.postId || payload.userId !== currentUserId) {
+        return;
+      }
+      updatePostStats(payload.postId, { saved: false });
     };
 
     socket.on("spark_created", onSparkCreated);
+    socket.on("post_created", onPostCreated);
+    socket.on("post_boosted", onPostBoosted);
+    socket.on("post_unboosted", onPostUnboosted);
+    socket.on("post_commented", onPostCommented);
+    socket.on("post_saved", onPostSaved);
+    socket.on("post_unsaved", onPostUnsaved);
 
     const onMomentCreated = (moment: Moment) => {
       if (!moment?.id || !moment.user) {
@@ -404,19 +471,48 @@ export default function HomeDashboardPage() {
 
     return () => {
       socket.off("spark_created", onSparkCreated);
+      socket.off("post_created", onPostCreated);
+      socket.off("post_boosted", onPostBoosted);
+      socket.off("post_unboosted", onPostUnboosted);
+      socket.off("post_commented", onPostCommented);
+      socket.off("post_saved", onPostSaved);
+      socket.off("post_unsaved", onPostUnsaved);
       socket.off("moment_created", onMomentCreated);
       socket.off("moment_deleted", onMomentDeleted);
     };
   }, [socket, currentUserId]);
 
+  function applyPendingSpark() {
+    if (!pendingSpark) {
+      return;
+    }
+
+    const mapped = mapPostToFeedPost({
+      ...pendingSpark,
+      likeCount: pendingSpark.likeCount ?? 0,
+      commentCount: pendingSpark.commentCount ?? 0,
+      liked: pendingSpark.liked ?? false,
+      saved: pendingSpark.saved ?? false,
+      isFollowingAuthor: pendingSpark.isFollowingAuthor ?? false,
+    });
+
+    setPosts((current) => {
+      const withoutDuplicate = current.filter((item) => item.id !== mapped.id);
+      return [mapped, ...withoutDuplicate.filter((item) => !item.isStatic)];
+    });
+    setPendingSpark(null);
+    setSparkNotice(null);
+    document.getElementById("fresh-drops")?.scrollIntoView({ behavior: "smooth" });
+  }
+
   useEffect(() => {
-    if (!sparkNotice) {
+    if (!sparkNotice || pendingSpark) {
       return;
     }
 
     const timer = setTimeout(() => setSparkNotice(null), 4000);
     return () => clearTimeout(timer);
-  }, [sparkNotice]);
+  }, [sparkNotice, pendingSpark]);
 
   useEffect(() => {
     setPulseCounts((current) => ({
@@ -561,9 +657,19 @@ export default function HomeDashboardPage() {
             </header>
 
             {sparkNotice ? (
-              <p className="rounded-3xl border border-brand-primary/25 bg-brand-primary/10 px-4 py-3 text-sm text-brand-primary dark:text-brand-secondary">
-                {sparkNotice}
-              </p>
+              pendingSpark ? (
+                <button
+                  type="button"
+                  onClick={applyPendingSpark}
+                  className="w-full rounded-3xl border border-brand-primary/25 bg-brand-primary/10 px-4 py-3 text-left text-sm text-brand-primary transition hover:bg-brand-primary/15 dark:text-brand-secondary"
+                >
+                  {sparkNotice} — Tap to view
+                </button>
+              ) : (
+                <p className="rounded-3xl border border-brand-primary/25 bg-brand-primary/10 px-4 py-3 text-sm text-brand-primary dark:text-brand-secondary">
+                  {sparkNotice}
+                </p>
+              )
             ) : null}
 
             {momentsWarning ? (

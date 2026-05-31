@@ -215,8 +215,6 @@ export class MessagesService {
     receiverId: string,
     dto: CreateMessageDto,
   ) {
-    console.log('Send message request:', { senderId, receiverId });
-
     try {
       if (!senderId) {
         throw new BadRequestException('Unauthorized');
@@ -242,14 +240,6 @@ export class MessagesService {
       const messageType = this.normalizeMessageType(dto.type);
 
       if (messageType === 'voice') {
-        console.log('Voice message request:', {
-          senderId,
-          receiverId,
-          type: messageType,
-          hasMediaUrl: Boolean(dto.mediaUrl ?? dto.audioUrl),
-          duration: dto.duration ?? dto.audioDuration ?? null,
-        });
-
         const mediaUrl = dto.mediaUrl ?? dto.audioUrl;
         const duration = dto.duration ?? dto.audioDuration;
         if (!mediaUrl) {
@@ -290,14 +280,6 @@ export class MessagesService {
       }
 
       const serialized = this.serializeMessage(message);
-      if (messageType === 'voice') {
-        console.log('Voice message saved:', {
-          id: serialized.id,
-          senderId: serialized.senderId,
-          receiverId: serialized.receiverId,
-          mediaUrl: serialized.mediaUrl,
-        });
-      }
 
       this.realtimeEmitter.emitDirectMessage(serialized);
       this.notificationsService.emitDirectMessageAlert(message);

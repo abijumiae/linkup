@@ -82,10 +82,6 @@ export class MessagesController {
     @UploadedFile() file: Express.Multer.File,
     @Req() req: { user: SafeUser },
   ) {
-    console.log('UPLOAD HIT');
-    console.log('UPLOAD USER:', req.user?.id);
-    console.log('UPLOAD FILE:', file?.originalname, file?.mimetype, file?.size);
-
     this.logger.log('Upload-audio request received');
     this.logger.log(
       `File received: ${file?.originalname ?? 'none'} ${file?.mimetype ?? 'none'} ${file?.size ?? 0}`,

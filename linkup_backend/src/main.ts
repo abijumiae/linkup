@@ -35,8 +35,7 @@ async function bootstrap() {
     }),
   );
 
-  // Serves uploaded media from linkup_backend/uploads (ephemeral on Render).
-  // TODO: Render local filesystem is temporary. Move uploads to Cloudinary/S3/Supabase Storage before real public launch.
+  // Serves /uploads for local storage and legacy media URLs after switching to Cloudinary.
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
   app.useGlobalPipes(

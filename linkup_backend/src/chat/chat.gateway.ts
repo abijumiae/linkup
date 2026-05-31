@@ -72,13 +72,10 @@ export class ChatGateway
 
   afterInit() {
     this.realtimeEmitter.bindServer(this.server);
-    console.log('Socket.io gateway initialized');
-    this.logger.log('Socket.io gateway initialized');
+    this.logger.log('Socket.io gateway initialized at /socket.io');
   }
 
   async handleConnection(client: AuthedSocket) {
-    this.logger.log('Socket connection attempt');
-    console.log('Socket connected:', client.id);
     try {
       const token =
         (client.handshake.auth?.token as string | undefined) ??
@@ -96,9 +93,7 @@ export class ChatGateway
 
       client.join(getUserRoom(user.id));
       client.emit('socket_ready', { userId: user.id });
-      this.logger.log(
-        `Socket connected user: ${user.id} socket: ${client.id}`,
-      );
+      this.logger.log(`Socket connected userId=${user.id} socketId=${client.id}`);
       this.broadcastPresence(user.id, true);
       this.server.emit('user_online', {
         userId: user.id,
@@ -110,13 +105,12 @@ export class ChatGateway
         lastActive: new Date().toISOString(),
       });
     } catch {
-      this.logger.warn('Chat socket rejected: invalid auth');
+      this.logger.warn('Socket auth failed — connection rejected');
       client.disconnect(true);
     }
   }
 
   handleDisconnect(client: AuthedSocket) {
-    console.log('Socket disconnected:', client.id);
     this.leaveActiveGroupCall(client);
     this.leaveActiveLiveRoom(client);
 
@@ -124,6 +118,8 @@ export class ChatGateway
     if (!userId) {
       return;
     }
+
+    this.logger.log(`Socket disconnected userId=${userId} socketId=${client.id}`);
 
     const sockets = this.onlineUsers.get(userId);
     sockets?.delete(client.id);

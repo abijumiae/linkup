@@ -1,24 +1,13 @@
-import { UploadMediaType, UploadResult } from './uploads.service';
+import { StorageProviderName } from '../storage/storage.types';
+import { hasCloudinaryCredentials } from '../storage/storage.validation';
 
 /**
- * Storage abstraction for LinkUp media (avatars, covers, posts, voice notes, etc.).
- *
- * - LocalStorageProvider: dev / fallback (Render disk is ephemeral)
- * - CloudinaryStorageProvider: production when CLOUDINARY_* env vars are set
- *
- * TODO: Add S3StorageProvider or SupabaseStorageProvider when env vars are configured.
+ * Returns the configured storage provider name for logging and static file hints.
  */
-export interface StorageProvider {
-  readonly name: string;
-  upload(file: Express.Multer.File, mediaType: UploadMediaType): Promise<UploadResult>;
-}
+export function getConfiguredStorageHint(): StorageProviderName | 's3' | 'supabase' {
+  const configured = process.env.STORAGE_PROVIDER?.trim().toLowerCase();
 
-export function getConfiguredStorageHint(): string {
-  if (
-    process.env.CLOUDINARY_CLOUD_NAME &&
-    process.env.CLOUDINARY_API_KEY &&
-    process.env.CLOUDINARY_API_SECRET
-  ) {
+  if (configured === 'cloudinary' && hasCloudinaryCredentials()) {
     return 'cloudinary';
   }
 

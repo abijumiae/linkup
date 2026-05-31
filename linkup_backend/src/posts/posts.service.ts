@@ -273,6 +273,12 @@ export class PostsService {
       where: { postId },
     });
 
+    if (existingLike) {
+      this.realtimeEmitter.emitPostUnboosted(postId, likeCount);
+    } else {
+      this.realtimeEmitter.emitPostBoosted(postId, likeCount);
+    }
+
     return {
       liked: !existingLike,
       likeCount,
@@ -292,6 +298,8 @@ export class PostsService {
     }
 
     const likeCount = await this.prisma.like.count({ where: { postId } });
+
+    this.realtimeEmitter.emitPostUnboosted(postId, likeCount);
 
     return {
       liked: false,
@@ -320,6 +328,20 @@ export class PostsService {
     });
 
     await this.notificationsService.notifyComment(userId, postId);
+
+    const commentCount = await this.prisma.comment.count({ where: { postId } });
+
+    this.realtimeEmitter.emitCommentCreated(
+      {
+        id: comment.id,
+        postId: comment.postId,
+        content: comment.content,
+        authorId: comment.authorId,
+        createdAt: comment.createdAt.toISOString(),
+        author: comment.author,
+      },
+      commentCount,
+    );
 
     return comment;
   }
@@ -366,6 +388,8 @@ export class PostsService {
       where: { postId: comment.postId },
     });
 
+    this.realtimeEmitter.emitCommentDeleted(postId, commentId, commentCount);
+
     return { message: 'Comment deleted', commentCount };
   }
 
@@ -401,10 +425,12 @@ export class PostsService {
       await this.prisma.savedPost.delete({
         where: { id: existing.id },
       });
+      this.realtimeEmitter.emitPostUnsaved(postId, userId);
     } else {
       await this.prisma.savedPost.create({
         data: { userId, postId },
       });
+      this.realtimeEmitter.emitPostSaved(postId, userId);
     }
 
     const saveCount = await this.prisma.savedPost.count({
@@ -429,6 +455,8 @@ export class PostsService {
     });
 
     const saveCount = await this.prisma.savedPost.count({ where: { postId } });
+
+    this.realtimeEmitter.emitPostUnsaved(postId, userId);
 
     return { saved: false, saveCount, isSavedByMe: false };
   }

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, CheckCircle2, Trash2 } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
+import { useSocket } from "@/src/components/SocketProvider";
 import { isChatAlert } from "@/src/lib/alertUtils";
 import {
   getNotificationActionLabel,
@@ -94,6 +95,7 @@ export default function NotificationsPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [isMarkingAll, setIsMarkingAll] = useState(false);
   const [markingId, setMarkingId] = useState<string | null>(null);
+  const { socket } = useSocket();
 
   const filteredNotifications = useMemo(
     () => filterAlerts(notifications, activeFilter),
@@ -148,6 +150,40 @@ export default function NotificationsPage() {
     ]);
     clearLatestNotification();
   }, [latestNotification, clearLatestNotification]);
+
+  useEffect(() => {
+    if (!socket) {
+      return;
+    }
+
+    const onNotificationRead = (payload: { id?: string }) => {
+      if (!payload?.id) {
+        return;
+      }
+      setNotifications((current) =>
+        current.map((notification) =>
+          notification.id === payload.id
+            ? { ...notification, read: true }
+            : notification,
+        ),
+      );
+    };
+
+    const onNotificationsReadAll = () => {
+      setNotifications((current) =>
+        current.map((notification) => ({ ...notification, read: true })),
+      );
+      setUnreadCount(0);
+    };
+
+    socket.on("notification_read", onNotificationRead);
+    socket.on("notifications_read_all", onNotificationsReadAll);
+
+    return () => {
+      socket.off("notification_read", onNotificationRead);
+      socket.off("notifications_read_all", onNotificationsReadAll);
+    };
+  }, [socket, setUnreadCount]);
 
   useEffect(() => {
     if (!notice) {

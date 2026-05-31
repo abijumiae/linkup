@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { usePathname } from "next/navigation";
@@ -46,6 +47,7 @@ export function NotificationsProvider({
   const [latestNotification, setLatestNotification] =
     useState<Notification | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const receivedNotificationIdsRef = useRef(new Set<string>());
 
   const refreshUnreadCount = useCallback(async () => {
     if (!isAuthenticated) {
@@ -76,7 +78,12 @@ export function NotificationsProvider({
 
       setLatestNotification(notification);
 
-      if (!notification.read) {
+      const isNew = !receivedNotificationIdsRef.current.has(notification.id);
+      if (isNew) {
+        receivedNotificationIdsRef.current.add(notification.id);
+      }
+
+      if (!notification.read && isNew) {
         setUnreadCount((current) => current + 1);
       }
 
@@ -114,8 +121,24 @@ export function NotificationsProvider({
 
     socket.on("notification_received", handleIncomingAlert);
 
+    const onNotificationRead = (payload: { id?: string }) => {
+      if (!payload?.id) {
+        return;
+      }
+      setUnreadCount((current) => Math.max(0, current - 1));
+    };
+
+    const onNotificationsReadAll = () => {
+      setUnreadCount(0);
+    };
+
+    socket.on("notification_read", onNotificationRead);
+    socket.on("notifications_read_all", onNotificationsReadAll);
+
     return () => {
       socket.off("notification_received", handleIncomingAlert);
+      socket.off("notification_read", onNotificationRead);
+      socket.off("notifications_read_all", onNotificationsReadAll);
     };
   }, [handleIncomingAlert, socket]);
 

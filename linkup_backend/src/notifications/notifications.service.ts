@@ -307,7 +307,12 @@ export class NotificationsService {
       where: { id: notificationId },
       data: { read: true },
       include: notificationInclude,
-    }).then((notification) => this.serializeListNotification(notification));
+    }).then((updated) => {
+      this.realtimeEmitter.emitNotificationRead(recipientId, {
+        id: notificationId,
+      });
+      return this.serializeListNotification(updated);
+    });
   }
 
   async markAllAsRead(recipientId: string) {
@@ -315,6 +320,8 @@ export class NotificationsService {
       where: { recipientId, read: false },
       data: { read: true },
     });
+
+    this.realtimeEmitter.emitNotificationsReadAll(recipientId);
 
     return { message: 'All notifications marked as read' };
   }

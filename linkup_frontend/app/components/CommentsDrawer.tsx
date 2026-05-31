@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Trash2, X } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
+import { useSocket } from "@/src/components/SocketProvider";
 import {
   Comment,
   createComment,
@@ -38,6 +39,7 @@ export default function CommentsDrawer({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [count, setCount] = useState(initialCount);
+  const { socket } = useSocket();
 
   useEffect(() => {
     setCount(initialCount);
@@ -65,6 +67,71 @@ export default function CommentsDrawer({
       .finally(() => setLoading(false));
   }, [open, postId, onCountChange]);
 
+  useEffect(() => {
+    if (!open || !socket) {
+      return;
+    }
+
+    const onCommentCreated = (
+      payload: Comment & { postId?: string; commentCount?: number },
+    ) => {
+      if (payload.postId && payload.postId !== postId) {
+        return;
+      }
+
+      setComments((current) => {
+        if (current.some((item) => item.id === payload.id)) {
+          return current;
+        }
+        return [...current, payload];
+      });
+
+      if (payload.commentCount != null) {
+        setCount(payload.commentCount);
+        onCountChange?.(payload.commentCount);
+      } else {
+        setCount((current) => {
+          const next = current + 1;
+          onCountChange?.(next);
+          return next;
+        });
+      }
+    };
+
+    const onCommentDeleted = (payload: {
+      postId?: string;
+      commentId?: string;
+      commentCount?: number;
+    }) => {
+      if (!payload.commentId || (payload.postId && payload.postId !== postId)) {
+        return;
+      }
+
+      setComments((current) =>
+        current.filter((item) => item.id !== payload.commentId),
+      );
+
+      if (payload.commentCount != null) {
+        setCount(payload.commentCount);
+        onCountChange?.(payload.commentCount);
+      } else {
+        setCount((current) => {
+          const next = Math.max(0, current - 1);
+          onCountChange?.(next);
+          return next;
+        });
+      }
+    };
+
+    socket.on("comment_created", onCommentCreated);
+    socket.on("comment_deleted", onCommentDeleted);
+
+    return () => {
+      socket.off("comment_created", onCommentCreated);
+      socket.off("comment_deleted", onCommentDeleted);
+    };
+  }, [open, socket, postId, onCountChange]);
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     const trimmed = input.trim();
@@ -77,7 +144,11 @@ export default function CommentsDrawer({
 
     try {
       const created = await createComment(postId, trimmed);
-      setComments((current) => [...current, created]);
+      setComments((current) =>
+        current.some((item) => item.id === created.id)
+          ? current
+          : [...current, created],
+      );
       setInput("");
       const nextCount = count + 1;
       setCount(nextCount);

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/src/lib/AuthProvider";
 import LinkupNavigation from "./LinkupNavigation";
 import { SidebarNav } from "./SidebarNav";
+import RealtimeStatusBanner from "./RealtimeStatusBanner";
 
 const sidebarNavItems = [
   { label: "Pulse", href: "/home", icon: "home" },
@@ -64,6 +65,7 @@ export default function LayoutContent({
           </aside>
         )}
         <main className="linkup-main min-w-0 flex-1 overflow-x-hidden pb-28 lg:pb-16">
+          {showNavigation ? <RealtimeStatusBanner /> : null}
           {children}
         </main>
       </div>

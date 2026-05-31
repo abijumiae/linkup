@@ -18,6 +18,20 @@ export type RealtimeDirectMessage = {
   sender: unknown;
 };
 
+export type RealtimeCommentPayload = {
+  id: string;
+  postId: string;
+  content: string;
+  authorId: string;
+  createdAt: string;
+  author: {
+    id: string;
+    name: string;
+    username: string;
+    avatarUrl: string | null;
+  };
+};
+
 @Injectable()
 export class RealtimeEmitter {
   private readonly logger = new Logger(RealtimeEmitter.name);
@@ -40,6 +54,10 @@ export class RealtimeEmitter {
     this.server?.to(room).emit(event, payload);
   }
 
+  emitToPulse(event: string, payload: unknown) {
+    this.emitToRoom('pulse', event, payload);
+  }
+
   emitNotification(recipientId: string, notification: unknown) {
     this.emitToUser(recipientId, 'notification_received', notification);
   }
@@ -48,16 +66,66 @@ export class RealtimeEmitter {
     this.emitNotification(recipientId, alert);
   }
 
+  emitNotificationRead(recipientId: string, payload: { id: string }) {
+    this.emitToUser(recipientId, 'notification_read', payload);
+  }
+
+  emitNotificationsReadAll(recipientId: string) {
+    this.emitToUser(recipientId, 'notifications_read_all', { ok: true });
+  }
+
   emitSparkCreated(post: unknown) {
-    this.emitToRoom('pulse', 'spark_created', post);
+    this.emitPostCreated(post);
+  }
+
+  emitPostCreated(post: unknown) {
+    this.emitToPulse('spark_created', post);
+    this.emitToPulse('post_created', post);
+  }
+
+  emitPostBoosted(postId: string, boostCount: number) {
+    const payload = { postId, likeCount: boostCount, boostCount };
+    this.emitToPulse('post_boosted', payload);
+  }
+
+  emitPostUnboosted(postId: string, boostCount: number) {
+    const payload = { postId, likeCount: boostCount, boostCount };
+    this.emitToPulse('post_unboosted', payload);
+  }
+
+  emitPostCommented(postId: string, commentCount: number) {
+    this.emitToPulse('post_commented', { postId, commentCount });
+  }
+
+  emitCommentCreated(comment: RealtimeCommentPayload, commentCount: number) {
+    const payload = { ...comment, commentCount };
+    this.emitToPulse('comment_created', payload);
+    this.emitToPulse('post_commented', { postId: comment.postId, commentCount });
+  }
+
+  emitCommentDeleted(
+    postId: string,
+    commentId: string,
+    commentCount: number,
+  ) {
+    this.emitToPulse('comment_deleted', { postId, commentId, commentCount });
+    this.emitToPulse('post_commented', { postId, commentCount });
+  }
+
+  emitPostSaved(postId: string, userId: string) {
+    this.emitToPulse('post_saved', { postId, userId });
+  }
+
+  emitPostUnsaved(postId: string, userId: string) {
+    this.emitToPulse('post_unsaved', { postId, userId });
   }
 
   emitMomentCreated(moment: unknown) {
-    this.emitToRoom('pulse', 'moment_created', moment);
+    this.emitToPulse('moment_created', moment);
   }
 
   emitMomentDeleted(momentId: string, userId: string) {
-    this.emitToRoom('pulse', 'moment_deleted', { momentId, userId });
+    this.emitToPulse('moment_deleted', { momentId, userId });
   }
 
   emitNewMessageNotification(
@@ -69,16 +137,14 @@ export class RealtimeEmitter {
 
   emitDirectMessage(message: RealtimeDirectMessage) {
     if (!this.server) {
-      this.logger.warn(
-        'Cannot emit direct message: socket server not ready',
-      );
+      this.logger.warn('Cannot emit direct message: socket server not ready');
       return;
     }
 
     const isVoice = message.type === 'voice' || message.type === 'audio';
     const serialized = {
       ...message,
-      audioUrl: isVoice ? message.mediaUrl ?? null : null,
+      audioUrl: isVoice ? (message.mediaUrl ?? null) : null,
       createdAt:
         message.createdAt instanceof Date
           ? message.createdAt.toISOString()
@@ -101,8 +167,7 @@ export class RealtimeEmitter {
     ]);
 
     for (const target of targets) {
-      this.logger.log(`emitting direct_message_received to: ${target}`);
-      console.log('direct_message_received emitted to:', target);
+      this.logger.debug(`direct_message_received → ${target}`);
       this.server.to(target).emit('message_received', payload);
       this.server.to(target).emit('direct_message_received', directPayload);
     }

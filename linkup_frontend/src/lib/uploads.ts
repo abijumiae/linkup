@@ -9,6 +9,7 @@ export type UploadResult = {
   filename: string;
   mimeType?: string;
   size?: number;
+  provider?: "local" | "cloudinary" | "s3" | "supabase";
 };
 
 const IMAGE_TYPES = new Set([
