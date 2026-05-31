@@ -97,7 +97,7 @@ export default function LinkupNavigation() {
             </Link>
             <Link
               href="/notifications"
-              className="relative rounded-full border border-slate-300 bg-white p-2.5 text-slate-700 transition hover:bg-slate-50 sm:p-3 dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-300 dark:hover:bg-white/10"
+              className="relative inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:bg-slate-50 dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-300 dark:hover:bg-white/10"
             >
               <Bell className="h-5 w-5" />
               {isAuthenticated && unreadCount > 0 ? (
@@ -106,6 +106,20 @@ export default function LinkupNavigation() {
                 </span>
               ) : null}
             </Link>
+
+            {showAuthActions && isAuthenticated && user ? (
+              <button
+                type="button"
+                onClick={handleLogout}
+                aria-label="Logout"
+                className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-3 text-slate-700 transition hover:bg-slate-50 md:hidden dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-300 dark:hover:bg-white/10"
+              >
+                <LogOut className="h-5 w-5 shrink-0" />
+                <span className="sr-only sm:not-sr-only sm:text-sm sm:font-medium">
+                  Logout
+                </span>
+              </button>
+            ) : null}
 
             {showAuthActions && isAuthenticated && user ? (
               <>
@@ -159,8 +173,8 @@ export default function LinkupNavigation() {
         </div>
       </header>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/90 px-2 py-1.5 shadow-[0_-10px_60px_rgba(15,23,42,0.12)] backdrop-blur-xl md:hidden dark:border-white/10 dark:bg-brand-dark/95 dark:shadow-[0_-10px_60px_rgba(15,23,42,0.35)]">
-        <div className="mx-auto flex max-w-md items-center justify-between gap-0.5">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/90 px-1 py-1.5 shadow-[0_-10px_60px_rgba(15,23,42,0.12)] backdrop-blur-xl md:hidden dark:border-white/10 dark:bg-brand-dark/95 dark:shadow-[0_-10px_60px_rgba(15,23,42,0.35)]">
+        <div className="mx-auto flex max-w-lg items-stretch justify-between gap-0.5 overflow-x-auto">
           {mobileNavItems.map((item) => {
             const isActive =
               pathname === item.href ||
@@ -169,7 +183,7 @@ export default function LinkupNavigation() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`inline-flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-2xl px-1 py-1.5 text-[10px] font-semibold transition sm:text-[11px] ${
+                className={`inline-flex min-h-[44px] min-w-[3rem] flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 py-1.5 text-[10px] font-semibold transition sm:min-w-[3.25rem] sm:text-[11px] ${
                   isActive
                     ? "bg-brand-primary text-white"
                     : "text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
@@ -180,6 +194,17 @@ export default function LinkupNavigation() {
               </Link>
             );
           })}
+          {isAuthenticated ? (
+            <button
+              type="button"
+              onClick={handleLogout}
+              aria-label="Logout"
+              className="inline-flex min-h-[44px] min-w-[3rem] flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 py-1.5 text-[10px] font-semibold text-slate-700 transition hover:bg-rose-50 hover:text-rose-700 dark:text-slate-300 dark:hover:bg-rose-500/10 dark:hover:text-rose-300 sm:min-w-[3.25rem] sm:text-[11px]"
+            >
+              <LogOut className="h-5 w-5 shrink-0" />
+              <span className="max-w-full truncate">Logout</span>
+            </button>
+          ) : null}
         </div>
       </nav>
     </>
