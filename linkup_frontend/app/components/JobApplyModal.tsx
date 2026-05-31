@@ -46,8 +46,8 @@ export default function JobApplyModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-dark/80 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-brand-dark">
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-brand-dark/80 p-4 backdrop-blur-sm sm:items-center">
+      <div className="my-8 max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-brand-dark sm:rounded-[2rem]">
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Apply</h2>
           <button

@@ -66,6 +66,11 @@ body {
   overflow-x: hidden;
 }
 
+img,
+video {
+  max-width: 100%;
+}
+
 body {
   min-height: 100vh;
   margin: 0;
@@ -133,11 +138,11 @@ select {
   }
 
   .linkup-container {
-    @apply mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:py-8;
+    @apply mx-auto w-full max-w-6xl px-3 py-6 sm:px-6 lg:py-8;
   }
 
   .linkup-container-wide {
-    @apply mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:py-8;
+    @apply mx-auto w-full max-w-7xl px-3 py-6 sm:px-6 lg:py-8;
   }
 
   .linkup-panel {

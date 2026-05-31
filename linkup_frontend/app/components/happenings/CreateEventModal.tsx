@@ -97,7 +97,7 @@ export default function CreateEventModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-brand-dark/80 p-4 backdrop-blur-sm sm:items-center">
-      <div className="my-8 w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-brand-dark">
+      <div className="my-8 max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-brand-dark">
         <div className="mb-6 flex items-start justify-between gap-3">
           <div>
             <p className="linkup-eyebrow">Happenings</p>

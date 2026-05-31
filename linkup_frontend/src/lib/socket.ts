@@ -255,7 +255,7 @@ export function connectSocket(token?: string | null): Socket | null {
     transports: ["websocket", "polling"],
     autoConnect: true,
     reconnection: true,
-    reconnectionAttempts: Infinity,
+    reconnectionAttempts: 30,
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000,
     timeout: 20000,
