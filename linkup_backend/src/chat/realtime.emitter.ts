@@ -189,6 +189,9 @@ export class RealtimeEmitter {
       this.logger.debug(`direct_message_received → ${target}`);
       this.server.to(target).emit('message_received', payload);
       this.server.to(target).emit('direct_message_received', directPayload);
+      if (isVoice) {
+        this.server.to(target).emit('voice_message_received', directPayload);
+      }
     }
 
     this.server

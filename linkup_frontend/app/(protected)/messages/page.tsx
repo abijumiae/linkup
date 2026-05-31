@@ -48,6 +48,7 @@ import VoiceNoteRecorder, {
   isVoiceRecordingSupported,
 } from "@/src/components/VoiceNoteRecorder";
 import ChatSafetyMenu from "../../components/ChatSafetyMenu";
+import { fetchBlockStatus, type BlockStatus } from "@/src/lib/safety";
 import { formatTimeAgo } from "@/src/lib/posts";
 import {
   CallSession,
@@ -149,6 +150,7 @@ export default function MessagesPage() {
   const [typingGroupId, setTypingGroupId] = useState<string | null>(null);
   const [isVoiceRecording, setIsVoiceRecording] = useState(false);
   const [chatBlocked, setChatBlocked] = useState(false);
+  const [blockedByMe, setBlockedByMe] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<Record<string, boolean>>({});
   const [joinedDirectRoom, setJoinedDirectRoom] = useState<string | null>(null);
   const { socket, status: socketStatus } = useSocket();
@@ -419,8 +421,49 @@ export default function MessagesPage() {
   }, [selectedUserId, selectedGroupId]);
 
   useEffect(() => {
-    setChatBlocked(false);
+    if (!activeUser?.id) {
+      setChatBlocked(false);
+      setBlockedByMe(false);
+      return;
+    }
+
+    void fetchBlockStatus(activeUser.id)
+      .then((status) => {
+        setBlockedByMe(status.blockedByMe);
+        setChatBlocked(status.isBlocked);
+      })
+      .catch(() => {
+        setChatBlocked(false);
+        setBlockedByMe(false);
+      });
   }, [activeUser?.id]);
+
+  useEffect(() => {
+    if (!socket || !activeUser?.id) {
+      return;
+    }
+
+    const applyBlockStatus = (status: BlockStatus) => {
+      setBlockedByMe(status.blockedByMe);
+      setChatBlocked(status.isBlocked);
+    };
+
+    const onUserBlocked = (payload: { userId?: string }) => {
+      if (payload.userId === activeUser.id) {
+        void fetchBlockStatus(activeUser.id).then(applyBlockStatus);
+      }
+    };
+
+    const onUserUnblocked = onUserBlocked;
+
+    socket.on("user_blocked", onUserBlocked);
+    socket.on("user_unblocked", onUserUnblocked);
+
+    return () => {
+      socket.off("user_blocked", onUserBlocked);
+      socket.off("user_unblocked", onUserUnblocked);
+    };
+  }, [socket, activeUser?.id]);
 
   useEffect(() => {
     if (!socket?.connected || !activeUser?.id) {
@@ -918,11 +961,6 @@ export default function MessagesPage() {
       if (!activeUser?.id) {
         showFeatureNotice("Select a chat first");
       }
-      console.error("Voice note send blocked:", {
-        activeUserId: activeUser?.id,
-        chatTab,
-        isSending,
-      });
       throw new Error("Voice note send unavailable");
     }
 
@@ -959,13 +997,8 @@ export default function MessagesPage() {
       });
       setTimeout(scrollToBottom, 50);
     } catch (err) {
-      console.error("Send voice note failed:", err);
-
-      if (err instanceof ApiError) {
-        console.error("Voice note ApiError:", {
-          status: err.status,
-          message: err.message,
-        });
+      if (process.env.NODE_ENV === "development") {
+        console.error("Send voice note failed:", err);
       }
 
       if (err instanceof ApiError && err.status === 401) {
@@ -1345,7 +1378,10 @@ export default function MessagesPage() {
           <ChatSafetyMenu
             userId={activeUser.id}
             userName={activeUser.name}
-            onBlockChange={setChatBlocked}
+            onBlockChange={(status) => {
+              setBlockedByMe(status.blockedByMe);
+              setChatBlocked(status.isBlocked);
+            }}
           />
         ) : (
           <button
@@ -1771,7 +1807,9 @@ export default function MessagesPage() {
                 <div className="sticky bottom-0 border-t border-slate-200/80 bg-slate-50/95 px-3 py-3 backdrop-blur-sm dark:border-white/10 dark:bg-brand-dark/95 sm:px-4 sm:py-4">
                   {chatBlocked ? (
                     <p className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 dark:border-white/10 dark:bg-brand-dark dark:text-slate-300">
-                      You blocked this user.
+                      {blockedByMe
+                        ? "You blocked this user."
+                        : "You can't message this user."}
                     </p>
                   ) : (
                   <div className="relative flex min-w-0 items-end gap-1.5 rounded-3xl border border-slate-200/80 bg-white px-2 py-2 shadow-sm dark:border-white/10 dark:bg-brand-dark sm:gap-2 sm:px-3 sm:py-2.5">

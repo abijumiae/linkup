@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { ApiError, getApiBaseUrl } from "@/src/lib/api";
 import { getCurrentUser, getToken } from "@/src/lib/auth";
+import { useSocket } from "@/src/components/SocketProvider";
 
 type ModerationReport = {
   id: string;
@@ -28,6 +29,7 @@ const STATUS_FILTERS = ["ALL", "OPEN", "REVIEWING", "RESOLVED", "DISMISSED"] as 
 export default function AdminModerationPage() {
   const router = useRouter();
   const user = getCurrentUser();
+  const { socket } = useSocket();
   const [reports, setReports] = useState<ModerationReport[]>([]);
   const [statusFilter, setStatusFilter] =
     useState<(typeof STATUS_FILTERS)[number]>("OPEN");
@@ -86,6 +88,24 @@ export default function AdminModerationPage() {
 
     void loadReports();
   }, [loadReports, router, user]);
+
+  useEffect(() => {
+    if (!socket) {
+      return;
+    }
+
+    const refresh = () => {
+      void loadReports();
+    };
+
+    socket.on("report_created", refresh);
+    socket.on("moderation_status_updated", refresh);
+
+    return () => {
+      socket.off("report_created", refresh);
+      socket.off("moderation_status_updated", refresh);
+    };
+  }, [loadReports, socket]);
 
   async function updateStatus(status: string) {
     if (!selectedReport) {

@@ -328,7 +328,7 @@ export default function SettingsPage() {
         browserAlertsEnabled,
       };
       localStorage.setItem(LOCAL_PREFS_KEY, JSON.stringify(localPrefs));
-      setSuccess("Your LinkUp Card and privacy settings have been updated.");
+      setSuccess("Privacy settings updated.");
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         handleAuthFailure();

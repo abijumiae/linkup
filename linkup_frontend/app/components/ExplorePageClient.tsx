@@ -27,6 +27,7 @@ import {
   SearchUser,
 } from "@/src/lib/discovery";
 import { FeedPost } from "@/src/lib/posts";
+import { useSocket } from "@/src/components/SocketProvider";
 import DiscoverHubCard from "./discover/DiscoverHubCard";
 import DiscoverOpportunityCard from "./discover/DiscoverOpportunityCard";
 import DiscoverPersonCard from "./discover/DiscoverPersonCard";
@@ -156,6 +157,7 @@ export default function ExplorePageClient() {
   const queryParam = searchParams.get("q") ?? "";
   const currentUser = getCurrentUser();
   const currentUserId = currentUser?.id ?? null;
+  const { socket } = useSocket();
 
   const [searchInput, setSearchInput] = useState(queryParam);
   const [activeQuery, setActiveQuery] = useState(queryParam);
@@ -252,6 +254,58 @@ export default function ExplorePageClient() {
 
     void init();
   }, [queryParam, loadDiscover, loadSearch, router]);
+
+  useEffect(() => {
+    if (!socket) {
+      return;
+    }
+
+    socket.emit("join_pulse");
+
+    const patchPostCounts = (
+      postId: string,
+      patch: Partial<Pick<FeedPost, "likeCount" | "commentCount">>,
+    ) => {
+      const updater = (posts: FeedPost[]) =>
+        posts.map((post) =>
+          post.id === postId ? { ...post, ...patch } : post,
+        );
+
+      setSearchPosts(updater);
+      setDiscover((current) => ({
+        ...current,
+        sparks: updater(current.sparks),
+      }));
+    };
+
+    const onPostBoosted = (payload: {
+      postId?: string;
+      boostCount?: number;
+      likeCount?: number;
+    }) => {
+      if (!payload.postId) return;
+      const count = payload.boostCount ?? payload.likeCount ?? 0;
+      patchPostCounts(payload.postId, { likeCount: count });
+    };
+
+    const onPostCommented = (payload: {
+      postId?: string;
+      commentCount?: number;
+    }) => {
+      if (!payload.postId || payload.commentCount == null) return;
+      patchPostCounts(payload.postId, { commentCount: payload.commentCount });
+    };
+
+    socket.on("post_boosted", onPostBoosted);
+    socket.on("post_unboosted", onPostBoosted);
+    socket.on("post_commented", onPostCommented);
+
+    return () => {
+      socket.off("post_boosted", onPostBoosted);
+      socket.off("post_unboosted", onPostBoosted);
+      socket.off("post_commented", onPostCommented);
+    };
+  }, [socket]);
 
   useEffect(() => {
     setSearchInput(queryParam);

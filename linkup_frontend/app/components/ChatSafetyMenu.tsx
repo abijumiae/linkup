@@ -7,13 +7,14 @@ import {
   blockUser,
   fetchBlockStatus,
   unblockUser,
+  type BlockStatus,
 } from "@/src/lib/safety";
 import ReportModal from "./ReportModal";
 
 type ChatSafetyMenuProps = {
   userId: string;
   userName: string;
-  onBlockChange?: (blocked: boolean) => void;
+  onBlockChange?: (status: BlockStatus) => void;
 };
 
 export default function ChatSafetyMenu({
@@ -31,7 +32,7 @@ export default function ChatSafetyMenu({
     void fetchBlockStatus(userId)
       .then((status) => {
         setBlockedByMe(status.blockedByMe);
-        onBlockChange?.(status.isBlocked);
+        onBlockChange?.(status);
       })
       .catch(() => {
         // Ignore status load failures.
@@ -47,12 +48,20 @@ export default function ChatSafetyMenu({
       if (blockedByMe) {
         await unblockUser(userId);
         setBlockedByMe(false);
-        onBlockChange?.(false);
+        onBlockChange?.({
+          blockedByMe: false,
+          blockedMe: false,
+          isBlocked: false,
+        });
         setNotice("User unblocked.");
       } else {
         await blockUser(userId);
         setBlockedByMe(true);
-        onBlockChange?.(true);
+        onBlockChange?.({
+          blockedByMe: true,
+          blockedMe: false,
+          isBlocked: true,
+        });
         setNotice("You blocked this user.");
       }
     } catch (err) {
