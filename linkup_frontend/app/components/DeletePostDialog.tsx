@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 type DeletePostDialogProps = {
   open: boolean;
@@ -15,6 +16,12 @@ export default function DeletePostDialog({
   onConfirm,
   isDeleting = false,
 }: DeletePostDialogProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (!open) {
       return;
@@ -30,28 +37,40 @@ export default function DeletePostDialog({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, isDeleting, onClose]);
 
-  if (!open) {
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [open]);
+
+  if (!mounted || !open) {
     return null;
   }
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <button
-        type="button"
-        aria-label="Close"
-        className="absolute inset-0"
-        onClick={() => {
-          if (!isDeleting) {
-            onClose();
-          }
-        }}
-      />
-
+  const dialog = (
+    <div
+      className="fixed inset-0 z-[9999] grid place-items-center bg-black/50 p-4 backdrop-blur-sm"
+      role="presentation"
+      onClick={() => {
+        if (!isDeleting) {
+          onClose();
+        }
+      }}
+    >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="delete-post-title"
-        className="relative z-10 w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-brand-dark sm:p-6"
+        className="w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:p-6"
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
       >
         <h2
           id="delete-post-title"
@@ -84,4 +103,6 @@ export default function DeletePostDialog({
       </div>
     </div>
   );
+
+  return createPortal(dialog, document.body);
 }
