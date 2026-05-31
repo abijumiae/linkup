@@ -172,6 +172,14 @@ export class RealtimeEmitter {
     this.emitToUser(recipientId, 'new_message_notification', payload);
   }
 
+  emitUserOnline(userId: string) {
+    this.server?.emit('user_online', { userId });
+  }
+
+  emitUserOffline(userId: string) {
+    this.server?.emit('user_offline', { userId });
+  }
+
   emitDirectMessage(message: RealtimeDirectMessage) {
     if (!this.server) {
       this.logger.warn('Cannot emit direct message: socket server not ready');

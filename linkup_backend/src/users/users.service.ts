@@ -193,6 +193,18 @@ export class UsersService {
     });
   }
 
+  async getOnlineUserIds(): Promise<string[]> {
+    const users = await this.prisma.user.findMany({
+      where: {
+        online: true,
+        showOnlineStatus: true,
+      },
+      select: { id: true },
+    });
+
+    return users.map((user) => user.id);
+  }
+
   async findByIdSafe(id: string): Promise<SafeUser> {
     const user = await this.findById(id);
 

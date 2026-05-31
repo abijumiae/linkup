@@ -6,6 +6,7 @@ import { MessageCircle, UserPlus } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import { DiscoverPerson } from "@/src/lib/discovery";
 import { formatAccountType, toggleFollow } from "@/src/lib/posts";
+import OnlineStatusDot from "../OnlineStatusDot";
 
 type DiscoverPersonCardProps = {
   user: DiscoverPerson;
@@ -47,18 +48,21 @@ export default function DiscoverPersonCard({
     <div className="linkup-card p-4 transition hover:border-brand-primary/25 sm:p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          {user.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={user.avatarUrl}
-              alt=""
-              className="h-12 w-12 rounded-full object-cover ring-2 ring-brand-primary/20"
-            />
-          ) : (
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white shadow-md shadow-brand-primary/20">
-              {getInitials(user.name, user.username)}
-            </div>
-          )}
+          <div className="relative shrink-0">
+            {user.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={user.avatarUrl}
+                alt=""
+                className="h-12 w-12 rounded-full object-cover ring-2 ring-brand-primary/20"
+              />
+            ) : (
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white shadow-md shadow-brand-primary/20">
+                {getInitials(user.name, user.username)}
+              </div>
+            )}
+            {!isSelf ? <OnlineStatusDot userId={user.id} /> : null}
+          </div>
           <div className="min-w-0">
             <p className="font-semibold text-slate-900 dark:text-white">
               {user.name}

@@ -86,6 +86,7 @@ model User {
   showOnlineStatus  Boolean @default(true)
   showCountry       Boolean @default(true)
   showActivity      Boolean @default(true)
+  online            Boolean @default(false)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   posts        Post[]

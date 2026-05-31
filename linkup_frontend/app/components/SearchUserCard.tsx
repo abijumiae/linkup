@@ -7,6 +7,7 @@ import { ApiError } from "@/src/lib/api";
 import { SearchUser } from "@/src/lib/discovery";
 import { resolveProfileImageUrl } from "@/src/lib/profileMedia";
 import { toggleFollow } from "@/src/lib/posts";
+import OnlineStatusDot from "./OnlineStatusDot";
 
 type SearchUserCardProps = {
   user: SearchUser;
@@ -49,18 +50,21 @@ export default function SearchUserCard({
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-brand-dark/70">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          {user.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={resolveProfileImageUrl(user.avatarUrl) ?? user.avatarUrl}
-              alt=""
-              className="h-12 w-12 rounded-xl object-cover ring-2 ring-brand-primary/20"
-            />
-          ) : (
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white">
-              {getInitials(user.name, user.username)}
-            </div>
-          )}
+          <div className="relative shrink-0">
+            {user.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={resolveProfileImageUrl(user.avatarUrl) ?? user.avatarUrl}
+                alt=""
+                className="h-12 w-12 rounded-xl object-cover ring-2 ring-brand-primary/20"
+              />
+            ) : (
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white">
+                {getInitials(user.name, user.username)}
+              </div>
+            )}
+            {!isSelf ? <OnlineStatusDot userId={user.id} /> : null}
+          </div>
           <div className="min-w-0">
             <p className="font-semibold text-slate-900 dark:text-white">
               {user.name}

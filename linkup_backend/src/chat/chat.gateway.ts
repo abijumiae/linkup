@@ -22,6 +22,7 @@ import {
   liveRoomKey,
 } from './live-room.manager';
 import { RealtimeEmitter } from './realtime.emitter';
+import { PresenceService } from './presence.service';
 import { WsAuthService } from './ws-auth.service';
 import {
   getDirectRoom,
@@ -59,12 +60,12 @@ export class ChatGateway
   @WebSocketServer()
   server!: Server;
 
-  private readonly onlineUsers = new Map<string, Set<string>>();
   private readonly groupCallManager = new GroupCallManager();
   private readonly liveRoomManager = new LiveRoomManager();
 
   constructor(
     private readonly wsAuthService: WsAuthService,
+    private readonly presenceService: PresenceService,
     @Inject(forwardRef(() => MessagesService))
     private readonly messagesService: MessagesService,
     private readonly realtimeEmitter: RealtimeEmitter,
@@ -86,27 +87,15 @@ export class ChatGateway
       client.data.userName = user.name;
       client.data.userAvatarUrl = user.avatarUrl ?? null;
 
-      if (!this.onlineUsers.has(user.id)) {
-        this.onlineUsers.set(user.id, new Set());
-      }
-      this.onlineUsers.get(user.id)?.add(client.id);
-
       client.join(getUserRoom(user.id));
       if (user.role === 'ADMIN' || user.role === 'MODERATOR') {
         client.join('moderation');
       }
+
+      await this.presenceService.registerConnection(user.id, client.id);
+
       client.emit('socket_ready', { userId: user.id });
       this.logger.log(`Socket connected userId=${user.id} socketId=${client.id}`);
-      this.broadcastPresence(user.id, true);
-      this.server.emit('user_online', {
-        userId: user.id,
-        online: true,
-      });
-      this.server.emit('presence:update', {
-        userId: user.id,
-        online: true,
-        lastActive: new Date().toISOString(),
-      });
     } catch {
       this.logger.warn('Socket auth failed — connection rejected');
       client.disconnect(true);
@@ -123,29 +112,13 @@ export class ChatGateway
     }
 
     this.logger.log(`Socket disconnected userId=${userId} socketId=${client.id}`);
-
-    const sockets = this.onlineUsers.get(userId);
-    sockets?.delete(client.id);
-    if (sockets && sockets.size === 0) {
-      this.onlineUsers.delete(userId);
-      this.broadcastPresence(userId, false);
-      this.server.emit('user_offline', {
-        userId,
-        online: false,
-      });
-      this.server.emit('presence:update', {
-        userId,
-        online: false,
-        lastActive: new Date().toISOString(),
-      });
-    }
+    void this.presenceService.unregisterConnection(userId, client.id);
   }
 
   @SubscribeMessage('get_online_users')
-  handleGetOnlineUsers(@ConnectedSocket() client: AuthedSocket) {
-    client.emit('online_users', {
-      userIds: Array.from(this.onlineUsers.keys()),
-    });
+  async handleGetOnlineUsers(@ConnectedSocket() client: AuthedSocket) {
+    const userIds = await this.presenceService.getVisibleOnlineUserIds();
+    client.emit('online_users', { userIds });
   }
 
   @SubscribeMessage('join_direct_chat')
@@ -578,7 +551,7 @@ export class ChatGateway
   }
 
   isUserOnline(userId: string): boolean {
-    return this.onlineUsers.has(userId);
+    return this.presenceService.isConnected(userId);
   }
 
   private resolveCallTarget(payload?: {
@@ -978,10 +951,6 @@ export class ChatGateway
     client
       .to(getDirectRoom(userId, payload.targetId))
       .emit('typing', eventPayload);
-  }
-
-  private broadcastPresence(userId: string, online: boolean) {
-    this.server.emit(online ? 'user_online' : 'user_offline', { userId, online });
   }
 
   private leaveActiveLiveRoom(

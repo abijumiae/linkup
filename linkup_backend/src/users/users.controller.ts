@@ -9,6 +9,12 @@ import { SafeUser, UsersService } from './users.service';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @Get('online')
+  async getOnlineUsers() {
+    const userIds = await this.usersService.getOnlineUserIds();
+    return { userIds };
+  }
+
   @Get('me')
   async getMe(@Req() req: { user: SafeUser }) {
     const user = await this.usersService.getProfile(req.user.id);

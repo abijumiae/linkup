@@ -1,6 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { ChatModule } from '../chat/chat.module';
 import { EmailModule } from '../email/email.module';
 import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
@@ -19,6 +20,7 @@ const googleProviders =
 @Module({
   imports: [
     forwardRef(() => UsersModule),
+    forwardRef(() => ChatModule),
     EmailModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({

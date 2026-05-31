@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { MessagesModule } from '../messages/messages.module';
 import { UsersModule } from '../users/users.module';
 import { ChatGateway } from './chat.gateway';
+import { PresenceService } from './presence.service';
 import { RealtimeEmitter } from './realtime.emitter';
 import { WsAuthService } from './ws-auth.service';
 
@@ -15,7 +16,7 @@ import { WsAuthService } from './ws-auth.service';
       signOptions: { expiresIn: '7d' },
     }),
   ],
-  providers: [ChatGateway, WsAuthService, RealtimeEmitter],
-  exports: [ChatGateway, RealtimeEmitter],
+  providers: [ChatGateway, WsAuthService, RealtimeEmitter, PresenceService],
+  exports: [ChatGateway, RealtimeEmitter, PresenceService],
 })
 export class ChatModule {}

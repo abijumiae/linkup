@@ -16,6 +16,7 @@ import {
   logout as clearAuthStorage,
 } from "./auth";
 import { disconnectSocket } from "./socket";
+import { notifyLogout } from "./presence";
 
 type AuthContextValue = {
   user: User | null;
@@ -49,6 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshUser]);
 
   const logout = useCallback(() => {
+    void notifyLogout();
     disconnectSocket();
     clearAuthStorage();
     setUser(null);

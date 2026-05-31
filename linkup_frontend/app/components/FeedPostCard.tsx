@@ -34,6 +34,7 @@ import {
 } from "@/src/lib/posts";
 import BoostReactionHints from "./linkup/BoostReactionHints";
 import CommentsDrawer from "./CommentsDrawer";
+import OnlineStatusDot from "./OnlineStatusDot";
 
 function isModeratorRole(role: Role | null | undefined): boolean {
   return role === "ADMIN" || role === "MODERATOR";
@@ -248,18 +249,23 @@ function FeedPostCard({
       <article className="linkup-card p-5 transition hover:border-brand-primary/25 hover:shadow-xl hover:shadow-brand-primary/5 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
-            {avatarSrc ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={avatarSrc}
-                alt=""
-                className="h-12 w-12 shrink-0 rounded-full object-cover ring-2 ring-brand-primary/20"
-              />
-            ) : (
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white shadow-md shadow-brand-primary/20">
-                {getInitials(localPost.author.name)}
-              </div>
-            )}
+            <div className="relative shrink-0">
+              {avatarSrc ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarSrc}
+                  alt=""
+                  className="h-12 w-12 shrink-0 rounded-full object-cover ring-2 ring-brand-primary/20"
+                />
+              ) : (
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white shadow-md shadow-brand-primary/20">
+                  {getInitials(localPost.author.name)}
+                </div>
+              )}
+              {localPost.authorId !== currentUserId ? (
+                <OnlineStatusDot userId={localPost.authorId} />
+              ) : null}
+            </div>
             <div className="min-w-0">
               <p className="truncate font-semibold text-slate-900 dark:text-white">
                 {localPost.author.name}

@@ -18,6 +18,7 @@ import {
   getProfileInitials,
   resolveProfileImageUrl,
 } from "@/src/lib/profileMedia";
+import OnlineStatusDot from "../OnlineStatusDot";
 
 type ProfileHeaderProps = {
   user: ProfileUser;
@@ -106,10 +107,7 @@ export default function ProfileHeader({
                   </div>
                 )}
               </div>
-              <span
-                className="absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-400 dark:border-brand-dark"
-                aria-label="Online"
-              />
+              <OnlineStatusDot userId={user.id} className="bottom-1 right-1" />
               {!isEditing && onEditAvatar ? (
                 <button
                   type="button"

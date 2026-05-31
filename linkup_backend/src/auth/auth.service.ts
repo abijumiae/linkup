@@ -2,17 +2,20 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
   ServiceUnavailableException,
   UnauthorizedException,
+  forwardRef,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { randomBytes, randomInt } from 'crypto';
 import { User } from '../generated/prisma/client';
 import { EmailService } from '../email/email.service';
+import { PresenceService } from '../chat/presence.service';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { CompleteOnboardingDto } from './dto/onboarding.dto';
@@ -31,6 +34,8 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly emailService: EmailService,
+    @Inject(forwardRef(() => PresenceService))
+    private readonly presenceService: PresenceService,
   ) {}
 
   isGoogleConfigured(): boolean {
@@ -214,6 +219,7 @@ export class AuthService {
       }
 
       const accessToken = await this.createAccessToken(user);
+      await this.presenceService.markOnline(user.id);
 
       return {
         accessToken,
@@ -237,6 +243,11 @@ export class AuthService {
     }
   }
 
+  async logout(userId: string) {
+    await this.presenceService.markOffline(userId);
+    return { ok: true };
+  }
+
   async handleGoogleUser(profile: GoogleProfilePayload) {
     try {
       let user =
@@ -258,6 +269,7 @@ export class AuthService {
       }
 
       const accessToken = await this.createAccessToken(user);
+      await this.presenceService.markOnline(user.id);
 
       return {
         accessToken,

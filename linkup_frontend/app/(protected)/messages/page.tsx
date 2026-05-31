@@ -27,6 +27,7 @@ import {
   TypingPayload,
 } from "@/src/lib/socket";
 import { useSocket } from "@/src/components/SocketProvider";
+import { useOnlinePresence } from "@/src/lib/OnlinePresenceProvider";
 import { useActiveChat } from "@/src/lib/ActiveChatContext";
 import {
   GroupChatMessage,
@@ -151,9 +152,9 @@ export default function MessagesPage() {
   const [isVoiceRecording, setIsVoiceRecording] = useState(false);
   const [chatBlocked, setChatBlocked] = useState(false);
   const [blockedByMe, setBlockedByMe] = useState(false);
-  const [onlineUsers, setOnlineUsers] = useState<Record<string, boolean>>({});
   const [joinedDirectRoom, setJoinedDirectRoom] = useState<string | null>(null);
   const { socket, status: socketStatus } = useSocket();
+  const { isUserOnline } = useOnlinePresence();
   const { setActiveChatPeerId } = useActiveChat();
   const activeUserRef = useRef(activeUser);
   const activeGroupRef = useRef(activeGroup);
@@ -549,7 +550,6 @@ export default function MessagesPage() {
           targetId: groupId,
         });
       }
-      socket.emit("get_online_users");
     };
 
     const applyIncomingMessage = (raw: unknown) => {
@@ -677,40 +677,6 @@ export default function MessagesPage() {
       }
     };
 
-    const onPresence = (payload: { userId: string; online: boolean }) => {
-      setOnlineUsers((current) => ({
-        ...current,
-        [payload.userId]: payload.online,
-      }));
-    };
-
-    const onOnlineUsers = (payload: { userIds?: string[] }) => {
-      if (!payload.userIds) {
-        return;
-      }
-      setOnlineUsers((current) => {
-        const next = { ...current };
-        payload.userIds?.forEach((userId) => {
-          next[userId] = true;
-        });
-        return next;
-      });
-    };
-
-    const onUserOnline = (payload: { userId: string }) => {
-      setOnlineUsers((current) => ({
-        ...current,
-        [payload.userId]: true,
-      }));
-    };
-
-    const onUserOffline = (payload: { userId: string }) => {
-      setOnlineUsers((current) => ({
-        ...current,
-        [payload.userId]: false,
-      }));
-    };
-
     const onCallOffer = (payload: {
       fromUserId: string;
       sdp?: RTCSessionDescriptionInit;
@@ -815,10 +781,6 @@ export default function MessagesPage() {
     socket.on("message:read", onRead);
     socket.on("typing", onTyping);
     socket.on("typing_update", onTyping);
-    socket.on("presence:update", onPresence);
-    socket.on("online_users", onOnlineUsers);
-    socket.on("user_online", onUserOnline);
-    socket.on("user_offline", onUserOffline);
     socket.on("call_offer", onCallOffer);
     socket.on("incoming_call", onCallOffer);
     socket.on("call_end", onCallEnded);
@@ -840,10 +802,6 @@ export default function MessagesPage() {
       socket.off("message:read", onRead);
       socket.off("typing", onTyping);
       socket.off("typing_update", onTyping);
-      socket.off("presence:update", onPresence);
-      socket.off("online_users", onOnlineUsers);
-      socket.off("user_online", onUserOnline);
-      socket.off("user_offline", onUserOffline);
       socket.off("call_offer", onCallOffer);
       socket.off("incoming_call", onCallOffer);
       socket.off("call_end", onCallEnded);
@@ -1447,7 +1405,7 @@ export default function MessagesPage() {
 
   const isDirectOnline =
     chatTab === "direct" && activeUser
-      ? Boolean(onlineUsers[activeUser.id])
+      ? isUserOnline(activeUser.id)
       : false;
 
   return (
@@ -1586,7 +1544,7 @@ export default function MessagesPage() {
                       lastMessage={conversation.lastMessage.content}
                       time={formatTimeAgo(conversation.lastMessage.createdAt)}
                       unread={conversation.unreadCount}
-                      online={onlineUsers[conversation.user.id]}
+                      online={isUserOnline(conversation.user.id)}
                       active={activeUser?.id === conversation.user.id}
                       onClick={() =>
                         void handleSelectConversation(conversation.user.id)

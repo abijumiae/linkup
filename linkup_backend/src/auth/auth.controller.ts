@@ -41,6 +41,12 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  logout(@Req() req: { user: SafeUser }) {
+    return this.authService.logout(req.user.id);
+  }
+
   @Post('verify-email')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   verifyEmail(@Body() dto: VerifyEmailDto) {
