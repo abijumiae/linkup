@@ -120,6 +120,24 @@ export class RealtimeEmitter {
     this.emitToPulse('post_unsaved', { postId, userId });
   }
 
+  emitPostUpdated(payload: {
+    id: string;
+    content: string;
+    mediaUrl: string | null;
+    mediaType: 'image' | 'video' | null;
+    imageUrl: string | null;
+    videoUrl: string | null;
+    postType: string;
+    updatedAt: string;
+    authorId: string;
+  }) {
+    this.emitToPulse('post_updated', payload);
+  }
+
+  emitPostDeleted(postId: string) {
+    this.emitToPulse('post_deleted', { id: postId });
+  }
+
   emitMomentCreated(moment: unknown) {
     this.emitToPulse('moment_created', moment);
   }

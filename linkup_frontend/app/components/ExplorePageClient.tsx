@@ -157,6 +157,7 @@ export default function ExplorePageClient() {
   const queryParam = searchParams.get("q") ?? "";
   const currentUser = getCurrentUser();
   const currentUserId = currentUser?.id ?? null;
+  const currentUserRole = currentUser?.role ?? null;
   const { socket } = useSocket();
 
   const [searchInput, setSearchInput] = useState(queryParam);
@@ -296,14 +297,70 @@ export default function ExplorePageClient() {
       patchPostCounts(payload.postId, { commentCount: payload.commentCount });
     };
 
+    const patchPost = (
+      postId: string,
+      patch: Partial<
+        Pick<FeedPost, "content" | "imageUrl" | "videoUrl" | "updatedAt">
+      >,
+    ) => {
+      const updater = (posts: FeedPost[]) =>
+        posts.map((post) =>
+          post.id === postId ? { ...post, ...patch } : post,
+        );
+
+      setSearchPosts(updater);
+      setDiscover((current) => ({
+        ...current,
+        sparks: updater(current.sparks),
+      }));
+    };
+
+    const removePost = (postId: string) => {
+      const filterPosts = (posts: FeedPost[]) =>
+        posts.filter((post) => post.id !== postId);
+
+      setSearchPosts(filterPosts);
+      setDiscover((current) => ({
+        ...current,
+        sparks: filterPosts(current.sparks),
+      }));
+    };
+
+    const onPostUpdated = (payload: {
+      id?: string;
+      content?: string;
+      imageUrl?: string | null;
+      videoUrl?: string | null;
+      updatedAt?: string;
+    }) => {
+      if (!payload.id) return;
+      patchPost(payload.id, {
+        content: payload.content,
+        imageUrl:
+          payload.imageUrl !== undefined ? payload.imageUrl : undefined,
+        videoUrl:
+          payload.videoUrl !== undefined ? payload.videoUrl : undefined,
+        updatedAt: payload.updatedAt,
+      });
+    };
+
+    const onPostDeleted = (payload: { id?: string }) => {
+      if (!payload.id) return;
+      removePost(payload.id);
+    };
+
     socket.on("post_boosted", onPostBoosted);
     socket.on("post_unboosted", onPostBoosted);
     socket.on("post_commented", onPostCommented);
+    socket.on("post_updated", onPostUpdated);
+    socket.on("post_deleted", onPostDeleted);
 
     return () => {
       socket.off("post_boosted", onPostBoosted);
       socket.off("post_unboosted", onPostBoosted);
       socket.off("post_commented", onPostCommented);
+      socket.off("post_updated", onPostUpdated);
+      socket.off("post_deleted", onPostDeleted);
     };
   }, [socket]);
 
@@ -416,7 +473,26 @@ export default function ExplorePageClient() {
             key={post.id}
             post={post}
             currentUserId={currentUserId}
+            currentUserRole={currentUserRole}
             pulseLabels
+            onPostUpdated={(updated) => {
+              const updater = (items: FeedPost[]) =>
+                items.map((item) => (item.id === updated.id ? updated : item));
+              setSearchPosts(updater);
+              setDiscover((current) => ({
+                ...current,
+                sparks: updater(current.sparks),
+              }));
+            }}
+            onPostDeleted={(postId) => {
+              const filterPosts = (items: FeedPost[]) =>
+                items.filter((item) => item.id !== postId);
+              setSearchPosts(filterPosts);
+              setDiscover((current) => ({
+                ...current,
+                sparks: filterPosts(current.sparks),
+              }));
+            }}
           />
         ))}
       </div>

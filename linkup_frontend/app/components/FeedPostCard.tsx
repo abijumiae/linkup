@@ -8,18 +8,24 @@ import {
   Heart,
   Mail,
   MessageCircle,
+  Pencil,
   Repeat2,
   Share2,
+  Trash2,
 } from "lucide-react";
 import { ApiError, resolveMediaUrl } from "@/src/lib/api";
+import { Role } from "@/src/lib/auth";
 import { resolveProfileImageUrl } from "@/src/lib/profileMedia";
 import {
   blockUser,
   fetchBlockStatus,
 } from "@/src/lib/safety";
 import ReportModal from "./ReportModal";
+import EditPostModal from "./EditPostModal";
+import DeletePostDialog from "./DeletePostDialog";
 import {
   FeedPost,
+  deletePost,
   formatAccountType,
   formatTimeAgo,
   toggleFollow,
@@ -28,6 +34,10 @@ import {
 } from "@/src/lib/posts";
 import BoostReactionHints from "./linkup/BoostReactionHints";
 import CommentsDrawer from "./CommentsDrawer";
+
+function isModeratorRole(role: Role | null | undefined): boolean {
+  return role === "ADMIN" || role === "MODERATOR";
+}
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -40,15 +50,21 @@ function getInitials(name: string): string {
 type FeedPostCardProps = {
   post: FeedPost;
   currentUserId: string | null;
+  currentUserRole?: Role | null;
   sparkLabels?: boolean;
   pulseLabels?: boolean;
+  onPostUpdated?: (post: FeedPost) => void;
+  onPostDeleted?: (postId: string) => void;
 };
 
 function FeedPostCard({
   post,
   currentUserId,
+  currentUserRole = null,
   sparkLabels = false,
   pulseLabels = false,
+  onPostUpdated,
+  onPostDeleted,
 }: FeedPostCardProps) {
   const useSparkWording = sparkLabels || pulseLabels;
   const [liked, setLiked] = useState(post.liked);
@@ -61,31 +77,44 @@ function FeedPostCard({
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [localPost, setLocalPost] = useState(post);
   const [blockedByMe, setBlockedByMe] = useState(false);
   const [interactionError, setInteractionError] = useState<string | null>(null);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
 
+  const isOwner = Boolean(currentUserId && localPost.authorId === currentUserId);
+  const canEdit = isOwner;
+  const canDelete = isOwner || isModeratorRole(currentUserRole);
+  const canReport = Boolean(currentUserId && !isOwner);
+
   useEffect(() => {
-    if (!currentUserId || post.authorId === currentUserId) {
+    setLocalPost(post);
+  }, [post]);
+
+  useEffect(() => {
+    if (!currentUserId || localPost.authorId === currentUserId) {
       return;
     }
 
-    void fetchBlockStatus(post.authorId)
+    void fetchBlockStatus(localPost.authorId)
       .then((status) => setBlockedByMe(status.blockedByMe))
       .catch(() => undefined);
-  }, [currentUserId, post.authorId]);
+  }, [currentUserId, localPost.authorId]);
 
   useEffect(() => {
-    setLiked(post.liked);
-    setSaved(post.saved ?? false);
-    setLikeCount(post.likeCount);
-    setCommentCount(post.commentCount);
-    setIsFollowingAuthor(post.isFollowingAuthor);
-  }, [post]);
+    setLiked(localPost.liked);
+    setSaved(localPost.saved ?? false);
+    setLikeCount(localPost.likeCount);
+    setCommentCount(localPost.commentCount);
+    setIsFollowingAuthor(localPost.isFollowingAuthor);
+  }, [localPost]);
 
-  const imageSrc = resolveMediaUrl(post.imageUrl);
-  const videoSrc = resolveMediaUrl(post.videoUrl);
-  const avatarSrc = resolveProfileImageUrl(post.author.avatarUrl);
+  const imageSrc = resolveMediaUrl(localPost.imageUrl);
+  const videoSrc = resolveMediaUrl(localPost.videoUrl);
+  const avatarSrc = resolveProfileImageUrl(localPost.author.avatarUrl);
 
   function getInteractionError(err: unknown): string {
     if (err instanceof ApiError) {
@@ -100,7 +129,7 @@ function FeedPostCard({
   async function handleLike() {
     setInteractionError(null);
     try {
-      const result = await toggleLike(post.id);
+      const result = await toggleLike(localPost.id);
       setLiked(result.liked);
       setLikeCount(result.likeCount);
     } catch (err) {
@@ -111,7 +140,7 @@ function FeedPostCard({
   async function handleSave() {
     setInteractionError(null);
     try {
-      const result = await toggleSave(post.id);
+      const result = await toggleSave(localPost.id);
       setSaved(result.saved);
     } catch (err) {
       setInteractionError(getInteractionError(err));
@@ -122,14 +151,14 @@ function FeedPostCard({
     setShareNotice(null);
     const shareUrl =
       typeof window !== "undefined"
-        ? `${window.location.origin}/explore?q=${encodeURIComponent(post.content.slice(0, 80))}`
+        ? `${window.location.origin}/explore?q=${encodeURIComponent(localPost.content.slice(0, 80))}`
         : "https://www.thelinkupzone.com/explore";
 
     try {
       if (navigator.share) {
         await navigator.share({
-          title: `${post.author.name} on LinkUp`,
-          text: post.content.slice(0, 140),
+          title: `${localPost.author.name} on LinkUp`,
+          text: localPost.content.slice(0, 140),
           url: shareUrl,
         });
       } else {
@@ -143,7 +172,7 @@ function FeedPostCard({
 
   async function handleFollow() {
     try {
-      const result = await toggleFollow(post.authorId);
+      const result = await toggleFollow(localPost.authorId);
       setIsFollowingAuthor(result.following);
       setInteractionError(null);
     } catch (err) {
@@ -154,7 +183,7 @@ function FeedPostCard({
   async function handleBlockAuthor() {
     setMenuOpen(false);
     try {
-      await blockUser(post.authorId);
+      await blockUser(localPost.authorId);
       setBlockedByMe(true);
       setShareNotice("You blocked this user.");
     } catch (err) {
@@ -162,12 +191,51 @@ function FeedPostCard({
     }
   }
 
+  function handlePostUpdated(updated: FeedPost) {
+    setLocalPost(updated);
+    onPostUpdated?.(updated);
+    setShareNotice("Post updated.");
+  }
+
+  async function handleDeleteConfirm() {
+    setIsDeleting(true);
+    setInteractionError(null);
+
+    try {
+      await deletePost(localPost.id);
+      setDeleteOpen(false);
+      setShareNotice("Post deleted.");
+      onPostDeleted?.(localPost.id);
+    } catch (err) {
+      setInteractionError(
+        err instanceof ApiError
+          ? err.message
+          : "Could not delete post. Please try again.",
+      );
+      setDeleteOpen(false);
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   return (
     <>
+      <EditPostModal
+        open={editOpen}
+        post={localPost}
+        onClose={() => setEditOpen(false)}
+        onUpdated={handlePostUpdated}
+      />
+      <DeletePostDialog
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
+      />
       <ReportModal
         open={reportOpen}
         targetType="POST"
-        targetId={post.id}
+        targetId={localPost.id}
         targetLabel="Report spark"
         onClose={() => setReportOpen(false)}
         onSubmitted={() => setShareNotice("Thanks. Your report has been sent.")}
@@ -184,24 +252,24 @@ function FeedPostCard({
               />
             ) : (
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white shadow-md shadow-brand-primary/20">
-                {getInitials(post.author.name)}
+                {getInitials(localPost.author.name)}
               </div>
             )}
             <div className="min-w-0">
               <p className="truncate font-semibold text-slate-900 dark:text-white">
-                {post.author.name}
+                {localPost.author.name}
               </p>
               <p className="truncate text-sm text-slate-500 dark:text-slate-400">
-                @{post.author.username} · {formatAccountType(post.author.accountType)} ·{" "}
-                {formatTimeAgo(post.createdAt)}
+                @{localPost.author.username} · {formatAccountType(localPost.author.accountType)} ·{" "}
+                {formatTimeAgo(localPost.createdAt)}
               </p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {currentUserId && post.authorId !== currentUserId ? (
+            {currentUserId && localPost.authorId !== currentUserId ? (
               <>
                 <Link
-                  href={`/messages?userId=${post.authorId}`}
+                  href={`/messages?userId=${localPost.authorId}`}
                   className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
                 >
                   <Mail className="h-4 w-4 text-brand-secondary" />
@@ -236,19 +304,47 @@ function FeedPostCard({
                 ···
               </button>
               {menuOpen ? (
-                <div className="absolute right-0 top-full z-10 mt-2 w-44 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-brand-dark">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      setReportOpen(true);
-                    }}
-                    className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-white/5"
-                  >
-                    <Flag className="h-4 w-4" />
-                    Report post
-                  </button>
-                  {currentUserId && post.authorId !== currentUserId ? (
+                <div className="absolute right-0 top-full z-10 mt-2 w-48 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-brand-dark">
+                  {canEdit ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        setEditOpen(true);
+                      }}
+                      className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-white/5"
+                    >
+                      <Pencil className="h-4 w-4" />
+                      Edit post
+                    </button>
+                  ) : null}
+                  {canDelete ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        setDeleteOpen(true);
+                      }}
+                      className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-rose-600 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete post
+                    </button>
+                  ) : null}
+                  {canReport ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        setReportOpen(true);
+                      }}
+                      className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-white/5"
+                    >
+                      <Flag className="h-4 w-4" />
+                      Report post
+                    </button>
+                  ) : null}
+                  {currentUserId && localPost.authorId !== currentUserId ? (
                     <button
                       type="button"
                       onClick={() => void handleBlockAuthor()}
@@ -263,9 +359,9 @@ function FeedPostCard({
           </div>
         </div>
 
-        {post.content ? (
+        {localPost.content ? (
           <p className="mt-5 text-sm leading-7 text-slate-700 dark:text-slate-300">
-            {post.content}
+            {localPost.content}
           </p>
         ) : null}
 
@@ -373,13 +469,13 @@ function FeedPostCard({
 
       <CommentsDrawer
         open={commentsOpen}
-        postId={post.id}
+        postId={localPost.id}
         currentUserId={currentUserId}
         initialCount={commentCount}
         pulseLabels={useSparkWording}
         onClose={() => setCommentsOpen(false)}
         onCountChange={setCommentCount}
-        postIdForDelete={post.id}
+        postIdForDelete={localPost.id}
       />
     </>
   );

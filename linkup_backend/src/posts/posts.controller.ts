@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -13,6 +14,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SafeUser } from '../users/users.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { CreatePostDto } from './dto/create-post.dto';
+import { UpdatePostDto } from './dto/update-post.dto';
 import { PostsService } from './posts.service';
 
 @Controller('posts')
@@ -131,8 +133,17 @@ export class PostsController {
     return this.postsService.getPostById(id, req.user.id);
   }
 
+  @Patch(':id')
+  update(
+    @Param('id') id: string,
+    @Req() req: { user: SafeUser },
+    @Body() dto: UpdatePostDto,
+  ) {
+    return this.postsService.update(id, req.user, dto);
+  }
+
   @Delete(':id')
   delete(@Param('id') id: string, @Req() req: { user: SafeUser }) {
-    return this.postsService.delete(id, req.user.id);
+    return this.postsService.delete(id, req.user);
   }
 }

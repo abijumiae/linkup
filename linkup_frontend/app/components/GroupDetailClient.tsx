@@ -25,7 +25,9 @@ type GroupDetailClientProps = {
 
 export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
   const router = useRouter();
-  const currentUserId = getCurrentUser()?.id ?? null;
+  const currentUser = getCurrentUser();
+  const currentUserId = currentUser?.id ?? null;
+  const currentUserRole = currentUser?.role ?? null;
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [postContent, setPostContent] = useState("");
@@ -226,6 +228,19 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
                 key={post.id}
                 post={post}
                 currentUserId={currentUserId}
+                currentUserRole={currentUserRole}
+                onPostUpdated={(updated) => {
+                  setPosts((current) =>
+                    current.map((item) =>
+                      item.id === updated.id ? updated : item,
+                    ),
+                  );
+                }}
+                onPostDeleted={(postId) => {
+                  setPosts((current) =>
+                    current.filter((item) => item.id !== postId),
+                  );
+                }}
               />
             ))
           )}

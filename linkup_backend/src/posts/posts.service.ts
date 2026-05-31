@@ -6,7 +6,7 @@ import {
   NotFoundException,
   forwardRef,
 } from '@nestjs/common';
-import { Prisma } from '../generated/prisma/client';
+import { Prisma, Role } from '../generated/prisma/client';
 import { RealtimeEmitter } from '../chat/realtime.emitter';
 import {
   buildPaginatedResult,
@@ -18,6 +18,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { SafetyService } from '../safety/safety.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { CreatePostDto } from './dto/create-post.dto';
+import { UpdatePostDto } from './dto/update-post.dto';
+import { SafeUser } from '../users/users.service';
 
 const authorSelect = {
   id: true,
@@ -505,7 +507,28 @@ export class PostsService {
     }));
   }
 
-  async delete(postId: string, userId: string) {
+  private canDeletePost(user: SafeUser, post: { authorId: string }): boolean {
+    return (
+      post.authorId === user.id ||
+      user.role === Role.ADMIN ||
+      user.role === Role.MODERATOR
+    );
+  }
+
+  private toRealtimePostMedia(post: {
+    imageUrl: string | null;
+    videoUrl: string | null;
+  }): { mediaUrl: string | null; mediaType: 'image' | 'video' | null } {
+    if (post.videoUrl) {
+      return { mediaUrl: post.videoUrl, mediaType: 'video' };
+    }
+    if (post.imageUrl) {
+      return { mediaUrl: post.imageUrl, mediaType: 'image' };
+    }
+    return { mediaUrl: null, mediaType: null };
+  }
+
+  async update(postId: string, user: SafeUser, dto: UpdatePostDto) {
     const post = await this.prisma.post.findUnique({
       where: { id: postId },
     });
@@ -514,14 +537,85 @@ export class PostsService {
       throw new NotFoundException('Post not found');
     }
 
-    if (post.authorId !== userId) {
-      throw new ForbiddenException('You can only delete your own posts');
+    if (post.authorId !== user.id) {
+      throw new ForbiddenException('You can only edit your own posts');
+    }
+
+    let content =
+      dto.content !== undefined ? dto.content.trim() : post.content;
+    let imageUrl = post.imageUrl;
+    let videoUrl = post.videoUrl;
+    let postType = post.postType;
+
+    if (dto.removeMedia) {
+      imageUrl = null;
+      videoUrl = null;
+      postType = content ? 'TEXT' : postType;
+    }
+
+    if (dto.mediaUrl && dto.mediaType) {
+      if (dto.mediaType === 'image') {
+        imageUrl = dto.mediaUrl;
+        videoUrl = null;
+        postType = 'IMAGE';
+      } else if (dto.mediaType === 'video') {
+        videoUrl = dto.mediaUrl;
+        imageUrl = null;
+        postType = 'VIDEO';
+      }
+    }
+
+    if (!content && !imageUrl && !videoUrl) {
+      throw new BadRequestException('Post cannot be empty');
+    }
+
+    const updated = await this.prisma.post.update({
+      where: { id: postId },
+      data: {
+        content,
+        imageUrl,
+        videoUrl,
+        postType,
+      },
+      include: postInclude,
+    });
+
+    const media = this.toRealtimePostMedia(updated);
+
+    this.realtimeEmitter.emitPostUpdated({
+      id: updated.id,
+      content: updated.content,
+      mediaUrl: media.mediaUrl,
+      mediaType: media.mediaType,
+      imageUrl: updated.imageUrl,
+      videoUrl: updated.videoUrl,
+      postType: updated.postType,
+      updatedAt: updated.updatedAt.toISOString(),
+      authorId: updated.authorId,
+    });
+
+    return this.getPostById(postId, user.id);
+  }
+
+  async delete(postId: string, user: SafeUser) {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+    });
+
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    if (!this.canDeletePost(user, post)) {
+      throw new ForbiddenException('You cannot delete this post');
     }
 
     await this.prisma.post.delete({
       where: { id: postId },
     });
 
-    return { message: 'Post deleted successfully' };
+    this.realtimeEmitter.emitPostDeleted(postId);
+
+    return { success: true, id: postId };
   }
 }

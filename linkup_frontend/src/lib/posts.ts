@@ -53,6 +53,18 @@ export interface CreatePostPayload {
   mediaType?: "image" | "video";
 }
 
+export interface UpdatePostPayload {
+  content?: string;
+  mediaUrl?: string | null;
+  mediaType?: "image" | "video" | null;
+  removeMedia?: boolean;
+}
+
+export interface DeletePostResponse {
+  success: boolean;
+  id: string;
+}
+
 export interface LikeResponse {
   liked: boolean;
   likeCount: number;
@@ -102,6 +114,18 @@ function normalizeCreatePostPayload(
   };
 }
 
+function normalizeUpdatePostPayload(
+  payload: UpdatePostPayload,
+): UpdatePostPayload {
+  const normalized: UpdatePostPayload = { ...payload };
+
+  if (payload.mediaUrl) {
+    normalized.mediaUrl = toAbsoluteMediaUrl(payload.mediaUrl);
+  }
+
+  return normalized;
+}
+
 export function getCreatePostErrorMessage(error: unknown): string {
   if (error instanceof ApiError && error.status === 400) {
     const message = error.message.toLowerCase();
@@ -126,6 +150,30 @@ export async function createPost(payload: CreatePostPayload): Promise<Post> {
       method: "POST",
       headers: authHeaders(),
       body: JSON.stringify(body),
+    }),
+  );
+}
+
+export async function updatePost(
+  postId: string,
+  payload: UpdatePostPayload,
+): Promise<FeedPost> {
+  const body = normalizeUpdatePostPayload(payload);
+
+  return withAuth(() =>
+    apiRequest<FeedPost>(`/posts/${postId}`, {
+      method: "PATCH",
+      headers: authHeaders(),
+      body: JSON.stringify(body),
+    }),
+  );
+}
+
+export async function deletePost(postId: string): Promise<DeletePostResponse> {
+  return withAuth(() =>
+    apiRequest<DeletePostResponse>(`/posts/${postId}`, {
+      method: "DELETE",
+      headers: authHeaders(),
     }),
   );
 }

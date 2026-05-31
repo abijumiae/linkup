@@ -157,6 +157,7 @@ function getInitials(name: string): string {
 export default function HomeDashboardPage() {
   const currentUser = getCurrentUser();
   const currentUserId = currentUser?.id ?? null;
+  const currentUserRole = currentUser?.role ?? null;
   const { socket } = useSocket();
   const sparkInputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -391,6 +392,53 @@ export default function HomeDashboardPage() {
       updatePostStats(payload.postId, { saved: false });
     };
 
+    const onPostUpdated = (payload: {
+      id?: string;
+      content?: string;
+      imageUrl?: string | null;
+      videoUrl?: string | null;
+      updatedAt?: string;
+    }) => {
+      if (!payload?.id) {
+        return;
+      }
+
+      setPosts((current) =>
+        current.map((item) => {
+          if (item.id !== payload.id || !item.apiPost) {
+            return item;
+          }
+
+          const apiPost: ApiFeedPost = {
+            ...item.apiPost,
+            content: payload.content ?? item.apiPost.content,
+            imageUrl:
+              payload.imageUrl !== undefined
+                ? payload.imageUrl
+                : item.apiPost.imageUrl,
+            videoUrl:
+              payload.videoUrl !== undefined
+                ? payload.videoUrl
+                : item.apiPost.videoUrl,
+            updatedAt: payload.updatedAt ?? item.apiPost.updatedAt,
+          };
+
+          return {
+            ...item,
+            content: apiPost.content,
+            apiPost,
+          };
+        }),
+      );
+    };
+
+    const onPostDeleted = (payload: { id?: string }) => {
+      if (!payload?.id) {
+        return;
+      }
+      setPosts((current) => current.filter((item) => item.id !== payload.id));
+    };
+
     socket.on("spark_created", onSparkCreated);
     socket.on("post_created", onPostCreated);
     socket.on("post_boosted", onPostBoosted);
@@ -398,6 +446,8 @@ export default function HomeDashboardPage() {
     socket.on("post_commented", onPostCommented);
     socket.on("post_saved", onPostSaved);
     socket.on("post_unsaved", onPostUnsaved);
+    socket.on("post_updated", onPostUpdated);
+    socket.on("post_deleted", onPostDeleted);
 
     const onMomentCreated = (moment: Moment) => {
       if (!moment?.id || !moment.user) {
@@ -478,6 +528,8 @@ export default function HomeDashboardPage() {
       socket.off("post_commented", onPostCommented);
       socket.off("post_saved", onPostSaved);
       socket.off("post_unsaved", onPostUnsaved);
+      socket.off("post_updated", onPostUpdated);
+      socket.off("post_deleted", onPostDeleted);
       socket.off("moment_created", onMomentCreated);
       socket.off("moment_deleted", onMomentDeleted);
     };
@@ -521,6 +573,17 @@ export default function HomeDashboardPage() {
       sparks: displaySparkCount,
     }));
   }, [displaySparkCount]);
+
+  function handleFeedPostUpdated(updated: ApiFeedPost) {
+    const mapped = mapPostToFeedPost(updated);
+    setPosts((current) =>
+      current.map((item) => (item.id === updated.id ? mapped : item)),
+    );
+  }
+
+  function handleFeedPostDeleted(postId: string) {
+    setPosts((current) => current.filter((item) => item.id !== postId));
+  }
 
   async function handleCreatePost() {
     const trimmed = postContent.trim();
@@ -772,7 +835,10 @@ export default function HomeDashboardPage() {
                         key={post.id}
                         post={post.apiPost}
                         currentUserId={currentUserId}
+                        currentUserRole={currentUserRole}
                         pulseLabels
+                        onPostUpdated={handleFeedPostUpdated}
+                        onPostDeleted={handleFeedPostDeleted}
                       />
                     ) : (
                       <article
