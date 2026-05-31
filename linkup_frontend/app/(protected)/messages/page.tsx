@@ -908,18 +908,6 @@ export default function MessagesPage() {
   }
 
   async function handleSendVoiceNote(file: File, durationSeconds: number) {
-    const token = getToken();
-    const apiUrl = getApiBaseUrl();
-    const receiverId = activeUser?.id ?? selectedUserId;
-
-    console.log("VOICE STEP 1: send voice clicked");
-    console.log("VOICE STEP 2: selectedUserId", receiverId);
-    console.log("VOICE STEP 3: token exists", Boolean(token));
-    console.log("VOICE STEP 4: audioBlob exists", Boolean(file));
-    console.log("VOICE STEP 5: audioBlob size", file?.size);
-    console.log("VOICE STEP 6: API_URL", apiUrl);
-    console.log("VOICE STEP 6b: upload endpoint", `${apiUrl}/messages/upload-audio`);
-
     if (!activeUser?.id || chatTab !== "direct" || isSending) {
       if (!activeUser?.id) {
         showFeatureNotice("Select a chat first");
@@ -940,12 +928,6 @@ export default function MessagesPage() {
         file,
         durationSeconds,
       );
-
-      console.log("VOICE STEP 9: message saved", {
-        id: created.id,
-        type: created.type,
-        mediaUrl: created.mediaUrl,
-      });
 
       setMessages((current) => {
         if (current.some((item) => item.id === created.id)) {
