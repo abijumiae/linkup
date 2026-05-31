@@ -175,6 +175,18 @@ function LoginForm() {
             Create an account
           </Link>
         </p>
+
+        <p className="mt-4 text-center text-xs text-slate-500 dark:text-slate-400">
+          <Link href="/terms" className="hover:text-brand-primary dark:hover:text-brand-secondary">
+            Terms
+          </Link>
+          <span className="px-2" aria-hidden="true">
+            ·
+          </span>
+          <Link href="/privacy" className="hover:text-brand-primary dark:hover:text-brand-secondary">
+            Privacy Policy
+          </Link>
+        </p>
       </div>
     </div>
   );

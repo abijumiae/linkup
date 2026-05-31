@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -8,6 +9,7 @@ import {
   Globe,
   LogOut,
   Mail,
+  Scale,
   Shield,
   Tag,
   Trash2,
@@ -885,6 +887,50 @@ export default function SettingsPage() {
                   Connect Google
                 </button>
               </div>
+            </div>
+          </SettingsSection>
+
+          <SettingsSection
+            title="Legal"
+            description="Review LinkUp terms and privacy information."
+          >
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Link
+                href="/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-4 transition hover:border-brand-primary/30 hover:bg-slate-50 dark:border-white/10 dark:bg-brand-dark/70 dark:hover:border-brand-secondary/30 dark:hover:bg-white/[0.04]"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Scale className="h-4 w-4 text-brand-primary dark:text-brand-secondary" />
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                      Terms and Conditions
+                    </p>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    Platform rules, eligibility, and user responsibilities.
+                  </p>
+                </div>
+              </Link>
+              <Link
+                href="/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-4 transition hover:border-brand-primary/30 hover:bg-slate-50 dark:border-white/10 dark:bg-brand-dark/70 dark:hover:border-brand-secondary/30 dark:hover:bg-white/[0.04]"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-brand-primary dark:text-brand-secondary" />
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                      Privacy Policy
+                    </p>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    How LinkUp collects, uses, and protects your data.
+                  </p>
+                </div>
+              </Link>
             </div>
           </SettingsSection>
 

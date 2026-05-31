@@ -237,6 +237,24 @@ export default function SignupPage() {
           >
             {isLoading ? "Creating account..." : "Create account"}
           </button>
+
+          <p className="text-center text-xs leading-6 text-slate-500 dark:text-slate-400">
+            By creating an account, you agree to LinkUp&apos;s{" "}
+            <Link
+              href="/terms"
+              className="font-medium text-brand-primary underline decoration-brand-primary/30 underline-offset-2 dark:text-brand-secondary"
+            >
+              Terms and Conditions
+            </Link>{" "}
+            and{" "}
+            <Link
+              href="/privacy"
+              className="font-medium text-brand-primary underline decoration-brand-primary/30 underline-offset-2 dark:text-brand-secondary"
+            >
+              Privacy Policy
+            </Link>
+            .
+          </p>
         </form>
 
         {/* Link */}

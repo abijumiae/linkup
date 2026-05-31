@@ -34,6 +34,8 @@ export default function LayoutContent({
     pathname === "/signup" ||
     pathname === "/verify-email" ||
     pathname === "/onboarding" ||
+    pathname === "/terms" ||
+    pathname === "/privacy" ||
     pathname.startsWith("/auth/") ||
     pathname === "/";
   const showNavigation = isAuthenticated && !isAuthPage;
