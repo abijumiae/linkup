@@ -45,7 +45,7 @@ export default function LayoutContent({
         className={`flex min-w-0 ${showNavigation ? "min-h-[calc(100vh-120px)] md:min-h-[calc(100vh-72px)]" : "min-h-screen"}`}
       >
         {showNavigation && (
-          <aside className="hidden w-[260px] shrink-0 border-r border-slate-200/90 bg-gradient-to-b from-white via-white to-slate-50/90 p-3 lg:block lg:w-[280px] lg:p-4 lg:py-6 dark:border-white/10 dark:from-brand-dark dark:via-brand-dark dark:to-brand-dark/80">
+          <aside className="hidden w-[260px] shrink-0 border-r border-slate-200/90 bg-gradient-to-b from-white via-white to-slate-50/90 p-3 lg:block lg:w-[280px] lg:p-4 lg:py-6 dark:border-slate-800/80 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900/90">
             <div className="sticky top-28 space-y-4">
               <Link
                 href="/home"
