@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+const apiUrl =
+  process.env.NEXT_PUBLIC_API_URL?.trim()?.replace(/\/$/, "") ||
+  (process.env.NODE_ENV === "development"
+    ? "http://localhost:3000"
+    : "https://api.thelinkupzone.com");
 
 const nextConfig: NextConfig = {
   async redirects() {

@@ -1,6 +1,45 @@
-export const getApiBaseUrl = (): string => {
-  return process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
-};
+const PRODUCTION_API_URL = "https://api.thelinkupzone.com";
+const LOCAL_API_URL = "http://localhost:3000";
+
+export function getApiBaseUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+
+  if (envUrl) {
+    return envUrl.replace(/\/$/, "");
+  }
+
+  if (process.env.NODE_ENV === "development") {
+    return LOCAL_API_URL;
+  }
+
+  return PRODUCTION_API_URL;
+}
+
+export const API_BASE_URL = getApiBaseUrl();
+
+export function getBackendUnreachableMessage(): string {
+  if (process.env.NODE_ENV === "development") {
+    return "Cannot reach the backend. Start linkup_backend on http://localhost:3000.";
+  }
+
+  return "Cannot reach the backend. Please try again shortly.";
+}
+
+export function resolveMediaUrl(url?: string | null): string | undefined {
+  if (!url) {
+    return undefined;
+  }
+
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
+
+  if (url.startsWith("/uploads") || url.startsWith("/")) {
+    return `${getApiBaseUrl()}${url}`;
+  }
+
+  return url;
+}
 
 function getStoredToken(): string | null {
   if (typeof window === "undefined") {
@@ -58,10 +97,7 @@ export async function apiRequest<T>(
     }
 
     if (error instanceof TypeError) {
-      throw new ApiError(
-        "Cannot reach the backend. Start linkup_backend on http://localhost:3000.",
-        0,
-      );
+      throw new ApiError(getBackendUnreachableMessage(), 0);
     }
 
     throw error;

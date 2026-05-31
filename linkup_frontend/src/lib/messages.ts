@@ -1,4 +1,10 @@
-import { apiRequest, ApiError, extractErrorMessage, getApiBaseUrl } from "./api";
+import {
+  apiRequest,
+  ApiError,
+  extractErrorMessage,
+  getApiBaseUrl,
+  resolveMediaUrl,
+} from "./api";
 import { clearAuth, getToken } from "./auth";
 
 export interface MessageUser {
@@ -35,21 +41,7 @@ export interface ChatMessage {
   sender: MessageUser;
 }
 
-export function resolveMediaUrl(url: string | null | undefined): string | undefined {
-  if (!url) {
-    return undefined;
-  }
-
-  if (url.startsWith("http://") || url.startsWith("https://")) {
-    return url;
-  }
-
-  if (url.startsWith("/")) {
-    return `${getApiBaseUrl()}${url}`;
-  }
-
-  return url;
-}
+export { resolveMediaUrl };
 
 export function getMessagePreview(message: Pick<ChatMessage, "type" | "content">) {
   const type = message.type?.toLowerCase();
