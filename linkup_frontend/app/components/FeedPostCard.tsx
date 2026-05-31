@@ -55,6 +55,7 @@ type FeedPostCardProps = {
   pulseLabels?: boolean;
   onPostUpdated?: (post: FeedPost) => void;
   onPostDeleted?: (postId: string) => void;
+  onPostUnsaved?: (postId: string) => void;
 };
 
 function FeedPostCard({
@@ -65,6 +66,7 @@ function FeedPostCard({
   pulseLabels = false,
   onPostUpdated,
   onPostDeleted,
+  onPostUnsaved,
 }: FeedPostCardProps) {
   const useSparkWording = sparkLabels || pulseLabels;
   const [liked, setLiked] = useState(post.liked);
@@ -142,6 +144,9 @@ function FeedPostCard({
     try {
       const result = await toggleSave(localPost.id);
       setSaved(result.saved);
+      if (!result.saved) {
+        onPostUnsaved?.(localPost.id);
+      }
     } catch (err) {
       setInteractionError(getInteractionError(err));
     }

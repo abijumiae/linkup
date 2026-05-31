@@ -261,6 +261,51 @@ export async function fetchSavedPosts(): Promise<FeedPost[]> {
   );
 }
 
+export async function fetchSavedPostsSafe(): Promise<FeedPost[]> {
+  try {
+    return await fetchSavedPosts();
+  } catch {
+    return [];
+  }
+}
+
+export function mapProfilePostToFeedPost(
+  post: {
+    id: string;
+    authorId: string;
+    content: string;
+    postType: string;
+    visibility: string;
+    imageUrl: string | null;
+    videoUrl: string | null;
+    createdAt: string;
+    updatedAt: string;
+    likeCount: number;
+    commentCount: number;
+  },
+  author: PostAuthor,
+  options?: { liked?: boolean; saved?: boolean },
+): FeedPost {
+  return {
+    id: post.id,
+    authorId: post.authorId,
+    groupId: null,
+    content: post.content,
+    postType: post.postType,
+    visibility: post.visibility,
+    imageUrl: post.imageUrl,
+    videoUrl: post.videoUrl,
+    createdAt: post.createdAt,
+    updatedAt: post.updatedAt,
+    author,
+    likeCount: post.likeCount,
+    commentCount: post.commentCount,
+    liked: options?.liked ?? false,
+    saved: options?.saved ?? false,
+    isFollowingAuthor: false,
+  };
+}
+
 export async function toggleFollow(userId: string): Promise<FollowResponse> {
   return withAuth(() =>
     apiRequest<FollowResponse>(`/users/${userId}/follow`, {

@@ -6,14 +6,17 @@ import {
   Bookmark,
   Briefcase,
   CircleDot,
-  Heart,
-  MessageCircle,
   PenLine,
   Users,
 } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import { useAuth } from "@/src/lib/AuthProvider";
-import { formatTimeAgo } from "@/src/lib/posts";
+import {
+  FeedPost,
+  fetchSavedPostsSafe,
+  mapProfilePostToFeedPost,
+} from "@/src/lib/posts";
+import { useSocket } from "@/src/components/SocketProvider";
 import {
   fetchMyPostsSafe,
   fetchUserProfile,
@@ -21,9 +24,9 @@ import {
   ProfileUser,
   updateUserProfile,
   UpdateProfilePayload,
-  UserPost,
 } from "@/src/lib/users";
 import { fetchUserMoments } from "@/src/lib/moments";
+import FeedPostCard from "./FeedPostCard";
 import ProfileAboutSection from "./profile/ProfileAboutSection";
 import ProfileCompletionCard from "./profile/ProfileCompletionCard";
 import ProfileEditModal from "./profile/ProfileEditModal";
@@ -37,11 +40,24 @@ import {
   ProfileTabsSkeleton,
 } from "./profile/ProfileSkeleton";
 
+function toPostAuthor(user: ProfileUser) {
+  return {
+    id: user.id,
+    name: user.name,
+    username: user.username,
+    avatarUrl: user.avatarUrl,
+    accountType: user.accountType,
+    isVerified: user.isVerified,
+  };
+}
+
 export default function ProfilePageClient() {
   const router = useRouter();
   const { setUser, logout } = useAuth();
+  const { socket } = useSocket();
   const [profileUser, setProfileUser] = useState<ProfileUser | null>(null);
-  const [userPosts, setUserPosts] = useState<UserPost[]>([]);
+  const [userPosts, setUserPosts] = useState<FeedPost[]>([]);
+  const [savedPosts, setSavedPosts] = useState<FeedPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -50,6 +66,9 @@ export default function ProfilePageClient() {
   const [warning, setWarning] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [hasActiveMoment, setHasActiveMoment] = useState(false);
+
+  const currentUserId = profileUser?.id ?? null;
+  const currentUserRole = profileUser?.role ?? null;
 
   const handleAuthFailure = useCallback(() => {
     logout();
@@ -61,13 +80,16 @@ export default function ProfilePageClient() {
 
     try {
       const { user, warning: profileWarning } = await fetchUserProfileSafe();
-      const [posts, moments] = await Promise.all([
+      const author = toPostAuthor(user);
+      const [posts, saved, moments] = await Promise.all([
         fetchMyPostsSafe(),
+        fetchSavedPostsSafe(),
         fetchUserMoments(user.id).catch(() => []),
       ]);
 
       setProfileUser(user);
-      setUserPosts(posts);
+      setUserPosts(posts.map((post) => mapProfilePostToFeedPost(post, author)));
+      setSavedPosts(saved);
       setHasActiveMoment(moments.length > 0);
       setUser(user);
       setWarning(profileWarning);
@@ -87,6 +109,119 @@ export default function ProfilePageClient() {
     void loadProfile();
   }, [loadProfile]);
 
+  useEffect(() => {
+    if (!socket || !currentUserId) {
+      return;
+    }
+
+    socket.emit("join_pulse");
+
+    const patchPostLists = (
+      postId: string,
+      patch: Partial<
+        Pick<FeedPost, "content" | "imageUrl" | "videoUrl" | "updatedAt">
+      >,
+    ) => {
+      const updater = (posts: FeedPost[]) =>
+        posts.map((post) =>
+          post.id === postId ? { ...post, ...patch } : post,
+        );
+
+      setUserPosts(updater);
+      setSavedPosts(updater);
+    };
+
+    const removePostFromLists = (postId: string) => {
+      setUserPosts((current) => {
+        const hadOwnPost = current.some((post) => post.id === postId);
+        if (hadOwnPost) {
+          setProfileUser((user) =>
+            user
+              ? { ...user, postsCount: Math.max(0, user.postsCount - 1) }
+              : user,
+          );
+        }
+        return current.filter((post) => post.id !== postId);
+      });
+      setSavedPosts((current) => current.filter((post) => post.id !== postId));
+    };
+
+    const onPostUpdated = (payload: {
+      id?: string;
+      content?: string;
+      imageUrl?: string | null;
+      videoUrl?: string | null;
+      updatedAt?: string;
+    }) => {
+      if (!payload.id) {
+        return;
+      }
+
+      patchPostLists(payload.id, {
+        content: payload.content,
+        imageUrl:
+          payload.imageUrl !== undefined ? payload.imageUrl : undefined,
+        videoUrl:
+          payload.videoUrl !== undefined ? payload.videoUrl : undefined,
+        updatedAt: payload.updatedAt,
+      });
+    };
+
+    const onPostDeleted = (payload: { id?: string }) => {
+      if (!payload.id) {
+        return;
+      }
+      removePostFromLists(payload.id);
+    };
+
+    const onPostUnsaved = (payload: { postId?: string; userId?: string }) => {
+      if (!payload.postId || payload.userId !== currentUserId) {
+        return;
+      }
+      setSavedPosts((current) =>
+        current.filter((post) => post.id !== payload.postId),
+      );
+    };
+
+    socket.on("post_updated", onPostUpdated);
+    socket.on("post_deleted", onPostDeleted);
+    socket.on("post_unsaved", onPostUnsaved);
+
+    return () => {
+      socket.off("post_updated", onPostUpdated);
+      socket.off("post_deleted", onPostDeleted);
+      socket.off("post_unsaved", onPostUnsaved);
+    };
+  }, [socket, currentUserId]);
+
+  function handlePostUpdated(updated: FeedPost) {
+    setUserPosts((current) =>
+      current.map((post) => (post.id === updated.id ? updated : post)),
+    );
+    setSavedPosts((current) =>
+      current.map((post) => (post.id === updated.id ? updated : post)),
+    );
+  }
+
+  function handlePostDeleted(postId: string) {
+    setUserPosts((current) => {
+      const hadOwnPost = current.some((post) => post.id === postId);
+      if (hadOwnPost) {
+        setProfileUser((user) =>
+          user
+            ? { ...user, postsCount: Math.max(0, user.postsCount - 1) }
+            : user,
+        );
+      }
+      return current.filter((post) => post.id !== postId);
+    });
+    setSavedPosts((current) => current.filter((post) => post.id !== postId));
+  }
+
+  function handlePostUnsaved(postId: string) {
+    setSavedPosts((current) => current.filter((post) => post.id !== postId));
+  }
+
   async function handleProfileUpdate(payload: UpdateProfilePayload) {
     setIsSaving(true);
     setSuccess(null);
@@ -96,6 +231,10 @@ export default function ProfilePageClient() {
       const user = await fetchUserProfile();
       setProfileUser(user);
       setUser(user);
+      const author = toPostAuthor(user);
+      setUserPosts((current) =>
+        current.map((post) => ({ ...post, author })),
+      );
       setIsEditing(false);
       setEditFocus("all");
       setSuccess("Your LinkUp Card has been updated.");
@@ -128,6 +267,28 @@ export default function ProfilePageClient() {
     window.alert("Share Profile is coming soon.");
   }
 
+  function renderPostList(
+    posts: FeedPost[],
+    options?: { onUnsaved?: (postId: string) => void },
+  ) {
+    return (
+      <div className="space-y-4">
+        {posts.map((post) => (
+          <FeedPostCard
+            key={post.id}
+            post={post}
+            currentUserId={currentUserId}
+            currentUserRole={currentUserRole}
+            pulseLabels
+            onPostUpdated={handlePostUpdated}
+            onPostDeleted={handlePostDeleted}
+            onPostUnsaved={options?.onUnsaved}
+          />
+        ))}
+      </div>
+    );
+  }
+
   function renderTabContent() {
     if (activeTab === "Sparks") {
       if (userPosts.length === 0) {
@@ -142,38 +303,7 @@ export default function ProfilePageClient() {
         );
       }
 
-      return (
-        <div className="space-y-4">
-          {userPosts.map((post) => (
-            <article
-              key={post.id}
-              className="linkup-panel p-5 transition hover:border-brand-primary/20"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary dark:text-brand-secondary">
-                  Spark
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {formatTimeAgo(post.createdAt)}
-                </p>
-              </div>
-              <p className="mt-4 text-sm leading-7 text-slate-700 dark:text-slate-300">
-                {post.content}
-              </p>
-              <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
-                <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2 dark:bg-white/5">
-                  <Heart className="h-4 w-4 text-pink-500" />
-                  Boost {post.likeCount}
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2 dark:bg-white/5">
-                  <MessageCircle className="h-4 w-4 text-brand-secondary" />
-                  Reply {post.commentCount}
-                </span>
-              </div>
-            </article>
-          ))}
-        </div>
-      );
+      return renderPostList(userPosts);
     }
 
     if (activeTab === "Moments") {
@@ -212,15 +342,19 @@ export default function ProfilePageClient() {
       );
     }
 
-    return (
-      <ProfileEmptyState
-        icon={Bookmark}
-        title="Nothing saved yet"
-        description="Sparks and content you save for later will be collected here for easy access."
-        actionLabel="Discover"
-        actionHref="/explore"
-      />
-    );
+    if (savedPosts.length === 0) {
+      return (
+        <ProfileEmptyState
+          icon={Bookmark}
+          title="Nothing saved yet"
+          description="Sparks and content you save for later will be collected here for easy access."
+          actionLabel="Discover"
+          actionHref="/explore"
+        />
+      );
+    }
+
+    return renderPostList(savedPosts, { onUnsaved: handlePostUnsaved });
   }
 
   if (isLoading) {
