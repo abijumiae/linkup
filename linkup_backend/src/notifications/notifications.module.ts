@@ -6,7 +6,7 @@ import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
 
 @Module({
-  imports: [forwardRef(() => ChatModule)],
+  imports: [forwardRef(() => ChatModule), forwardRef(() => SafetyModule)],
   controllers: [NotificationsController, AlertsController],
   providers: [NotificationsService],
   exports: [NotificationsService],
