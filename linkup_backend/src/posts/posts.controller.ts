@@ -25,6 +25,16 @@ export class PostsController {
     return this.postsService.create(req.user.id, dto);
   }
 
+  /** Alias for feed — GET /posts?page=&limit= */
+  @Get()
+  getPosts(
+    @Req() req: { user: SafeUser },
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.postsService.getFeed(req.user.id, { page, limit });
+  }
+
   @Get('feed')
   getFeed(
     @Req() req: { user: SafeUser },
@@ -45,11 +55,11 @@ export class PostsController {
   }
 
   @Delete('comments/:commentId')
-  deleteComment(
+  deleteCommentLegacy(
     @Param('commentId') commentId: string,
     @Req() req: { user: SafeUser },
   ) {
-    return this.postsService.deleteComment(commentId, req.user.id);
+    return this.postsService.deleteCommentById(commentId, req.user.id);
   }
 
   @Post(':postId/like')
@@ -58,6 +68,23 @@ export class PostsController {
     @Req() req: { user: SafeUser },
   ) {
     return this.postsService.toggleLike(postId, req.user.id);
+  }
+
+  /** Boost alias for like */
+  @Post(':postId/boost')
+  boostPost(
+    @Param('postId') postId: string,
+    @Req() req: { user: SafeUser },
+  ) {
+    return this.postsService.toggleLike(postId, req.user.id);
+  }
+
+  @Delete(':postId/boost')
+  removeBoost(
+    @Param('postId') postId: string,
+    @Req() req: { user: SafeUser },
+  ) {
+    return this.postsService.removeBoost(postId, req.user.id);
   }
 
   @Post(':postId/comments')
@@ -74,12 +101,34 @@ export class PostsController {
     return this.postsService.getComments(postId);
   }
 
+  @Delete(':postId/comments/:commentId')
+  deleteComment(
+    @Param('postId') postId: string,
+    @Param('commentId') commentId: string,
+    @Req() req: { user: SafeUser },
+  ) {
+    return this.postsService.deleteComment(postId, commentId, req.user.id);
+  }
+
   @Post(':postId/save')
   toggleSave(
     @Param('postId') postId: string,
     @Req() req: { user: SafeUser },
   ) {
     return this.postsService.toggleSave(postId, req.user.id);
+  }
+
+  @Delete(':postId/save')
+  removeSave(
+    @Param('postId') postId: string,
+    @Req() req: { user: SafeUser },
+  ) {
+    return this.postsService.removeSave(postId, req.user.id);
+  }
+
+  @Get(':id')
+  getPost(@Param('id') id: string, @Req() req: { user: SafeUser }) {
+    return this.postsService.getPostById(id, req.user.id);
   }
 
   @Delete(':id')

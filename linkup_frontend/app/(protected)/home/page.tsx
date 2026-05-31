@@ -284,10 +284,13 @@ export default function HomeDashboardPage() {
 
     try {
       const data = await fetchFeed(nextPage);
-      setPosts((current) => [
-        ...current,
-        ...data.items.map(mapPostToFeedPost),
-      ]);
+      setPosts((current) => {
+        const existingIds = new Set(current.map((post) => post.id));
+        const newPosts = data.items
+          .map(mapPostToFeedPost)
+          .filter((post) => !existingIds.has(post.id));
+        return [...current, ...newPosts];
+      });
       setFeedPage(nextPage);
       setFeedHasMore(data.hasMore);
     } catch {

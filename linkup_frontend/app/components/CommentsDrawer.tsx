@@ -17,6 +17,7 @@ type CommentsDrawerProps = {
   currentUserId: string | null;
   initialCount: number;
   pulseLabels?: boolean;
+  postIdForDelete?: string;
   onClose: () => void;
   onCountChange?: (count: number) => void;
 };
@@ -27,6 +28,7 @@ export default function CommentsDrawer({
   currentUserId,
   initialCount,
   pulseLabels = false,
+  postIdForDelete,
   onClose,
   onCountChange,
 }: CommentsDrawerProps) {
@@ -91,7 +93,7 @@ export default function CommentsDrawer({
 
   async function handleDelete(commentId: string) {
     try {
-      const result = await deleteComment(commentId);
+      const result = await deleteComment(commentId, postIdForDelete ?? postId);
       setComments((current) => current.filter((item) => item.id !== commentId));
       setCount(result.commentCount);
       onCountChange?.(result.commentCount);

@@ -25,6 +25,7 @@ export interface DiscoverPerson {
   accountType: AccountType;
   isVerified: boolean;
   isFollowingAuthor: boolean;
+  bio?: string | null;
 }
 
 export interface DiscoverHub {

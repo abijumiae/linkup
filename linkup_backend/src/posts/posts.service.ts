@@ -50,6 +50,9 @@ export type FeedPost = PostWithAuthor & {
   liked: boolean;
   saved: boolean;
   isFollowingAuthor: boolean;
+  boostCount?: number;
+  isBoostedByMe?: boolean;
+  isSavedByMe?: boolean;
 };
 
 @Injectable()
@@ -150,7 +153,58 @@ export class PostsService {
 
     const followingSet = new Set(following.map((row) => row.followingId));
 
-    const mapped = posts.map((post) => ({
+    const mapped = posts.map((post) => this.toFeedPost(post, followingSet));
+
+    return buildPaginatedResult(mapped, pagination);
+  }
+
+  async getPostById(postId: string, userId: string): Promise<FeedPost> {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      include: {
+        ...postInclude,
+        _count: { select: { likes: true, comments: true } },
+        likes: { where: { userId }, select: { id: true } },
+        savedBy: { where: { userId }, select: { id: true } },
+      },
+    });
+
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    const following = await this.prisma.follow.findMany({
+      where: { followerId: userId, followingId: post.authorId },
+      select: { followingId: true },
+    });
+
+    return this.toFeedPost(post, new Set(following.map((row) => row.followingId)));
+  }
+
+  private toFeedPost(
+    post: {
+      id: string;
+      authorId: string;
+      groupId: string | null;
+      content: string;
+      postType: string;
+      visibility: string;
+      imageUrl: string | null;
+      videoUrl: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+      author: PostWithAuthor['author'];
+      _count: { likes: number; comments: number };
+      likes: { id: string }[];
+      savedBy: { id: string }[];
+    },
+    followingSet: Set<string>,
+  ): FeedPost {
+    const likeCount = post._count.likes;
+    const liked = post.likes.length > 0;
+    const saved = post.savedBy.length > 0;
+
+    return {
       id: post.id,
       authorId: post.authorId,
       groupId: post.groupId,
@@ -162,14 +216,15 @@ export class PostsService {
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
       author: post.author,
-      likeCount: post._count.likes,
+      likeCount,
       commentCount: post._count.comments,
-      liked: post.likes.length > 0,
-      saved: post.savedBy.length > 0,
+      liked,
+      saved,
       isFollowingAuthor: followingSet.has(post.authorId),
-    }));
-
-    return buildPaginatedResult(mapped, pagination);
+      boostCount: likeCount,
+      isBoostedByMe: liked,
+      isSavedByMe: saved,
+    } as FeedPost;
   }
 
   getMyPosts(authorId: string) {
@@ -221,6 +276,28 @@ export class PostsService {
     return {
       liked: !existingLike,
       likeCount,
+      boostCount: likeCount,
+      isBoostedByMe: !existingLike,
+    };
+  }
+
+  async removeBoost(postId: string, userId: string) {
+    const existingLike = await this.prisma.like.findUnique({
+      where: { userId_postId: { userId, postId } },
+    });
+
+    if (existingLike) {
+      await this.prisma.like.delete({ where: { id: existingLike.id } });
+      await this.notificationsService.removeLikeNotification(userId, postId);
+    }
+
+    const likeCount = await this.prisma.like.count({ where: { postId } });
+
+    return {
+      liked: false,
+      likeCount,
+      boostCount: likeCount,
+      isBoostedByMe: false,
     };
   }
 
@@ -264,13 +341,17 @@ export class PostsService {
     });
   }
 
-  async deleteComment(commentId: string, userId: string) {
+  async deleteComment(postId: string, commentId: string, userId: string) {
     const comment = await this.prisma.comment.findUnique({
       where: { id: commentId },
     });
 
     if (!comment) {
       throw new NotFoundException('Comment not found');
+    }
+
+    if (comment.postId !== postId) {
+      throw new NotFoundException('Comment not found on this post');
     }
 
     if (comment.authorId !== userId) {
@@ -286,6 +367,19 @@ export class PostsService {
     });
 
     return { message: 'Comment deleted', commentCount };
+  }
+
+  /** @deprecated Prefer deleteComment with postId */
+  async deleteCommentById(commentId: string, userId: string) {
+    const comment = await this.prisma.comment.findUnique({
+      where: { id: commentId },
+    });
+
+    if (!comment) {
+      throw new NotFoundException('Comment not found');
+    }
+
+    return this.deleteComment(comment.postId, commentId, userId);
   }
 
   async toggleSave(postId: string, userId: string) {
@@ -320,7 +414,23 @@ export class PostsService {
     return {
       saved: !existing,
       saveCount,
+      isSavedByMe: !existing,
     };
+  }
+
+  async removeSave(postId: string, userId: string) {
+    const post = await this.prisma.post.findUnique({ where: { id: postId } });
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    await this.prisma.savedPost.deleteMany({
+      where: { userId, postId },
+    });
+
+    const saveCount = await this.prisma.savedPost.count({ where: { postId } });
+
+    return { saved: false, saveCount, isSavedByMe: false };
   }
 
   async getSavedPosts(userId: string) {

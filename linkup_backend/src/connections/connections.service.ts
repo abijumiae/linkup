@@ -99,4 +99,25 @@ export class ConnectionsService {
   disconnect(userId: string, targetUserId: string) {
     return this.usersService.toggleFollow(userId, targetUserId);
   }
+
+  async getConnectionStatus(userId: string, targetUserId: string) {
+    if (userId === targetUserId) {
+      return { following: false, connected: false, isSelf: true };
+    }
+
+    const follow = await this.prisma.follow.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: userId,
+          followingId: targetUserId,
+        },
+      },
+    });
+
+    return {
+      following: Boolean(follow),
+      connected: Boolean(follow),
+      isSelf: false,
+    };
+  }
 }

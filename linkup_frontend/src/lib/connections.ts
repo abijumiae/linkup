@@ -87,3 +87,16 @@ export async function disconnectUser(userId: string): Promise<FollowResponse> {
     }),
   );
 }
+
+export async function fetchConnectionStatus(userId: string): Promise<{
+  following: boolean;
+  connected: boolean;
+  isSelf: boolean;
+}> {
+  return withAuth(() =>
+    apiRequest<{ following: boolean; connected: boolean; isSelf: boolean }>(
+      `/connections/${userId}/status`,
+      { headers: authHeaders() },
+    ),
+  );
+}

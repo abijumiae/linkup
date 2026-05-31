@@ -162,9 +162,14 @@ export async function toggleSave(postId: string): Promise<SaveResponse> {
 
 export async function deleteComment(
   commentId: string,
+  postId?: string,
 ): Promise<DeleteCommentResponse> {
+  const path = postId
+    ? `/posts/${postId}/comments/${commentId}`
+    : `/posts/comments/${commentId}`;
+
   return withAuth(() =>
-    apiRequest<DeleteCommentResponse>(`/posts/comments/${commentId}`, {
+    apiRequest<DeleteCommentResponse>(path, {
       method: "DELETE",
       headers: authHeaders(),
     }),

@@ -38,7 +38,7 @@ export type SearchResults = {
 };
 
 const EXPLORE_LIMIT = 30;
-const SEARCH_LIMIT = 20;
+const SEARCH_LIMIT = 5;
 const DISCOVER_LIMIT = 5;
 
 const discoverUserSelect = {
@@ -48,6 +48,7 @@ const discoverUserSelect = {
   avatarUrl: true,
   accountType: true,
   isVerified: true,
+  bio: true,
 } satisfies Prisma.UserSelect;
 
 export type DiscoverPerson = Prisma.UserGetPayload<{

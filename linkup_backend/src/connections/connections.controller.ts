@@ -26,6 +26,14 @@ export class ConnectionsController {
     return this.connectionsService.getSuggestions(req.user.id);
   }
 
+  @Get(':userId/status')
+  getStatus(
+    @Param('userId') userId: string,
+    @Req() req: { user: SafeUser },
+  ) {
+    return this.connectionsService.getConnectionStatus(req.user.id, userId);
+  }
+
   @Post(':userId')
   connect(
     @Param('userId') userId: string,

@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsString,
   IsUrl,
+  MaxLength,
   ValidateIf,
 } from 'class-validator';
 
@@ -14,6 +15,7 @@ export class CreatePostDto {
   )
   @IsString()
   @IsNotEmpty()
+  @MaxLength(2000)
   content?: string;
 
   @IsOptional()

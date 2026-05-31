@@ -12,6 +12,7 @@ import {
   Share2,
 } from "lucide-react";
 import { ApiError, resolveMediaUrl } from "@/src/lib/api";
+import { resolveProfileImageUrl } from "@/src/lib/profileMedia";
 import {
   createReport,
   REPORT_REASONS,
@@ -71,6 +72,7 @@ function FeedPostCard({
 
   const imageSrc = resolveMediaUrl(post.imageUrl);
   const videoSrc = resolveMediaUrl(post.videoUrl);
+  const avatarSrc = resolveProfileImageUrl(post.author.avatarUrl);
 
   function getInteractionError(err: unknown): string {
     if (err instanceof ApiError) {
@@ -156,9 +158,18 @@ function FeedPostCard({
       <article className="linkup-card p-5 transition hover:border-brand-primary/25 hover:shadow-xl hover:shadow-brand-primary/5 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white shadow-md shadow-brand-primary/20">
-              {getInitials(post.author.name)}
-            </div>
+            {avatarSrc ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatarSrc}
+                alt=""
+                className="h-12 w-12 shrink-0 rounded-full object-cover ring-2 ring-brand-primary/20"
+              />
+            ) : (
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white shadow-md shadow-brand-primary/20">
+                {getInitials(post.author.name)}
+              </div>
+            )}
             <div className="min-w-0">
               <p className="truncate font-semibold text-slate-900 dark:text-white">
                 {post.author.name}
@@ -339,6 +350,7 @@ function FeedPostCard({
         pulseLabels={useSparkWording}
         onClose={() => setCommentsOpen(false)}
         onCountChange={setCommentCount}
+        postIdForDelete={post.id}
       />
     </>
   );

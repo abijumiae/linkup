@@ -169,6 +169,7 @@ export default function ExplorePageClient() {
   const [searchHappenings, setSearchHappenings] = useState<DiscoverData["happenings"]>([]);
   const [searchTags, setSearchTags] = useState<string[]>([]);
   const [searchTab, setSearchTab] = useState<DiscoverTab>("all");
+  const [isSearchLoading, setIsSearchLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [dataWarning, setDataWarning] = useState<string | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -194,6 +195,7 @@ export default function ExplorePageClient() {
         return;
       }
 
+      setIsSearchLoading(true);
       try {
         const results = await searchAll(query);
         setSearchUsers(results.users);
@@ -216,6 +218,8 @@ export default function ExplorePageClient() {
         setSearchHappenings([]);
         setSearchTags([]);
         setSearchError("Search is warming up. Try again in a moment.");
+      } finally {
+        setIsSearchLoading(false);
       }
     },
     [loadDiscover],
@@ -384,7 +388,7 @@ export default function ExplorePageClient() {
 
     if (!hasAny) {
       return (
-        <DiscoverEmptyState message={`No results found for "${activeQuery}".`} />
+        <DiscoverEmptyState message="No results found." />
       );
     }
 
@@ -744,6 +748,18 @@ export default function ExplorePageClient() {
 
   function renderTabContent() {
     if (isSearchMode) {
+      if (isSearchLoading) {
+        return (
+          <div className="space-y-4">
+            {[0, 1, 2].map((key) => (
+              <div
+                key={key}
+                className="linkup-panel h-28 animate-pulse p-5"
+              />
+            ))}
+          </div>
+        );
+      }
       return renderSearchResults();
     }
 

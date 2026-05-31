@@ -113,7 +113,7 @@ export default function DailySparkCard({
           onChange={(event) => onChange(event.target.value)}
           disabled={isSubmitting}
           className="min-h-[120px] w-full resize-none rounded-2xl border border-slate-200/90 bg-slate-50/90 p-4 text-base text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-primary/50 focus:ring-2 focus:ring-brand-primary/15 disabled:opacity-60 dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-brand-secondary/40 dark:focus:ring-brand-secondary/15 sm:text-sm"
-          placeholder="Share a spark, insight, or update with your network..."
+          placeholder="What's sparking today?"
         />
 
         <div className="flex flex-wrap gap-2">

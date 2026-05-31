@@ -139,6 +139,12 @@ export default function QuickConnectPanel({
                         : "Connect"}
                   </button>
                   <Link
+                    href={`/explore?q=${encodeURIComponent(person.username)}`}
+                    className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-slate-200/90 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-brand-primary/30 dark:border-white/10 dark:bg-brand-dark dark:text-slate-200"
+                  >
+                    View Profile
+                  </Link>
+                  <Link
                     href={`/messages?userId=${encodeURIComponent(person.id)}`}
                     className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-slate-200/90 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-brand-primary/30 dark:border-white/10 dark:bg-brand-dark dark:text-slate-200"
                   >
