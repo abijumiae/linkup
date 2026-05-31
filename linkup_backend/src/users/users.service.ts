@@ -293,6 +293,10 @@ export class UsersService {
         avatarUrl: dto.avatarUrl,
         coverUrl: dto.coverUrl,
         bio: dto.bio,
+        interests: dto.interests,
+        skills: dto.skills,
+        website: dto.website,
+        openToConnect: dto.openToConnect,
       },
     });
 

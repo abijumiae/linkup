@@ -363,6 +363,7 @@ export class GroupsService {
       likeCount: post._count.likes,
       commentCount: post._count.comments,
       liked: post.likes.length > 0,
+      saved: false,
       isFollowingAuthor: followingSet.has(post.authorId),
     };
   }

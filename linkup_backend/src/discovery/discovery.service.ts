@@ -30,6 +30,11 @@ export type SearchUser = Prisma.UserGetPayload<{
 export type SearchResults = {
   users: SearchUser[];
   posts: FeedPost[];
+  hubs: DiscoverHub[];
+  market: DiscoverMarketItem[];
+  work: DiscoverWorkItem[];
+  happenings: DiscoverHappening[];
+  tags: string[];
 };
 
 const EXPLORE_LIMIT = 30;
@@ -158,16 +163,31 @@ export class DiscoveryService {
     const q = query.trim();
 
     if (!q) {
-      return { users: [], posts: [] };
+      return {
+        users: [],
+        posts: [],
+        hubs: [],
+        market: [],
+        work: [],
+        happenings: [],
+        tags: [],
+      };
     }
 
-    const [users, posts] = await Promise.all([
+    const tagMatches = DISCOVER_TAGS.filter((tag) =>
+      tag.toLowerCase().includes(q.toLowerCase()),
+    );
+
+    const [users, posts, groupRows, marketRows, jobRows, eventRows] =
+      await Promise.all([
       this.prisma.user.findMany({
         where: {
           OR: [
             { name: { contains: q, mode: 'insensitive' } },
             { username: { contains: q, mode: 'insensitive' } },
-            { email: { contains: q, mode: 'insensitive' } },
+            { bio: { contains: q, mode: 'insensitive' } },
+            { interests: { contains: q, mode: 'insensitive' } },
+            { skills: { contains: q, mode: 'insensitive' } },
           ],
         },
         take: SEARCH_LIMIT,
@@ -186,7 +206,75 @@ export class DiscoveryService {
           author: { select: authorSelect },
           _count: { select: { likes: true, comments: true } },
           likes: { where: { userId }, select: { id: true } },
+          savedBy: { where: { userId }, select: { id: true } },
         },
+      }),
+      this.prisma.group.findMany({
+        where: {
+          OR: [
+            { name: { contains: q, mode: 'insensitive' } },
+            { description: { contains: q, mode: 'insensitive' } },
+          ],
+        },
+        take: SEARCH_LIMIT,
+        orderBy: { members: { _count: 'desc' } },
+        include: {
+          _count: { select: { members: true } },
+          members: { where: { userId }, select: { id: true } },
+        },
+      }),
+      this.prisma.marketplaceItem.findMany({
+        where: {
+          status: 'ACTIVE',
+          OR: [
+            { title: { contains: q, mode: 'insensitive' } },
+            { description: { contains: q, mode: 'insensitive' } },
+            { category: { contains: q, mode: 'insensitive' } },
+          ],
+        },
+        take: SEARCH_LIMIT,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          price: true,
+          currency: true,
+          category: true,
+          location: true,
+        },
+      }),
+      this.prisma.job.findMany({
+        where: {
+          status: 'ACTIVE',
+          OR: [
+            { title: { contains: q, mode: 'insensitive' } },
+            { company: { contains: q, mode: 'insensitive' } },
+            { location: { contains: q, mode: 'insensitive' } },
+          ],
+        },
+        take: SEARCH_LIMIT,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          title: true,
+          company: true,
+          location: true,
+          jobType: true,
+        },
+      }),
+      this.prisma.event.findMany({
+        where: {
+          status: 'ACTIVE',
+          OR: [
+            { title: { contains: q, mode: 'insensitive' } },
+            { location: { contains: q, mode: 'insensitive' } },
+            { category: { contains: q, mode: 'insensitive' } },
+          ],
+        },
+        take: SEARCH_LIMIT,
+        orderBy: { startDate: 'asc' },
+        include: { _count: { select: { attendees: true } } },
       }),
     ]);
 
@@ -204,6 +292,33 @@ export class DiscoveryService {
         isFollowingAuthor: following.has(user.id),
       })),
       posts: posts.map((post) => this.mapPost(post, postFollowing)),
+      hubs: groupRows.map((group) => ({
+        id: group.id,
+        name: group.name,
+        description: group.description,
+        membersCount: group._count.members,
+        category: 'Community',
+        isMember: group.members.length > 0,
+      })),
+      market: marketRows.map((item) => ({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        price: Number(item.price),
+        currency: item.currency,
+        category: item.category,
+        location: item.location,
+      })),
+      work: jobRows,
+      happenings: eventRows.map((event) => ({
+        id: event.id,
+        title: event.title,
+        location: event.location,
+        startDate: event.startDate.toISOString(),
+        category: event.category,
+        attendeesCount: event._count.attendees,
+      })),
+      tags: tagMatches,
     };
   }
 
@@ -216,6 +331,7 @@ export class DiscoveryService {
         author: { select: authorSelect },
         _count: { select: { likes: true, comments: true } },
         likes: { where: { userId }, select: { id: true } },
+        savedBy: { where: { userId }, select: { id: true } },
       },
     });
 
@@ -300,6 +416,7 @@ export class DiscoveryService {
         author: { select: authorSelect },
         _count: { select: { likes: true, comments: true } },
         likes: { where: { userId }, select: { id: true } },
+        savedBy: { where: { userId }, select: { id: true } },
       },
     });
   }
@@ -451,6 +568,7 @@ export class DiscoveryService {
       author: Prisma.UserGetPayload<{ select: typeof authorSelect }>;
       _count: { likes: number; comments: number };
       likes: { id: string }[];
+      savedBy?: { id: string }[];
     },
     followingSet: Set<string>,
   ): FeedPost {
@@ -469,6 +587,7 @@ export class DiscoveryService {
       likeCount: post._count.likes,
       commentCount: post._count.comments,
       liked: post.likes.length > 0,
+      saved: (post.savedBy?.length ?? 0) > 0,
       isFollowingAuthor: followingSet.has(post.authorId),
     };
   }

@@ -39,6 +39,19 @@ export class PostsController {
     return this.postsService.getMyPosts(req.user.id);
   }
 
+  @Get('saved')
+  getSavedPosts(@Req() req: { user: SafeUser }) {
+    return this.postsService.getSavedPosts(req.user.id);
+  }
+
+  @Delete('comments/:commentId')
+  deleteComment(
+    @Param('commentId') commentId: string,
+    @Req() req: { user: SafeUser },
+  ) {
+    return this.postsService.deleteComment(commentId, req.user.id);
+  }
+
   @Post(':postId/like')
   toggleLike(
     @Param('postId') postId: string,
@@ -59,6 +72,14 @@ export class PostsController {
   @Get(':postId/comments')
   getComments(@Param('postId') postId: string) {
     return this.postsService.getComments(postId);
+  }
+
+  @Post(':postId/save')
+  toggleSave(
+    @Param('postId') postId: string,
+    @Req() req: { user: SafeUser },
+  ) {
+    return this.postsService.toggleSave(postId, req.user.id);
   }
 
   @Delete(':id')

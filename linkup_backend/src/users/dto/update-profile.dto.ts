@@ -34,4 +34,24 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   bio?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  interests?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  skills?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2048)
+  website?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  openToConnect?: string;
 }

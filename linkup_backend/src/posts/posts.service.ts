@@ -48,6 +48,7 @@ export type FeedPost = PostWithAuthor & {
   likeCount: number;
   commentCount: number;
   liked: boolean;
+  saved: boolean;
   isFollowingAuthor: boolean;
 };
 
@@ -107,9 +108,13 @@ export class PostsService {
     query: { page?: string; limit?: string } = {},
   ): Promise<PaginatedResult<FeedPost>> {
     const pagination = parsePaginationQuery(query);
+    const blockedIds = await this.getBlockedUserIds(userId);
 
     const posts = await this.prisma.post.findMany({
-      where: { groupId: null },
+      where: {
+        groupId: null,
+        authorId: blockedIds.length ? { notIn: blockedIds } : undefined,
+      },
       orderBy: { createdAt: 'desc' },
       skip: pagination.skip,
       take: pagination.limit + 1,
@@ -122,6 +127,10 @@ export class PostsService {
           },
         },
         likes: {
+          where: { userId },
+          select: { id: true },
+        },
+        savedBy: {
           where: { userId },
           select: { id: true },
         },
@@ -156,6 +165,7 @@ export class PostsService {
       likeCount: post._count.likes,
       commentCount: post._count.comments,
       liked: post.likes.length > 0,
+      saved: post.savedBy.length > 0,
       isFollowingAuthor: followingSet.has(post.authorId),
     }));
 
@@ -252,6 +262,118 @@ export class PostsService {
       take: COMMENTS_LIMIT,
       include: commentInclude,
     });
+  }
+
+  async deleteComment(commentId: string, userId: string) {
+    const comment = await this.prisma.comment.findUnique({
+      where: { id: commentId },
+    });
+
+    if (!comment) {
+      throw new NotFoundException('Comment not found');
+    }
+
+    if (comment.authorId !== userId) {
+      throw new ForbiddenException('You can only delete your own comments');
+    }
+
+    await this.prisma.comment.delete({
+      where: { id: commentId },
+    });
+
+    const commentCount = await this.prisma.comment.count({
+      where: { postId: comment.postId },
+    });
+
+    return { message: 'Comment deleted', commentCount };
+  }
+
+  async toggleSave(postId: string, userId: string) {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+    });
+
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    const existing = await this.prisma.savedPost.findUnique({
+      where: {
+        userId_postId: { userId, postId },
+      },
+    });
+
+    if (existing) {
+      await this.prisma.savedPost.delete({
+        where: { id: existing.id },
+      });
+    } else {
+      await this.prisma.savedPost.create({
+        data: { userId, postId },
+      });
+    }
+
+    const saveCount = await this.prisma.savedPost.count({
+      where: { postId },
+    });
+
+    return {
+      saved: !existing,
+      saveCount,
+    };
+  }
+
+  async getSavedPosts(userId: string) {
+    const rows = await this.prisma.savedPost.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: FEED_LIMIT,
+      include: {
+        post: {
+          include: {
+            ...postInclude,
+            _count: { select: { likes: true, comments: true } },
+            likes: { where: { userId }, select: { id: true } },
+            savedBy: { where: { userId }, select: { id: true } },
+          },
+        },
+      },
+    });
+
+    return rows.map((row) => ({
+      id: row.post.id,
+      authorId: row.post.authorId,
+      groupId: row.post.groupId,
+      content: row.post.content,
+      postType: row.post.postType,
+      visibility: row.post.visibility,
+      imageUrl: row.post.imageUrl,
+      videoUrl: row.post.videoUrl,
+      createdAt: row.post.createdAt,
+      updatedAt: row.post.updatedAt,
+      author: row.post.author,
+      likeCount: row.post._count.likes,
+      commentCount: row.post._count.comments,
+      liked: row.post.likes.length > 0,
+      saved: true,
+      isFollowingAuthor: false,
+      savedAt: row.createdAt,
+    }));
+  }
+
+  private async getBlockedUserIds(userId: string): Promise<string[]> {
+    const rows = await this.prisma.block.findMany({
+      where: {
+        OR: [{ blockerId: userId }, { blockedId: userId }],
+      },
+      select: { blockerId: true, blockedId: true },
+    });
+
+    const ids = new Set<string>();
+    for (const row of rows) {
+      ids.add(row.blockerId === userId ? row.blockedId : row.blockerId);
+    }
+    return [...ids];
   }
 
   async delete(postId: string, userId: string) {

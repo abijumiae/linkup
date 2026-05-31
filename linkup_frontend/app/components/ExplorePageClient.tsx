@@ -163,6 +163,12 @@ export default function ExplorePageClient() {
   const [discover, setDiscover] = useState<DiscoverData>(EMPTY_DISCOVER_DATA);
   const [searchUsers, setSearchUsers] = useState<SearchUser[]>([]);
   const [searchPosts, setSearchPosts] = useState<FeedPost[]>([]);
+  const [searchHubs, setSearchHubs] = useState<DiscoverData["hubs"]>([]);
+  const [searchMarket, setSearchMarket] = useState<DiscoverData["market"]>([]);
+  const [searchWork, setSearchWork] = useState<DiscoverData["work"]>([]);
+  const [searchHappenings, setSearchHappenings] = useState<DiscoverData["happenings"]>([]);
+  const [searchTags, setSearchTags] = useState<string[]>([]);
+  const [searchTab, setSearchTab] = useState<DiscoverTab>("all");
   const [isLoading, setIsLoading] = useState(true);
   const [dataWarning, setDataWarning] = useState<string | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -178,6 +184,11 @@ export default function ExplorePageClient() {
       if (!query.trim()) {
         setSearchUsers([]);
         setSearchPosts([]);
+        setSearchHubs([]);
+        setSearchMarket([]);
+        setSearchWork([]);
+        setSearchHappenings([]);
+        setSearchTags([]);
         setSearchError(null);
         await loadDiscover();
         return;
@@ -187,6 +198,11 @@ export default function ExplorePageClient() {
         const results = await searchAll(query);
         setSearchUsers(results.users);
         setSearchPosts(results.posts);
+        setSearchHubs(results.hubs);
+        setSearchMarket(results.market);
+        setSearchWork(results.work);
+        setSearchHappenings(results.happenings);
+        setSearchTags(results.tags);
         setSearchError(null);
       } catch (err) {
         if (err instanceof ApiError && err.status === 401) {
@@ -194,6 +210,11 @@ export default function ExplorePageClient() {
         }
         setSearchUsers([]);
         setSearchPosts([]);
+        setSearchHubs([]);
+        setSearchMarket([]);
+        setSearchWork([]);
+        setSearchHappenings([]);
+        setSearchTags([]);
         setSearchError("Search is warming up. Try again in a moment.");
       }
     },
@@ -347,16 +368,50 @@ export default function ExplorePageClient() {
   function renderSearchResults() {
     const hasUsers = searchUsers.length > 0;
     const hasSparks = searchPosts.length > 0;
+    const hasHubs = searchHubs.length > 0;
+    const hasMarket = searchMarket.length > 0;
+    const hasWork = searchWork.length > 0;
+    const hasHappenings = searchHappenings.length > 0;
+    const hasTags = searchTags.length > 0;
+    const hasAny =
+      hasUsers ||
+      hasSparks ||
+      hasHubs ||
+      hasMarket ||
+      hasWork ||
+      hasHappenings ||
+      hasTags;
 
-    if (!hasUsers && !hasSparks) {
+    if (!hasAny) {
       return (
         <DiscoverEmptyState message={`No results found for "${activeQuery}".`} />
       );
     }
 
+    const showAll = searchTab === "all";
+
     return (
       <div className="space-y-8">
-        {hasUsers ? (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {tabs
+            .filter((tab) => tab.id !== "watch")
+            .map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setSearchTab(tab.id)}
+                className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  searchTab === tab.id
+                    ? "bg-brand-primary text-white"
+                    : "bg-slate-100 text-slate-700 dark:bg-white/5 dark:text-slate-300"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+        </div>
+
+        {(showAll || searchTab === "people") && hasUsers ? (
           <SectionShell eyebrow="People" title="Matching people">
             <div className="space-y-3">
               {searchUsers.map((user) => (
@@ -369,9 +424,87 @@ export default function ExplorePageClient() {
             </div>
           </SectionShell>
         ) : null}
-        {hasSparks ? (
+
+        {(showAll || searchTab === "sparks") && hasSparks ? (
           <SectionShell eyebrow="Sparks" title="Matching sparks">
             {renderSparks(searchPosts)}
+          </SectionShell>
+        ) : null}
+
+        {(showAll || searchTab === "hubs") && hasHubs ? (
+          <SectionShell eyebrow="Hubs" title="Matching hubs">
+            <div className="grid gap-4 sm:grid-cols-2">
+              {searchHubs.map((hub) => (
+                <DiscoverHubCard key={hub.id} hub={hub} />
+              ))}
+            </div>
+          </SectionShell>
+        ) : null}
+
+        {(showAll || searchTab === "market") && hasMarket ? (
+          <SectionShell eyebrow="Market" title="Matching listings">
+            <div className="grid gap-4 sm:grid-cols-2">
+              {searchMarket.map((item) => (
+                <DiscoverOpportunityCard
+                  key={item.id}
+                  title={item.title}
+                  subtitle={`${item.category} · ${item.currency} ${item.price}`}
+                  href={`/marketplace/${item.id}`}
+                  cta="View listing"
+                  icon={ShoppingBag}
+                />
+              ))}
+            </div>
+          </SectionShell>
+        ) : null}
+
+        {(showAll || searchTab === "work") && hasWork ? (
+          <SectionShell eyebrow="Work" title="Matching roles">
+            <div className="grid gap-4 sm:grid-cols-2">
+              {searchWork.map((job) => (
+                <DiscoverOpportunityCard
+                  key={job.id}
+                  title={job.title}
+                  subtitle={`${job.company} · ${job.location}`}
+                  href={`/jobs/${job.id}`}
+                  cta="View role"
+                  icon={Briefcase}
+                />
+              ))}
+            </div>
+          </SectionShell>
+        ) : null}
+
+        {(showAll || searchTab === "happenings") && hasHappenings ? (
+          <SectionShell eyebrow="Happenings" title="Matching events">
+            <div className="grid gap-4 sm:grid-cols-2">
+              {searchHappenings.map((event) => (
+                <DiscoverOpportunityCard
+                  key={event.id}
+                  title={event.title}
+                  subtitle={`${event.location} · ${event.attendeesCount} going`}
+                  href={`/events/${event.id}`}
+                  cta="View event"
+                  icon={CalendarDays}
+                />
+              ))}
+            </div>
+          </SectionShell>
+        ) : null}
+
+        {(showAll || searchTab === "tags") && hasTags ? (
+          <SectionShell eyebrow="Tags" title="Matching tags">
+            <div className="flex flex-wrap gap-2">
+              {searchTags.map((tag) => (
+                <Link
+                  key={tag}
+                  href={`/explore?q=${encodeURIComponent(tag)}`}
+                  className="rounded-full border border-brand-primary/30 bg-brand-primary/10 px-4 py-2 text-sm font-semibold text-brand-primary dark:text-brand-secondary"
+                >
+                  #{tag}
+                </Link>
+              ))}
+            </div>
           </SectionShell>
         ) : null}
       </div>

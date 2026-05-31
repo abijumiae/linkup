@@ -92,6 +92,11 @@ export interface DiscoverData {
 export interface SearchResults {
   users: SearchUser[];
   posts: FeedPost[];
+  hubs: DiscoverHub[];
+  market: DiscoverMarketItem[];
+  work: DiscoverWorkItem[];
+  happenings: DiscoverHappening[];
+  tags: string[];
 }
 
 export type DiscoverLoadResult = {
@@ -351,6 +356,13 @@ export async function searchAll(query: string): Promise<SearchResults> {
       return {
         users: asArray<SearchUser>(record.users),
         posts: asArray<FeedPost>(record.posts),
+        hubs: asArray<DiscoverHub>(record.hubs),
+        market: asArray<DiscoverMarketItem>(record.market),
+        work: asArray<DiscoverWorkItem>(record.work),
+        happenings: asArray<DiscoverHappening>(record.happenings),
+        tags: asArray<string>(record.tags).length
+          ? asArray<string>(record.tags)
+          : DEFAULT_DISCOVER_TAGS,
       };
     }),
   );

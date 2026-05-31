@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { createHash, randomBytes } from 'crypto';
 import { mkdir, writeFile } from 'fs/promises';
+import { getConfiguredStorageHint } from './storage.provider';
 import { extname, join } from 'path';
 
 const IMAGE_MIME_TYPES = new Set([
@@ -254,7 +255,7 @@ export class UploadsService {
     await writeFile(destination, file.buffer);
 
     this.logger.log(
-      `Stored upload locally as ${filename}. Configure Cloudinary or S3 for production persistence.`,
+      `Stored upload locally as ${filename}. Active storage: ${getConfiguredStorageHint()}. Configure Cloudinary or S3 for production persistence.`,
     );
 
     return {

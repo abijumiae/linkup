@@ -4,29 +4,28 @@ import Link from "next/link";
 import { memo, useEffect, useState } from "react";
 import {
   Bookmark,
+  Flag,
   Heart,
   Mail,
   MessageCircle,
+  Repeat2,
   Share2,
 } from "lucide-react";
-import { ApiError } from "@/src/lib/api";
+import { ApiError, resolveMediaUrl } from "@/src/lib/api";
 import {
-  createComment,
+  createReport,
+  REPORT_REASONS,
+} from "@/src/lib/safety";
+import {
   FeedPost,
-  fetchComments,
   formatAccountType,
   formatTimeAgo,
   toggleFollow,
   toggleLike,
+  toggleSave,
 } from "@/src/lib/posts";
 import BoostReactionHints from "./linkup/BoostReactionHints";
-
-type FeedComment = {
-  id: string;
-  content: string;
-  author: string;
-  time: string;
-};
+import CommentsDrawer from "./CommentsDrawer";
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -34,49 +33,6 @@ function getInitials(name: string): string {
     return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
   }
   return (name[0] ?? "U").toUpperCase();
-}
-
-type CardPost = {
-  id: string;
-  authorId: string;
-  author: string;
-  role: string;
-  time: string;
-  content: string;
-  imageUrl: string | null;
-  videoUrl: string | null;
-  liked: boolean;
-  isFollowingAuthor: boolean;
-  stats: { likes: number; comments: number; shares: number; saves: number };
-  comments: FeedComment[];
-  showComments: boolean;
-  commentInput: string;
-  interactionError: string | null;
-};
-
-function mapApiPost(post: FeedPost): CardPost {
-  return {
-    id: post.id,
-    authorId: post.authorId,
-    author: post.author.name,
-    role: formatAccountType(post.author.accountType),
-    time: formatTimeAgo(post.createdAt),
-    content: post.content,
-    imageUrl: post.imageUrl,
-    videoUrl: post.videoUrl,
-    liked: post.liked,
-    isFollowingAuthor: post.isFollowingAuthor,
-    stats: {
-      likes: post.likeCount,
-      comments: post.commentCount,
-      shares: 0,
-      saves: 0,
-    },
-    comments: [],
-    showComments: false,
-    commentInput: "",
-    interactionError: null,
-  };
 }
 
 type FeedPostCardProps = {
@@ -93,15 +49,28 @@ function FeedPostCard({
   pulseLabels = false,
 }: FeedPostCardProps) {
   const useSparkWording = sparkLabels || pulseLabels;
-  const [cardPost, setCardPost] = useState<CardPost>(() => mapApiPost(post));
+  const [liked, setLiked] = useState(post.liked);
+  const [saved, setSaved] = useState(post.saved ?? false);
+  const [likeCount, setLikeCount] = useState(post.likeCount);
+  const [commentCount, setCommentCount] = useState(post.commentCount);
+  const [isFollowingAuthor, setIsFollowingAuthor] = useState(
+    post.isFollowingAuthor,
+  );
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [interactionError, setInteractionError] = useState<string | null>(null);
+  const [shareNotice, setShareNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    setCardPost(mapApiPost(post));
+    setLiked(post.liked);
+    setSaved(post.saved ?? false);
+    setLikeCount(post.likeCount);
+    setCommentCount(post.commentCount);
+    setIsFollowingAuthor(post.isFollowingAuthor);
   }, [post]);
 
-  function updateCard(updater: (current: CardPost) => CardPost) {
-    setCardPost((current) => updater(current));
-  }
+  const imageSrc = resolveMediaUrl(post.imageUrl);
+  const videoSrc = resolveMediaUrl(post.videoUrl);
 
   function getInteractionError(err: unknown): string {
     if (err instanceof ApiError) {
@@ -114,284 +83,264 @@ function FeedPostCard({
   }
 
   async function handleLike() {
-    updateCard((current) => ({ ...current, interactionError: null }));
-
+    setInteractionError(null);
     try {
-      const result = await toggleLike(cardPost.id);
-      updateCard((current) => ({
-        ...current,
-        liked: result.liked,
-        stats: { ...current.stats, likes: result.likeCount },
-      }));
+      const result = await toggleLike(post.id);
+      setLiked(result.liked);
+      setLikeCount(result.likeCount);
     } catch (err) {
-      updateCard((current) => ({
-        ...current,
-        interactionError: getInteractionError(err),
-      }));
+      setInteractionError(getInteractionError(err));
     }
   }
 
-  async function handleToggleComments() {
-    const nextShow = !cardPost.showComments;
-    updateCard((current) => ({
-      ...current,
-      showComments: nextShow,
-      interactionError: null,
-    }));
+  async function handleSave() {
+    setInteractionError(null);
+    try {
+      const result = await toggleSave(post.id);
+      setSaved(result.saved);
+    } catch (err) {
+      setInteractionError(getInteractionError(err));
+    }
+  }
 
-    if (nextShow && cardPost.comments.length === 0) {
-      try {
-        const comments = await fetchComments(cardPost.id);
-        updateCard((current) => ({
-          ...current,
-          comments: comments.map((comment) => ({
-            id: comment.id,
-            content: comment.content,
-            author: comment.author.name,
-            time: formatTimeAgo(comment.createdAt),
-          })),
-        }));
-      } catch (err) {
-        updateCard((current) => ({
-          ...current,
-          showComments: false,
-          interactionError: getInteractionError(err),
-        }));
+  async function handleShare() {
+    setShareNotice(null);
+    const shareUrl =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/explore?q=${encodeURIComponent(post.content.slice(0, 80))}`
+        : "https://www.thelinkupzone.com/explore";
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `${post.author.name} on LinkUp`,
+          text: post.content.slice(0, 140),
+          url: shareUrl,
+        });
+      } else {
+        await navigator.clipboard.writeText(shareUrl);
+        setShareNotice("Link copied to clipboard");
       }
-    }
-  }
-
-  async function handleSubmitComment() {
-    const trimmed = cardPost.commentInput.trim();
-    if (!trimmed) {
-      return;
-    }
-
-    try {
-      const created = await createComment(cardPost.id, trimmed);
-      updateCard((current) => ({
-        ...current,
-        commentInput: "",
-        showComments: true,
-        stats: { ...current.stats, comments: current.stats.comments + 1 },
-        comments: [
-          ...current.comments,
-          {
-            id: created.id,
-            content: created.content,
-            author: created.author.name,
-            time: formatTimeAgo(created.createdAt),
-          },
-        ],
-      }));
-    } catch (err) {
-      updateCard((current) => ({
-        ...current,
-        interactionError: getInteractionError(err),
-      }));
+    } catch {
+      setShareNotice("Share unavailable right now");
     }
   }
 
   async function handleFollow() {
     try {
-      const result = await toggleFollow(cardPost.authorId);
-      updateCard((current) => ({
-        ...current,
-        isFollowingAuthor: result.following,
-        interactionError: null,
-      }));
+      const result = await toggleFollow(post.authorId);
+      setIsFollowingAuthor(result.following);
+      setInteractionError(null);
     } catch (err) {
-      updateCard((current) => ({
-        ...current,
-        interactionError: getInteractionError(err),
-      }));
+      setInteractionError(getInteractionError(err));
+    }
+  }
+
+  async function handleReport() {
+    setMenuOpen(false);
+    const reason = REPORT_REASONS[0];
+    try {
+      await createReport({
+        targetType: "POST",
+        targetId: post.id,
+        reason,
+      });
+      setShareNotice("Report submitted. Thank you.");
+    } catch (err) {
+      setInteractionError(getInteractionError(err));
     }
   }
 
   return (
-    <article className="linkup-card p-5 transition hover:border-brand-primary/25 hover:shadow-xl hover:shadow-brand-primary/5 sm:p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white shadow-md shadow-brand-primary/20">
-            {getInitials(cardPost.author)}
+    <>
+      <article className="linkup-card p-5 transition hover:border-brand-primary/25 hover:shadow-xl hover:shadow-brand-primary/5 sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white shadow-md shadow-brand-primary/20">
+              {getInitials(post.author.name)}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate font-semibold text-slate-900 dark:text-white">
+                {post.author.name}
+              </p>
+              <p className="truncate text-sm text-slate-500 dark:text-slate-400">
+                @{post.author.username} · {formatAccountType(post.author.accountType)} ·{" "}
+                {formatTimeAgo(post.createdAt)}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="font-semibold text-slate-900 dark:text-white">{cardPost.author}</p>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              @{post.author.username} · {cardPost.role} · {cardPost.time}
-            </p>
+          <div className="flex flex-wrap items-center gap-2">
+            {currentUserId && post.authorId !== currentUserId ? (
+              <>
+                <Link
+                  href={`/messages?userId=${post.authorId}`}
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+                >
+                  <Mail className="h-4 w-4 text-brand-secondary" />
+                  {pulseLabels ? "Start Chat" : "Message"}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => void handleFollow()}
+                  className={`min-h-[44px] rounded-full border px-4 py-2 text-sm transition ${
+                    isFollowingAuthor
+                      ? "border-brand-primary/40 bg-brand-primary/15 text-brand-primary dark:text-brand-secondary"
+                      : "border-slate-200 bg-slate-100 text-slate-700 hover:border-brand-primary/30 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+                  }`}
+                >
+                  {isFollowingAuthor
+                    ? pulseLabels
+                      ? "Connected"
+                      : "Following"
+                    : pulseLabels
+                      ? "Connect"
+                      : "Follow"}
+                </button>
+              </>
+            ) : null}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMenuOpen((value) => !value)}
+                className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300"
+                aria-label="Post options"
+              >
+                ···
+              </button>
+              {menuOpen ? (
+                <div className="absolute right-0 top-full z-10 mt-2 w-44 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-brand-dark">
+                  <button
+                    type="button"
+                    onClick={() => void handleReport()}
+                    className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-white/5"
+                  >
+                    <Flag className="h-4 w-4" />
+                    Report post
+                  </button>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
-        {currentUserId && cardPost.authorId !== currentUserId ? (
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href={`/messages?userId=${cardPost.authorId}`}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:border-brand-secondary/30 dark:hover:bg-white/10"
-            >
-              <Mail className="h-4 w-4 text-brand-secondary dark:text-brand-secondary" />
-              {pulseLabels ? "Start Chat" : "Message"}
-            </Link>
-            <button
-              type="button"
-              onClick={() => void handleFollow()}
-              className={`rounded-full border px-4 py-2 text-sm transition ${
-                cardPost.isFollowingAuthor
-                  ? "border-brand-primary/40 bg-brand-primary/15 text-brand-primary dark:text-brand-secondary"
-                  : "border-slate-200 bg-slate-100 text-slate-700 hover:border-brand-primary/30 hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
-              }`}
-            >
-              {cardPost.isFollowingAuthor
-                ? pulseLabels
-                  ? "Connected"
-                  : "Following"
-                : pulseLabels
-                  ? "Connect"
-                  : "Follow"}
-            </button>
+
+        {post.content ? (
+          <p className="mt-5 text-sm leading-7 text-slate-700 dark:text-slate-300">
+            {post.content}
+          </p>
+        ) : null}
+
+        {imageSrc ? (
+          <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={imageSrc}
+              alt=""
+              loading="lazy"
+              className="max-h-[28rem] w-full object-contain bg-slate-100 dark:bg-brand-dark/60"
+            />
           </div>
         ) : null}
-      </div>
-      {cardPost.content ? (
-        <p className="mt-5 text-sm leading-7 text-slate-700 dark:text-slate-300">
-          {cardPost.content}
-        </p>
-      ) : null}
-      {cardPost.imageUrl ? (
-        <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={cardPost.imageUrl}
-            alt=""
-            loading="lazy"
-            className="max-h-[28rem] w-full object-contain bg-slate-100 dark:bg-brand-dark/60"
-          />
-        </div>
-      ) : null}
-      {cardPost.videoUrl ? (
-        <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10">
-          <video
-            src={cardPost.videoUrl}
-            controls
-            className="max-h-[28rem] w-full bg-slate-100 dark:bg-brand-dark/60"
-          />
-        </div>
-      ) : null}
-      <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-200/80 pt-4 text-sm text-slate-600 dark:border-white/10 dark:text-slate-400 sm:gap-3">
-        <button
-          type="button"
-          onClick={() => void handleLike()}
-          className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-3.5 py-2.5 transition active:scale-[0.97] ${
-            cardPost.liked
-              ? "bg-pink-500/10 text-pink-600 dark:bg-pink-500/15 dark:text-pink-300"
-              : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
-          }`}
-        >
-          <Heart
-            className={`h-4 w-4 ${cardPost.liked ? "fill-pink-400 text-pink-400" : "text-pink-400"}`}
-          />
-          {useSparkWording ? (
-            <>
-              Boost
-              <span className="tabular-nums text-slate-500 dark:text-slate-400">
-                {cardPost.stats.likes}
-              </span>
-            </>
-          ) : (
-            cardPost.stats.likes
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={() => void handleToggleComments()}
-          className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-3.5 py-2.5 transition active:scale-[0.97] ${
-            cardPost.showComments
-              ? "bg-brand-secondary/10 text-brand-primary dark:bg-brand-secondary/15 dark:text-brand-secondary"
-              : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
-          }`}
-        >
-          <MessageCircle className="h-4 w-4 text-brand-secondary dark:text-brand-secondary" />
-          {useSparkWording ? (
-            <>
-              Reply
-              <span className="tabular-nums text-slate-500 dark:text-slate-400">
-                {cardPost.stats.comments}
-              </span>
-            </>
-          ) : (
-            cardPost.stats.comments
-          )}
-        </button>
-        <button
-          type="button"
-          className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-slate-100 px-3.5 py-2.5 text-slate-700 transition hover:bg-slate-200 active:scale-[0.97] dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
-        >
-          <Share2 className="h-4 w-4 text-brand-secondary dark:text-brand-secondary" />
-          {useSparkWording ? (
-            <>
-              Share
-              <span className="tabular-nums text-slate-500 dark:text-slate-400">
-                {cardPost.stats.shares}
-              </span>
-            </>
-          ) : (
-            cardPost.stats.shares
-          )}
-        </button>
-        <button
-          type="button"
-          className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-slate-100 px-3.5 py-2.5 text-slate-700 transition hover:bg-slate-200 active:scale-[0.97] dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
-        >
-          <Bookmark className="h-4 w-4 text-brand-primary dark:text-brand-secondary" />
-          {useSparkWording ? (
-            <>
-              Save
-              <span className="tabular-nums text-slate-500 dark:text-slate-400">
-                {cardPost.stats.saves}
-              </span>
-            </>
-          ) : (
-            cardPost.stats.saves
-          )}
-        </button>
-      </div>
-      {(pulseLabels || sparkLabels) ? <BoostReactionHints /> : null}
-      {cardPost.interactionError ? (
-        <p className="mt-3 text-sm text-red-500 dark:text-red-400">{cardPost.interactionError}</p>
-      ) : null}
-      {cardPost.showComments ? (
-        <div className="mt-4 space-y-3 border-t border-slate-200 pt-4 dark:border-white/10">
-          {cardPost.comments.map((comment) => (
-            <div key={comment.id} className="rounded-2xl bg-slate-50 px-4 py-3 dark:bg-brand-dark/80">
-              <p className="text-sm font-medium text-slate-900 dark:text-white">{comment.author}</p>
-              <p className="mt-1 text-xs text-slate-500">{comment.time}</p>
-              <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">{comment.content}</p>
-            </div>
-          ))}
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <input
-              type="text"
-              value={cardPost.commentInput}
-              onChange={(event) =>
-                updateCard((current) => ({
-                  ...current,
-                  commentInput: event.target.value,
-                }))
-              }
-              placeholder={pulseLabels ? "Write a reply..." : "Write a comment..."}
-              className="flex-1 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-100 dark:placeholder:text-slate-500"
+
+        {videoSrc ? (
+          <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10">
+            <video
+              src={videoSrc}
+              controls
+              className="max-h-[28rem] w-full bg-slate-100 dark:bg-brand-dark/60"
             />
-            <button
-              type="button"
-              onClick={() => void handleSubmitComment()}
-              disabled={!cardPost.commentInput.trim()}
-              className="rounded-full bg-brand-primary px-4 py-2 text-sm font-semibold text-brand-light transition hover:bg-brand-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {pulseLabels ? "Reply" : "Comment"}
-            </button>
           </div>
+        ) : null}
+
+        <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-200/80 pt-4 text-sm text-slate-600 dark:border-white/10 dark:text-slate-400 sm:gap-3">
+          <button
+            type="button"
+            onClick={() => void handleLike()}
+            className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-3.5 py-2.5 transition active:scale-[0.97] ${
+              liked
+                ? "bg-pink-500/10 text-pink-600 dark:bg-pink-500/15 dark:text-pink-300"
+                : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300"
+            }`}
+          >
+            <Heart className={`h-4 w-4 ${liked ? "fill-pink-400 text-pink-400" : "text-pink-400"}`} />
+            {useSparkWording ? (
+              <>
+                Boost
+                <span className="tabular-nums">{likeCount}</span>
+              </>
+            ) : (
+              likeCount
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setCommentsOpen(true)}
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-slate-100 px-3.5 py-2.5 text-slate-700 transition hover:bg-slate-200 active:scale-[0.97] dark:bg-white/5 dark:text-slate-300"
+          >
+            <MessageCircle className="h-4 w-4 text-brand-secondary" />
+            {useSparkWording ? (
+              <>
+                Reply
+                <span className="tabular-nums">{commentCount}</span>
+              </>
+            ) : (
+              commentCount
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void handleShare()}
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-slate-100 px-3.5 py-2.5 text-slate-700 transition hover:bg-slate-200 active:scale-[0.97] dark:bg-white/5 dark:text-slate-300"
+          >
+            <Share2 className="h-4 w-4 text-brand-secondary" />
+            Share
+          </button>
+
+          <button
+            type="button"
+            disabled
+            title="Reshare coming soon"
+            className="inline-flex min-h-[44px] cursor-not-allowed items-center gap-2 rounded-full bg-slate-100/70 px-3.5 py-2.5 text-slate-500 opacity-70 dark:bg-white/5 dark:text-slate-500"
+          >
+            <Repeat2 className="h-4 w-4" />
+            Reshare
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-3.5 py-2.5 transition active:scale-[0.97] ${
+              saved
+                ? "bg-brand-primary/10 text-brand-primary dark:bg-brand-secondary/15 dark:text-brand-secondary"
+                : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300"
+            }`}
+          >
+            <Bookmark className={`h-4 w-4 ${saved ? "fill-brand-primary dark:fill-brand-secondary" : ""}`} />
+            {useSparkWording ? "Save" : saved ? "Saved" : "Save"}
+          </button>
         </div>
-      ) : null}
-    </article>
+
+        {useSparkWording ? <BoostReactionHints /> : null}
+
+        {interactionError ? (
+          <p className="mt-3 text-sm text-red-500 dark:text-red-400">{interactionError}</p>
+        ) : null}
+        {shareNotice ? (
+          <p className="mt-3 text-sm text-brand-primary dark:text-brand-secondary">{shareNotice}</p>
+        ) : null}
+      </article>
+
+      <CommentsDrawer
+        open={commentsOpen}
+        postId={post.id}
+        currentUserId={currentUserId}
+        initialCount={commentCount}
+        pulseLabels={useSparkWording}
+        onClose={() => setCommentsOpen(false)}
+        onCountChange={setCommentCount}
+      />
+    </>
   );
 }
 

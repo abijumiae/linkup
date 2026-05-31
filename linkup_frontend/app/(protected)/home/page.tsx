@@ -16,7 +16,8 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { homePosts, homeSuggestions } from "../../data/linkupData";
+import { homePosts } from "../../data/linkupData";
+import { fetchConnectionSuggestionsSafe, fetchMyConnections } from "../../../src/lib/connections";
 import { getLocalProfilePrefs, markDailySparkComplete } from "../../../src/lib/linkupFeatures";
 import { getCurrentUser } from "../../../src/lib/auth";
 import { fetchEvents } from "../../../src/lib/events";
@@ -186,6 +187,15 @@ export default function HomeDashboardPage() {
   const [momentsLoading, setMomentsLoading] = useState(true);
   const [momentsWarning, setMomentsWarning] = useState<string | null>(null);
   const [dropMomentOpen, setDropMomentOpen] = useState(false);
+  const [connectSuggestions, setConnectSuggestions] = useState<
+    Array<{
+      id: string;
+      name: string;
+      username: string;
+      subtitle?: string;
+      isFollowingAuthor?: boolean;
+    }>
+  >([]);
   const [viewerGroupIndex, setViewerGroupIndex] = useState<number | null>(null);
 
   const loadMoments = () => {
@@ -227,17 +237,34 @@ export default function HomeDashboardPage() {
 
     async function loadPulseCounts() {
       try {
-        const [groups, jobs, events] = await Promise.all([
+        const [groups, jobs, events, suggestions, connections] = await Promise.all([
           fetchGroups(1, 50).catch(() => ({ items: [], hasMore: false })),
           fetchJobs({ page: 1, limit: 50 }).catch(() => ({ items: [], hasMore: false })),
           fetchEvents({ page: 1, limit: 50 }).catch(() => ({ items: [], hasMore: false })),
+          fetchConnectionSuggestionsSafe(),
+          fetchMyConnections().catch(() => ({
+            following: [],
+            followers: [],
+            followingCount: 0,
+            followersCount: 0,
+          })),
         ]);
         setPulseCounts((current) => ({
           ...current,
           hubs: groups.items.length,
           work: jobs.items.length,
           happenings: events.items.length,
+          connects: connections.followingCount,
         }));
+        setConnectSuggestions(
+          suggestions.map((person) => ({
+            id: person.id,
+            name: person.name,
+            username: person.username,
+            subtitle: person.bio?.slice(0, 60) || person.country || "Suggested for you",
+            isFollowingAuthor: person.isFollowingAuthor,
+          })),
+        );
       } catch {
         // Placeholder counts remain at zero.
       }
@@ -288,6 +315,7 @@ export default function HomeDashboardPage() {
         likeCount: post.likeCount ?? 0,
         commentCount: post.commentCount ?? 0,
         liked: post.liked ?? false,
+        saved: post.saved ?? false,
         isFollowingAuthor: post.isFollowingAuthor ?? false,
       });
 
@@ -427,6 +455,7 @@ export default function HomeDashboardPage() {
         likeCount: 0,
         commentCount: 0,
         liked: false,
+        saved: false,
         isFollowingAuthor: false,
       });
 
@@ -491,12 +520,7 @@ export default function HomeDashboardPage() {
     },
   ];
 
-  const quickConnectSuggestions = homeSuggestions.map((name) => ({
-    id: name.toLowerCase().replace(/\s+/g, "-"),
-    name,
-    username: name.toLowerCase().replace(/\s+/g, ""),
-    subtitle: "Suggested creator",
-  }));
+  const quickConnectSuggestions = connectSuggestions;
 
   const opportunityItems = [
     {

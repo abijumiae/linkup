@@ -21,6 +21,10 @@ export interface User {
   avatarUrl: string | null;
   coverUrl?: string | null;
   bio?: string | null;
+  interests?: string | null;
+  skills?: string | null;
+  website?: string | null;
+  openToConnect?: string | null;
   isVerified: boolean;
   isEmailVerified: boolean;
   isOnboarded: boolean;

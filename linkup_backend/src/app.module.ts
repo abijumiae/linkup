@@ -19,6 +19,9 @@ import { WatchModule } from './watch/watch.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { UsersModule } from './users/users.module';
+import { ConnectionsModule } from './connections/connections.module';
+import { SafetyModule } from './safety/safety.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -44,6 +47,9 @@ import { UsersModule } from './users/users.module';
     JobsModule,
     EventsModule,
     UploadsModule,
+    ConnectionsModule,
+    SafetyModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

@@ -3,6 +3,10 @@ import { clearAuth, getCurrentUser, getToken, saveUser, User } from "./auth";
 
 export interface ProfileUser extends User {
   bio?: string | null;
+  interests?: string | null;
+  skills?: string | null;
+  website?: string | null;
+  openToConnect?: string | null;
   followersCount: number;
   followingCount: number;
   postsCount: number;
@@ -32,6 +36,10 @@ export interface UpdateProfilePayload {
   avatarUrl?: string;
   coverUrl?: string;
   bio?: string;
+  interests?: string;
+  skills?: string;
+  website?: string;
+  openToConnect?: string;
   accountType?: User["accountType"];
 }
 

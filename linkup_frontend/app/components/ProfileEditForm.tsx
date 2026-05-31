@@ -30,6 +30,10 @@ export default function ProfileEditForm({
   const [name, setName] = useState(user.name);
   const [username, setUsername] = useState(user.username);
   const [bio, setBio] = useState(user.bio ?? "");
+  const [interests, setInterests] = useState(user.interests ?? "");
+  const [skills, setSkills] = useState(user.skills ?? "");
+  const [website, setWebsite] = useState(user.website ?? "");
+  const [openToConnect, setOpenToConnect] = useState(user.openToConnect ?? "");
   const [country, setCountry] = useState(user.country ?? "United Arab Emirates");
   const [language, setLanguage] = useState(user.language ?? "en");
   const [accountType, setAccountType] = useState<AccountType>(user.accountType);
@@ -42,6 +46,10 @@ export default function ProfileEditForm({
     setName(user.name);
     setUsername(user.username);
     setBio(user.bio ?? "");
+    setInterests(user.interests ?? "");
+    setSkills(user.skills ?? "");
+    setWebsite(user.website ?? "");
+    setOpenToConnect(user.openToConnect ?? "");
     setCountry(user.country ?? "United Arab Emirates");
     setLanguage(user.language ?? "en");
     setAccountType(user.accountType);
@@ -66,6 +74,10 @@ export default function ProfileEditForm({
         name: name.trim(),
         username: username.trim(),
         bio: bio.trim() || undefined,
+        interests: interests.trim() || undefined,
+        skills: skills.trim() || undefined,
+        website: website.trim() || undefined,
+        openToConnect: openToConnect.trim() || undefined,
         country: country.trim() || undefined,
         language: language.trim() || undefined,
         accountType,
@@ -189,6 +201,61 @@ export default function ProfileEditForm({
                 />
               </div>
             </label>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block space-y-2">
+                <span className={labelClass}>Interests</span>
+                <div className={inputShell}>
+                  <input
+                    className={inputClass}
+                    value={interests}
+                    onChange={(event) => setInterests(event.target.value)}
+                    placeholder="Tech, Design, Startups"
+                    disabled={isSaving}
+                  />
+                </div>
+              </label>
+              <label className="block space-y-2">
+                <span className={labelClass}>Skills</span>
+                <div className={inputShell}>
+                  <input
+                    className={inputClass}
+                    value={skills}
+                    onChange={(event) => setSkills(event.target.value)}
+                    placeholder="Product, Marketing, Code"
+                    disabled={isSaving}
+                  />
+                </div>
+              </label>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block space-y-2">
+                <span className={labelClass}>Website</span>
+                <div className={inputShell}>
+                  <Globe className="h-4 w-4 shrink-0 text-slate-500" />
+                  <input
+                    className={inputClass}
+                    value={website}
+                    onChange={(event) => setWebsite(event.target.value)}
+                    placeholder="https://your-site.com"
+                    disabled={isSaving}
+                  />
+                </div>
+              </label>
+              <label className="block space-y-2">
+                <span className={labelClass}>Open to connect for</span>
+                <div className={inputShell}>
+                  <input
+                    className={inputClass}
+                    value={openToConnect}
+                    onChange={(event) => setOpenToConnect(event.target.value)}
+                    placeholder="Collaborations, Mentorship, Hiring"
+                    disabled={isSaving}
+                  />
+                </div>
+              </label>
+            </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block space-y-2">

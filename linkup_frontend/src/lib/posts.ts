@@ -29,6 +29,7 @@ export interface FeedPost extends Post {
   likeCount: number;
   commentCount: number;
   liked: boolean;
+  saved: boolean;
   isFollowingAuthor: boolean;
 }
 
@@ -57,10 +58,14 @@ export interface LikeResponse {
   likeCount: number;
 }
 
-export interface FollowResponse {
-  following: boolean;
-  followersCount: number;
-  followingCount: number;
+export interface SaveResponse {
+  saved: boolean;
+  saveCount: number;
+}
+
+export interface DeleteCommentResponse {
+  message: string;
+  commentCount: number;
 }
 
 function authHeaders(): HeadersInit {
@@ -135,6 +140,40 @@ export async function createComment(
 export async function fetchComments(postId: string): Promise<Comment[]> {
   return withAuth(() =>
     apiRequest<Comment[]>(`/posts/${postId}/comments`, {
+      headers: authHeaders(),
+    }),
+  );
+}
+
+export interface FollowResponse {
+  following: boolean;
+  followersCount: number;
+  followingCount: number;
+}
+
+export async function toggleSave(postId: string): Promise<SaveResponse> {
+  return withAuth(() =>
+    apiRequest<SaveResponse>(`/posts/${postId}/save`, {
+      method: "POST",
+      headers: authHeaders(),
+    }),
+  );
+}
+
+export async function deleteComment(
+  commentId: string,
+): Promise<DeleteCommentResponse> {
+  return withAuth(() =>
+    apiRequest<DeleteCommentResponse>(`/posts/comments/${commentId}`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    }),
+  );
+}
+
+export async function fetchSavedPosts(): Promise<FeedPost[]> {
+  return withAuth(() =>
+    apiRequest<FeedPost[]>("/posts/saved", {
       headers: authHeaders(),
     }),
   );

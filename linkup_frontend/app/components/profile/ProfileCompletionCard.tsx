@@ -32,6 +32,26 @@ export default function ProfileCompletionCard({
       done: Boolean(user.avatarUrl),
     },
     {
+      id: "cover",
+      label: "Add Pulse Cover",
+      done: Boolean(user.coverUrl),
+    },
+    {
+      id: "interests",
+      label: "Add interests & skills",
+      done: Boolean(user.interests?.trim() || user.skills?.trim()),
+    },
+    {
+      id: "website",
+      label: "Add website or link",
+      done: Boolean(user.website?.trim()),
+    },
+    {
+      id: "open",
+      label: "Set open to connect",
+      done: Boolean(user.openToConnect?.trim()),
+    },
+    {
       id: "hub",
       label: "Join a hub",
       done: (user.hubsCount ?? 0) > 0,
