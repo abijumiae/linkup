@@ -22,6 +22,7 @@ import { UsersModule } from './users/users.module';
 import { ConnectionsModule } from './connections/connections.module';
 import { SafetyModule } from './safety/safety.module';
 import { AdminModule } from './admin/admin.module';
+import { PrivacyModule } from './privacy/privacy.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { AdminModule } from './admin/admin.module';
     ConnectionsModule,
     SafetyModule,
     AdminModule,
+    PrivacyModule,
   ],
   controllers: [AppController],
   providers: [

@@ -8,6 +8,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SafeUser } from '../users/users.service';
 import { CreateReportDto } from './dto/create-report.dto';
@@ -19,6 +20,7 @@ export class SafetyController {
   constructor(private readonly safetyService: SafetyService) {}
 
   @Post('reports')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   createReport(
     @Req() req: { user: SafeUser },
     @Body() dto: CreateReportDto,
@@ -45,5 +47,18 @@ export class SafetyController {
   @Get('blocks')
   listBlocks(@Req() req: { user: SafeUser }) {
     return this.safetyService.listBlocks(req.user.id);
+  }
+
+  @Get('blocks/me')
+  listMyBlocks(@Req() req: { user: SafeUser }) {
+    return this.safetyService.listBlocks(req.user.id);
+  }
+
+  @Get('blocks/:userId/status')
+  getBlockStatus(
+    @Param('userId') userId: string,
+    @Req() req: { user: SafeUser },
+  ) {
+    return this.safetyService.getBlockStatus(req.user.id, userId);
   }
 }

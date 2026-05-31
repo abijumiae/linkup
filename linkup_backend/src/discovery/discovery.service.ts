@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { FeedPost } from '../posts/posts.service';
+import { PrivacyService } from '../privacy/privacy.service';
+import { SafetyService } from '../safety/safety.service';
 
 const authorSelect = {
   id: true,
@@ -132,7 +134,11 @@ const DISCOVER_TAGS = [
 export class DiscoveryService {
   private readonly logger = new Logger(DiscoveryService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly safetyService: SafetyService,
+    private readonly privacyService: PrivacyService,
+  ) {}
 
   private emptyDiscoverResponse(): DiscoverResponse {
     return {
@@ -284,15 +290,37 @@ export class DiscoveryService {
       users.map((user) => user.id),
     );
 
+    const blockedIds = new Set(await this.safetyService.getBlockedUserIds(userId));
+
+    const visibleUsers = (
+      await Promise.all(
+        users.map(async (user) => {
+          if (blockedIds.has(user.id)) {
+            return null;
+          }
+          const canView = await this.privacyService.canViewProfile(
+            userId,
+            user.id,
+          );
+          if (!canView) {
+            return null;
+          }
+          return {
+            ...user,
+            isFollowingAuthor: following.has(user.id),
+          };
+        }),
+      )
+    ).filter((user): user is NonNullable<typeof user> => user !== null);
+
     const authorIds = [...new Set(posts.map((post) => post.authorId))];
     const postFollowing = await this.getFollowingSet(userId, authorIds);
 
+    const visiblePosts = posts.filter((post) => !blockedIds.has(post.authorId));
+
     return {
-      users: users.map((user) => ({
-        ...user,
-        isFollowingAuthor: following.has(user.id),
-      })),
-      posts: posts.map((post) => this.mapPost(post, postFollowing)),
+      users: visibleUsers,
+      posts: visiblePosts.map((post) => this.mapPost(post, postFollowing)),
       hubs: groupRows.map((group) => ({
         id: group.id,
         name: group.name,

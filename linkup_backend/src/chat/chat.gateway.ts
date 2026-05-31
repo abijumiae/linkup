@@ -92,6 +92,9 @@ export class ChatGateway
       this.onlineUsers.get(user.id)?.add(client.id);
 
       client.join(getUserRoom(user.id));
+      if (user.role === 'ADMIN' || user.role === 'MODERATOR') {
+        client.join('moderation');
+      }
       client.emit('socket_ready', { userId: user.id });
       this.logger.log(`Socket connected userId=${user.id} socketId=${client.id}`);
       this.broadcastPresence(user.id, true);

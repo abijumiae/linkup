@@ -14,9 +14,10 @@ import {
 import { ApiError, resolveMediaUrl } from "@/src/lib/api";
 import { resolveProfileImageUrl } from "@/src/lib/profileMedia";
 import {
-  createReport,
-  REPORT_REASONS,
+  blockUser,
+  fetchBlockStatus,
 } from "@/src/lib/safety";
+import ReportModal from "./ReportModal";
 import {
   FeedPost,
   formatAccountType,
@@ -59,8 +60,20 @@ function FeedPostCard({
   );
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [blockedByMe, setBlockedByMe] = useState(false);
   const [interactionError, setInteractionError] = useState<string | null>(null);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!currentUserId || post.authorId === currentUserId) {
+      return;
+    }
+
+    void fetchBlockStatus(post.authorId)
+      .then((status) => setBlockedByMe(status.blockedByMe))
+      .catch(() => undefined);
+  }, [currentUserId, post.authorId]);
 
   useEffect(() => {
     setLiked(post.liked);
@@ -138,16 +151,12 @@ function FeedPostCard({
     }
   }
 
-  async function handleReport() {
+  async function handleBlockAuthor() {
     setMenuOpen(false);
-    const reason = REPORT_REASONS[0];
     try {
-      await createReport({
-        targetType: "POST",
-        targetId: post.id,
-        reason,
-      });
-      setShareNotice("Report submitted. Thank you.");
+      await blockUser(post.authorId);
+      setBlockedByMe(true);
+      setShareNotice("You blocked this user.");
     } catch (err) {
       setInteractionError(getInteractionError(err));
     }
@@ -155,6 +164,14 @@ function FeedPostCard({
 
   return (
     <>
+      <ReportModal
+        open={reportOpen}
+        targetType="POST"
+        targetId={post.id}
+        targetLabel="Report spark"
+        onClose={() => setReportOpen(false)}
+        onSubmitted={() => setShareNotice("Thanks. Your report has been sent.")}
+      />
       <article className="linkup-card p-5 transition hover:border-brand-primary/25 hover:shadow-xl hover:shadow-brand-primary/5 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
@@ -222,12 +239,24 @@ function FeedPostCard({
                 <div className="absolute right-0 top-full z-10 mt-2 w-44 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-white/10 dark:bg-brand-dark">
                   <button
                     type="button"
-                    onClick={() => void handleReport()}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setReportOpen(true);
+                    }}
                     className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-white/5"
                   >
                     <Flag className="h-4 w-4" />
                     Report post
                   </button>
+                  {currentUserId && post.authorId !== currentUserId ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleBlockAuthor()}
+                      className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-white/5"
+                    >
+                      {blockedByMe ? "Blocked" : "Block user"}
+                    </button>
+                  ) : null}
                 </div>
               ) : null}
             </div>

@@ -11,7 +11,9 @@ import { Prisma } from '../generated/prisma/client';
 import { ChatGateway } from '../chat/chat.gateway';
 import { RealtimeEmitter } from '../chat/realtime.emitter';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PrivacyService } from '../privacy/privacy.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { SafetyService } from '../safety/safety.service';
 import { UploadsService } from '../uploads/uploads.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 
@@ -44,6 +46,8 @@ export class MessagesService {
     private readonly notificationsService: NotificationsService,
     private readonly realtimeEmitter: RealtimeEmitter,
     private readonly uploadsService: UploadsService,
+    private readonly safetyService: SafetyService,
+    private readonly privacyService: PrivacyService,
     @Inject(forwardRef(() => ChatGateway))
     private readonly chatGateway: ChatGateway,
   ) {}
@@ -236,6 +240,9 @@ export class MessagesService {
       if (!receiver) {
         throw new NotFoundException('Receiver not found');
       }
+
+      await this.safetyService.assertNotBlocked(senderId, receiverId);
+      await this.privacyService.assertCanMessage(senderId, receiverId);
 
       const messageType = this.normalizeMessageType(dto.type);
 

@@ -1,9 +1,10 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { Trash2, X } from "lucide-react";
+import { Flag, Trash2, X } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import { useSocket } from "@/src/components/SocketProvider";
+import ReportModal from "./ReportModal";
 import {
   Comment,
   createComment,
@@ -39,6 +40,8 @@ export default function CommentsDrawer({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [count, setCount] = useState(initialCount);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportCommentId, setReportCommentId] = useState<string | null>(null);
   const { socket } = useSocket();
 
   useEffect(() => {
@@ -248,6 +251,18 @@ export default function CommentsDrawer({
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
+                    ) : currentUserId ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReportCommentId(comment.id);
+                          setReportOpen(true);
+                        }}
+                        className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/10"
+                        aria-label="Report comment"
+                      >
+                        <Flag className="h-4 w-4" />
+                      </button>
                     ) : null}
                   </div>
                   <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-300">
@@ -286,6 +301,19 @@ export default function CommentsDrawer({
           </div>
         </form>
       </div>
+
+      {reportCommentId ? (
+        <ReportModal
+          open={reportOpen}
+          targetType="COMMENT"
+          targetId={reportCommentId}
+          targetLabel="Report comment"
+          onClose={() => {
+            setReportOpen(false);
+            setReportCommentId(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

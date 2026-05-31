@@ -6,6 +6,7 @@ import {
 } from '../common/pagination.util';
 import { RealtimeEmitter } from '../chat/realtime.emitter';
 import { PrismaService } from '../prisma/prisma.service';
+import { SafetyService } from '../safety/safety.service';
 import {
   buildChatAlertPayload,
   buildRealtimeAlertPayload,
@@ -31,6 +32,7 @@ export class NotificationsService {
     private readonly prisma: PrismaService,
     @Inject(forwardRef(() => RealtimeEmitter))
     private readonly realtimeEmitter: RealtimeEmitter,
+    private readonly safetyService: SafetyService,
   ) {}
 
   async notifyLike(actorId: string, postId: string) {
@@ -405,6 +407,17 @@ export class NotificationsService {
     return payload;
   }
 
+  private async shouldDeliverNotification(
+    actorId: string,
+    recipientId: string,
+  ): Promise<boolean> {
+    if (actorId === recipientId) {
+      return false;
+    }
+
+    return !(await this.safetyService.isBlocked(actorId, recipientId));
+  }
+
   private async upsertNotification(params: {
     type: NotificationType;
     recipientId: string;
@@ -412,6 +425,12 @@ export class NotificationsService {
     postId: string | null;
     message: string;
   }) {
+    if (
+      !(await this.shouldDeliverNotification(params.actorId, params.recipientId))
+    ) {
+      return null;
+    }
+
     const existing = await this.prisma.notification.findFirst({
       where: {
         recipientId: params.recipientId,

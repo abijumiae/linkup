@@ -7,7 +7,7 @@ export type AccountType =
   | "STUDENT"
   | "PROFESSIONAL";
 
-export type Role = "USER" | "ADMIN";
+export type Role = "USER" | "MODERATOR" | "ADMIN";
 
 export interface User {
   id: string;

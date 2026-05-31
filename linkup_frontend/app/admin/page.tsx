@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ShieldCheck, Sparkles, Users } from "lucide-react";
 import { getApiBaseUrl } from "@/src/lib/api";
@@ -38,7 +39,7 @@ export default function AdminPage() {
       return;
     }
 
-    if (user.role !== "ADMIN") {
+    if (user.role !== "ADMIN" && user.role !== "MODERATOR") {
       setDenied(true);
       setLoading(false);
       return;
@@ -152,10 +153,9 @@ export default function AdminPage() {
                       </p>
                       <h2 className="mt-2 text-xl font-semibold text-white">Open reports</h2>
                     </div>
-                    <button className="inline-flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-sm text-slate-200">
-                      <ShieldCheck className="h-4 w-4 text-brand-secondary" />
-                      Review
-                    </button>
+                    <Link href="/admin/moderation" className="inline-flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-sm text-slate-200 hover:bg-white/10">
+                      Open moderation
+                    </Link>
                   </div>
                   <div className="mt-6">
                     {reportRows.length > 0 ? (

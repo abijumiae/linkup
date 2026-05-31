@@ -1,13 +1,22 @@
 import { apiRequest, ApiError } from "./api";
 import { clearAuth, getToken } from "./auth";
 
-export type ReportTargetType = "POST" | "USER";
+export type ReportTargetType =
+  | "POST"
+  | "USER"
+  | "COMMENT"
+  | "GROUP"
+  | "MARKET"
+  | "JOB"
+  | "EVENT";
 
 export interface CreateReportPayload {
   targetType: ReportTargetType;
   targetId: string;
-  reason: string;
+  reason?: string;
+  category?: string;
   details?: string;
+  description?: string;
 }
 
 export interface BlockedUser {
@@ -20,6 +29,12 @@ export interface BlockedUser {
   };
   createdAt: string;
 }
+
+export type BlockStatus = {
+  blockedByMe: boolean;
+  blockedMe: boolean;
+  isBlocked: boolean;
+};
 
 function authHeaders(): HeadersInit {
   const token = getToken();
@@ -43,11 +58,18 @@ async function withAuth<T>(request: () => Promise<T>): Promise<T> {
 export async function createReport(
   payload: CreateReportPayload,
 ): Promise<{ id: string; message?: string }> {
+  const body = {
+    targetType: payload.targetType,
+    targetId: payload.targetId,
+    category: payload.category ?? payload.reason,
+    description: payload.description ?? payload.details,
+  };
+
   return withAuth(() =>
     apiRequest<{ id: string; message?: string }>("/reports", {
       method: "POST",
       headers: authHeaders(),
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     }),
   );
 }
@@ -72,17 +94,30 @@ export async function unblockUser(userId: string): Promise<{ blocked: boolean }>
 
 export async function fetchBlockedUsers(): Promise<BlockedUser[]> {
   return withAuth(() =>
-    apiRequest<BlockedUser[]>("/blocks", {
+    apiRequest<BlockedUser[]>("/blocks/me", {
       headers: authHeaders(),
     }),
   );
 }
 
-export const REPORT_REASONS = [
+export async function fetchBlockStatus(userId: string): Promise<BlockStatus> {
+  return withAuth(() =>
+    apiRequest<BlockStatus>(`/blocks/${userId}/status`, {
+      headers: authHeaders(),
+    }),
+  );
+}
+
+export const REPORT_CATEGORIES = [
   "Spam",
   "Harassment",
-  "Inappropriate content",
+  "Hate or abuse",
+  "Violence",
+  "Scam or fraud",
+  "Nudity or sexual content",
   "Misinformation",
-  "Impersonation",
   "Other",
 ] as const;
+
+/** @deprecated Use REPORT_CATEGORIES */
+export const REPORT_REASONS = REPORT_CATEGORIES;

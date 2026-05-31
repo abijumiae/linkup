@@ -1,37 +1,43 @@
 import {
   BadRequestException,
+  ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
+import { RealtimeEmitter } from '../chat/realtime.emitter';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateReportDto } from './dto/create-report.dto';
+import {
+  CreateReportDto,
+  REPORT_CATEGORIES,
+} from './dto/create-report.dto';
 
 @Injectable()
 export class SafetyService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => RealtimeEmitter))
+    private readonly realtimeEmitter: RealtimeEmitter,
+  ) {}
 
   async createReport(reporterId: string, dto: CreateReportDto) {
+    const reason = (dto.reason ?? dto.category)?.trim();
+    const details = (dto.description ?? dto.details)?.trim() || null;
+
+    if (!reason) {
+      throw new BadRequestException('Report category is required');
+    }
+
+    if (!REPORT_CATEGORIES.includes(reason as (typeof REPORT_CATEGORIES)[number])) {
+      throw new BadRequestException('Invalid report category');
+    }
+
     if (dto.targetType === 'USER' && dto.targetId === reporterId) {
       throw new BadRequestException('You cannot report yourself');
     }
 
-    if (dto.targetType === 'POST') {
-      const post = await this.prisma.post.findUnique({
-        where: { id: dto.targetId },
-      });
-      if (!post) {
-        throw new NotFoundException('Post not found');
-      }
-    }
-
-    if (dto.targetType === 'USER') {
-      const user = await this.prisma.user.findUnique({
-        where: { id: dto.targetId },
-      });
-      if (!user) {
-        throw new NotFoundException('User not found');
-      }
-    }
+    await this.validateReportTarget(dto.targetType, dto.targetId);
 
     const existing = await this.prisma.report.findFirst({
       where: {
@@ -51,18 +57,79 @@ export class SafetyService {
         reporterId,
         targetType: dto.targetType,
         targetId: dto.targetId,
-        reason: dto.reason.trim(),
-        details: dto.details?.trim() || null,
+        reason,
+        details,
       },
       select: {
         id: true,
         targetType: true,
+        targetId: true,
+        reason: true,
         status: true,
         createdAt: true,
       },
     });
 
-    return report;
+    this.realtimeEmitter.emitReportCreatedToStaff({
+      id: report.id,
+      targetType: report.targetType,
+      targetId: report.targetId,
+      reason: report.reason,
+      status: report.status,
+      createdAt:
+        report.createdAt instanceof Date
+          ? report.createdAt.toISOString()
+          : String(report.createdAt),
+    });
+
+    return { ...report, message: 'Thanks. Your report has been sent.' };
+  }
+
+  private async validateReportTarget(
+    targetType: CreateReportDto['targetType'],
+    targetId: string,
+  ) {
+    switch (targetType) {
+      case 'POST': {
+        const post = await this.prisma.post.findUnique({ where: { id: targetId } });
+        if (!post) throw new NotFoundException('Post not found');
+        return;
+      }
+      case 'USER': {
+        const user = await this.prisma.user.findUnique({ where: { id: targetId } });
+        if (!user) throw new NotFoundException('User not found');
+        return;
+      }
+      case 'COMMENT': {
+        const comment = await this.prisma.comment.findUnique({ where: { id: targetId } });
+        if (!comment) throw new NotFoundException('Comment not found');
+        return;
+      }
+      case 'GROUP': {
+        const group = await this.prisma.group.findUnique({ where: { id: targetId } });
+        if (!group) throw new NotFoundException('Group not found');
+        return;
+      }
+      case 'MARKET': {
+        const item = await this.prisma.marketplaceItem.findUnique({
+          where: { id: targetId },
+        });
+        if (!item) throw new NotFoundException('Listing not found');
+        return;
+      }
+      case 'JOB': {
+        const job = await this.prisma.job.findUnique({ where: { id: targetId } });
+        if (!job) throw new NotFoundException('Job not found');
+        return;
+      }
+      case 'EVENT': {
+        const event = await this.prisma.event.findUnique({ where: { id: targetId } });
+        if (!event) throw new NotFoundException('Event not found');
+        return;
+      }
+      default:
+        throw new BadRequestException('Unsupported report target');
+    }
   }
 
   async blockUser(blockerId: string, blockedId: string) {
@@ -72,6 +139,7 @@ export class SafetyService {
 
     const target = await this.prisma.user.findUnique({
       where: { id: blockedId },
+      select: { id: true },
     });
 
     if (!target) {
@@ -102,6 +170,8 @@ export class SafetyService {
       }),
     ]);
 
+    this.realtimeEmitter.emitUserBlocked(blockerId, blockedId);
+
     return { blocked: true };
   }
 
@@ -110,7 +180,50 @@ export class SafetyService {
       where: { blockerId, blockedId },
     });
 
+    this.realtimeEmitter.emitUserUnblocked(blockerId, blockedId);
+
     return { blocked: false };
+  }
+
+  async getBlockStatus(viewerId: string, targetUserId: string) {
+    const [blockedByMe, blockedMe] = await Promise.all([
+      this.prisma.block.findUnique({
+        where: {
+          blockerId_blockedId: {
+            blockerId: viewerId,
+            blockedId: targetUserId,
+          },
+        },
+        select: { id: true },
+      }),
+      this.prisma.block.findUnique({
+        where: {
+          blockerId_blockedId: {
+            blockerId: targetUserId,
+            blockedId: viewerId,
+          },
+        },
+        select: { id: true },
+      }),
+    ]);
+
+    return {
+      blockedByMe: Boolean(blockedByMe),
+      blockedMe: Boolean(blockedMe),
+      isBlocked: Boolean(blockedByMe || blockedMe),
+    };
+  }
+
+  async assertNotBlocked(userA: string, userB: string) {
+    const status = await this.getBlockStatus(userA, userB);
+    if (status.isBlocked) {
+      throw new ForbiddenException("You can't message this user");
+    }
+  }
+
+  async isBlocked(userA: string, userB: string): Promise<boolean> {
+    const status = await this.getBlockStatus(userA, userB);
+    return status.isBlocked;
   }
 
   async getBlockedUserIds(userId: string): Promise<string[]> {

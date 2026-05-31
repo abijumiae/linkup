@@ -1,42 +1,62 @@
-import { Controller, Get, Patch, Param, Req, UseGuards } from '@nestjs/common';
-import { AdminGuard } from '../common/guards/admin.guard';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { ModeratorGuard } from '../common/guards/moderator.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PrismaService } from '../prisma/prisma.service';
 import { SafeUser } from '../users/users.service';
+import { ModerationService } from './moderation.service';
+import { UpdateReportStatusDto } from './dto/update-report-status.dto';
 
 @Controller('admin')
-@UseGuards(JwtAuthGuard, AdminGuard)
+@UseGuards(JwtAuthGuard, ModeratorGuard)
 export class AdminController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly moderationService: ModerationService,
+  ) {}
 
   @Get('reports')
-  async listReports() {
-    return this.prisma.report.findMany({
-      where: { status: 'OPEN' },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-      select: {
-        id: true,
-        targetType: true,
-        targetId: true,
-        reason: true,
-        details: true,
-        status: true,
-        createdAt: true,
-      },
-    });
+  listReports(
+    @Query('status') status?: string,
+    @Query('targetType') targetType?: string,
+  ) {
+    return this.moderationService.listReports({ status, targetType });
+  }
+
+  @Get('reports/:id')
+  getReport(@Param('id') id: string) {
+    return this.moderationService.getReport(id);
+  }
+
+  @Patch('reports/:id/status')
+  updateReportStatus(
+    @Param('id') id: string,
+    @Req() req: { user: SafeUser },
+    @Body() body: UpdateReportStatusDto,
+  ) {
+    return this.moderationService.updateReportStatus(
+      req.user.id,
+      id,
+      body.status,
+      body.notes,
+    );
   }
 
   @Patch('reports/:id/review')
-  async reviewReport(@Param('id') id: string, @Req() req: { user: SafeUser }) {
-    return this.prisma.report.update({
-      where: { id },
-      data: { status: 'REVIEWED' },
-      select: {
-        id: true,
-        status: true,
-      },
-    });
+  reviewReport(@Param('id') id: string, @Req() req: { user: SafeUser }) {
+    return this.moderationService.updateReportStatus(
+      req.user.id,
+      id,
+      'REVIEWING',
+    );
   }
 
   @Get('stats')

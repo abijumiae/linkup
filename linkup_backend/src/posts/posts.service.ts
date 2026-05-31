@@ -15,6 +15,7 @@ import {
 } from '../common/pagination.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { SafetyService } from '../safety/safety.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { CreatePostDto } from './dto/create-post.dto';
 
@@ -60,6 +61,7 @@ export class PostsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
+    private readonly safetyService: SafetyService,
     @Inject(forwardRef(() => RealtimeEmitter))
     private readonly realtimeEmitter: RealtimeEmitter,
   ) {}
@@ -111,7 +113,7 @@ export class PostsService {
     query: { page?: string; limit?: string } = {},
   ): Promise<PaginatedResult<FeedPost>> {
     const pagination = parsePaginationQuery(query);
-    const blockedIds = await this.getBlockedUserIds(userId);
+    const blockedIds = await this.safetyService.getBlockedUserIds(userId);
 
     const posts = await this.prisma.post.findMany({
       where: {
@@ -318,6 +320,10 @@ export class PostsService {
       throw new NotFoundException('Post not found');
     }
 
+    if (await this.safetyService.isBlocked(userId, post.authorId)) {
+      throw new ForbiddenException("You can't comment on this content");
+    }
+
     const comment = await this.prisma.comment.create({
       data: {
         content: dto.content,
@@ -497,21 +503,6 @@ export class PostsService {
       isFollowingAuthor: false,
       savedAt: row.createdAt,
     }));
-  }
-
-  private async getBlockedUserIds(userId: string): Promise<string[]> {
-    const rows = await this.prisma.block.findMany({
-      where: {
-        OR: [{ blockerId: userId }, { blockedId: userId }],
-      },
-      select: { blockerId: true, blockedId: true },
-    });
-
-    const ids = new Set<string>();
-    for (const row of rows) {
-      ids.add(row.blockerId === userId ? row.blockedId : row.blockerId);
-    }
-    return [...ids];
   }
 
   async delete(postId: string, userId: string) {

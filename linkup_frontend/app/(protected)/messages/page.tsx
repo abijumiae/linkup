@@ -47,6 +47,7 @@ import {
 import VoiceNoteRecorder, {
   isVoiceRecordingSupported,
 } from "@/src/components/VoiceNoteRecorder";
+import ChatSafetyMenu from "../../components/ChatSafetyMenu";
 import { formatTimeAgo } from "@/src/lib/posts";
 import {
   CallSession,
@@ -147,6 +148,7 @@ export default function MessagesPage() {
   const [typingPeerId, setTypingPeerId] = useState<string | null>(null);
   const [typingGroupId, setTypingGroupId] = useState<string | null>(null);
   const [isVoiceRecording, setIsVoiceRecording] = useState(false);
+  const [chatBlocked, setChatBlocked] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<Record<string, boolean>>({});
   const [joinedDirectRoom, setJoinedDirectRoom] = useState<string | null>(null);
   const { socket, status: socketStatus } = useSocket();
@@ -415,6 +417,10 @@ export default function MessagesPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedUserId, selectedGroupId]);
+
+  useEffect(() => {
+    setChatBlocked(false);
+  }, [activeUser?.id]);
 
   useEffect(() => {
     if (!socket?.connected || !activeUser?.id) {
@@ -1335,14 +1341,22 @@ export default function MessagesPage() {
         >
           <Video className="h-4 w-4" />
         </button>
-        <button
-          type="button"
-          onClick={() => showFeatureNotice("More options coming soon.")}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-700 transition hover:border-brand-primary/30 hover:bg-brand-primary/5 dark:border-white/10 dark:bg-brand-dark dark:text-slate-200 dark:hover:bg-white/10"
-          aria-label="More options"
-        >
-          <MoreVertical className="h-4 w-4" />
-        </button>
+        {isDirectChat && activeUser ? (
+          <ChatSafetyMenu
+            userId={activeUser.id}
+            userName={activeUser.name}
+            onBlockChange={setChatBlocked}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => showFeatureNotice("More options coming soon.")}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-700 transition hover:border-brand-primary/30 hover:bg-brand-primary/5 dark:border-white/10 dark:bg-brand-dark dark:text-slate-200 dark:hover:bg-white/10"
+            aria-label="More options"
+          >
+            <MoreVertical className="h-4 w-4" />
+          </button>
+        )}
       </>
     );
   }
@@ -1755,6 +1769,11 @@ export default function MessagesPage() {
 
                 {/* Input */}
                 <div className="sticky bottom-0 border-t border-slate-200/80 bg-slate-50/95 px-3 py-3 backdrop-blur-sm dark:border-white/10 dark:bg-brand-dark/95 sm:px-4 sm:py-4">
+                  {chatBlocked ? (
+                    <p className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 dark:border-white/10 dark:bg-brand-dark dark:text-slate-300">
+                      You blocked this user.
+                    </p>
+                  ) : (
                   <div className="relative flex min-w-0 items-end gap-1.5 rounded-3xl border border-slate-200/80 bg-white px-2 py-2 shadow-sm dark:border-white/10 dark:bg-brand-dark sm:gap-2 sm:px-3 sm:py-2.5">
                     <button
                       type="button"
@@ -1823,6 +1842,7 @@ export default function MessagesPage() {
                       </span>
                     </button>
                   </div>
+                  )}
                 </div>
               </div>
             ) : chatTab === "live" ? (

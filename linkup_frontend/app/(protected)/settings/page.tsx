@@ -39,8 +39,17 @@ import SettingsSection from "../../components/SettingsSection";
 import SettingsPageSkeleton from "../../components/settings/SettingsSkeleton";
 import { ThemeToggle } from "../../components/ThemeToggle";
 import LinkUpCardAppearanceEditor from "@/src/components/profile/LinkUpCardAppearanceEditor";
+import BlockedUsersSection from "../../components/BlockedUsersSection";
+import {
+  fetchPrivacySettings,
+  mapApiMessagesToUi,
+  mapApiVisibilityToUi,
+  mapUiMessagesToApi,
+  mapUiVisibilityToApi,
+  updatePrivacySettings,
+} from "@/src/lib/privacy";
 
-type Visibility = "PUBLIC" | "PRIVATE";
+type Visibility = "PUBLIC" | "CONNECTIONS" | "PRIVATE";
 type MessagePolicy = "EVERYONE" | "FOLLOWERS" | "NO_ONE";
 const LOCAL_PREFS_KEY = "linkup_settings_ui_prefs_v1";
 
@@ -53,6 +62,7 @@ type LocalUiPrefs = {
   allowMessages: MessagePolicy;
   showCountry: boolean;
   showOnlineStatus: boolean;
+  showActivity: boolean;
   showLocalPulse: boolean;
   notifyMessages: boolean;
   notifyLikesComments: boolean;
@@ -136,6 +146,7 @@ export default function SettingsPage() {
   const [allowMessages, setAllowMessages] = useState<MessagePolicy>("EVERYONE");
   const [showCountry, setShowCountry] = useState(true);
   const [showOnlineStatus, setShowOnlineStatus] = useState(true);
+  const [showActivity, setShowActivity] = useState(true);
   const [showLocalPulse, setShowLocalPulse] = useState(true);
   const [notifyMessages, setNotifyMessages] = useState(true);
   const [notifyLikesComments, setNotifyLikesComments] = useState(true);
@@ -172,6 +183,17 @@ export default function SettingsPage() {
       setLanguage(user.language ?? "en");
       setAvatarUrl(user.avatarUrl ?? "");
       setCoverUrl(user.coverUrl ?? "");
+
+      try {
+        const privacy = await fetchPrivacySettings();
+        setVisibility(mapApiVisibilityToUi(privacy.profileVisibility));
+        setAllowMessages(mapApiMessagesToUi(privacy.messagePermission));
+        setShowCountry(privacy.showCountry);
+        setShowOnlineStatus(privacy.showOnlineStatus);
+        setShowActivity(privacy.showActivity);
+      } catch {
+        // Privacy API may be unavailable during rollout.
+      }
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         handleAuthFailure();
@@ -209,7 +231,7 @@ export default function SettingsPage() {
       if (typeof parsed.openToConnect === "string") {
         setOpenToConnect(parsed.openToConnect);
       }
-      if (parsed.visibility === "PUBLIC" || parsed.visibility === "PRIVATE") {
+      if (parsed.visibility === "PUBLIC" || parsed.visibility === "PRIVATE" || parsed.visibility === "CONNECTIONS") {
         setVisibility(parsed.visibility);
       }
       if (
@@ -277,6 +299,13 @@ export default function SettingsPage() {
 
     try {
       await updateUserProfile(payload);
+      await updatePrivacySettings({
+        profileVisibility: mapUiVisibilityToApi(visibility),
+        messagePermission: mapUiMessagesToApi(allowMessages),
+        showCountry,
+        showOnlineStatus,
+        showActivity,
+      });
       const { user: updated } = await fetchUserProfileSafe();
       setProfileUser(updated);
       setUser(updated);
@@ -289,6 +318,7 @@ export default function SettingsPage() {
         allowMessages,
         showCountry,
         showOnlineStatus,
+        showActivity,
         showLocalPulse,
         notifyMessages,
         notifyLikesComments,
@@ -298,7 +328,7 @@ export default function SettingsPage() {
         browserAlertsEnabled,
       };
       localStorage.setItem(LOCAL_PREFS_KEY, JSON.stringify(localPrefs));
-      setSuccess("Your LinkUp Card has been updated.");
+      setSuccess("Your LinkUp Card and privacy settings have been updated.");
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         handleAuthFailure();
@@ -630,7 +660,7 @@ export default function SettingsPage() {
 
           <SettingsSection
             title="Privacy"
-            description="Control who sees your profile and how people can reach you. Saved on this device until backend support is added."
+            description="Control who sees your profile and how people can reach you."
           >
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block space-y-2">
@@ -644,6 +674,7 @@ export default function SettingsPage() {
                     disabled={isSaving}
                   >
                     <option value="PUBLIC">Public</option>
+                    <option value="CONNECTIONS">Connections only</option>
                     <option value="PRIVATE">Private</option>
                   </select>
                 </div>
@@ -684,12 +715,26 @@ export default function SettingsPage() {
               disabled={isSaving}
             />
             <ToggleRow
+              label="Show activity"
+              description="Let connections see your recent sparks and activity."
+              checked={showActivity}
+              onChange={setShowActivity}
+              disabled={isSaving}
+            />
+            <ToggleRow
               label="Local Pulse"
               description="Show what's moving near you on Pulse and Discover using your country."
               checked={showLocalPulse}
               onChange={setShowLocalPulse}
               disabled={isSaving}
             />
+          </SettingsSection>
+
+          <SettingsSection
+            title="Blocked users"
+            description="People you have blocked cannot message you or appear in your feed."
+          >
+            <BlockedUsersSection />
           </SettingsSection>
 
           <SettingsSection

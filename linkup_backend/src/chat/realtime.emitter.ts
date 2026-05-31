@@ -128,6 +128,25 @@ export class RealtimeEmitter {
     this.emitToPulse('moment_deleted', { momentId, userId });
   }
 
+  emitUserBlocked(blockerId: string, blockedUserId: string) {
+    const payload = { userId: blockedUserId };
+    this.emitToUser(blockerId, 'user_blocked', payload);
+    this.emitToUser(blockedUserId, 'user_blocked', { userId: blockerId });
+  }
+
+  emitUserUnblocked(blockerId: string, blockedUserId: string) {
+    this.emitToUser(blockerId, 'user_unblocked', { userId: blockedUserId });
+    this.emitToUser(blockedUserId, 'user_unblocked', { userId: blockerId });
+  }
+
+  emitReportCreatedToStaff(report: Record<string, unknown>) {
+    this.emitToRoom('moderation', 'report_created', report);
+  }
+
+  emitModerationStatusUpdated(payload: Record<string, unknown>) {
+    this.emitToRoom('moderation', 'moderation_status_updated', payload);
+  }
+
   emitNewMessageNotification(
     recipientId: string,
     payload: { peerId: string; message: unknown },
