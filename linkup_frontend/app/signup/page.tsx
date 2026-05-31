@@ -8,7 +8,6 @@ import { Eye, EyeOff, Globe, Lock, Mail, User } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import { AccountType, signup } from "@/src/lib/auth";
 import { ACCOUNT_TYPES, COUNTRIES } from "@/src/lib/profileOptions";
-import GoogleSignInButton from "../components/GoogleSignInButton";
 import { ThemeToggle } from "../components/ThemeToggle";
 
 export default function SignupPage() {
@@ -95,18 +94,6 @@ export default function SignupPage() {
         {error && (
           <div className="linkup-alert-error mb-6">{error}</div>
         )}
-
-        {/* Google + Form */}
-        <div className="space-y-4">
-          <GoogleSignInButton />
-
-          <div className="flex items-center gap-3">
-            <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
-            <span className="text-xs uppercase tracking-wide text-slate-500">
-              or
-            </span>
-            <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
-          </div>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -251,7 +238,6 @@ export default function SignupPage() {
             {isLoading ? "Creating account..." : "Create account"}
           </button>
         </form>
-        </div>
 
         {/* Link */}
         <p className="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
