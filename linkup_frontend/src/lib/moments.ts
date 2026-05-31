@@ -1,4 +1,5 @@
-import { apiRequest, ApiError, getApiBaseUrl } from "./api";
+import { apiRequest, ApiError } from "./api";
+import { apiWarningFromError } from "./apiWarnings";
 
 export type MomentUser = {
   id: string;
@@ -36,23 +37,7 @@ export type CreateMomentInput = {
 };
 
 function momentsWarningFromError(error: unknown): string {
-  if (error instanceof ApiError) {
-    if (error.status === 404) {
-      const api = getApiBaseUrl();
-      if (api.includes("onrender.com")) {
-        return "Moments API is not deployed on Render yet. Redeploy linkup-backend (clear build cache), then refresh.";
-      }
-      return `Moments API returned 404 from ${api}. Run: cd linkup_backend && npm run start:dev`;
-    }
-    if (error.status === 0) {
-      if (error.message.includes("timed out")) {
-        return "Backend or database timed out. Check Neon connection in linkup_backend/.env and restart the backend.";
-      }
-      return "Cannot reach the backend. Start linkup_backend on http://localhost:3000.";
-    }
-  }
-
-  return "Moments are warming up.";
+  return apiWarningFromError(error, "Moments are warming up.");
 }
 
 export async function fetchMomentsFeedSafe(): Promise<{

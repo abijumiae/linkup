@@ -11,6 +11,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
+import { getFrontendUrl } from '../common/frontend-url';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { CompleteOnboardingDto } from './dto/onboarding.dto';
@@ -85,7 +86,7 @@ export class AuthController {
     @Res() res: Response,
   ) {
     const result = await this.authService.handleGoogleUser(req.user);
-    const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3001';
+    const frontendUrl = getFrontendUrl();
     const params = new URLSearchParams({
       token: result.accessToken,
       onboarded: String(result.user.isOnboarded),

@@ -1,6 +1,7 @@
 import { INestApplicationContext, Logger } from '@nestjs/common';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { Server, ServerOptions } from 'socket.io';
+import { getAllowedOrigins } from '../common/cors.config';
 
 export class SocketIoAdapter extends IoAdapter {
   private readonly logger = new Logger(SocketIoAdapter.name);
@@ -10,11 +11,16 @@ export class SocketIoAdapter extends IoAdapter {
   }
 
   createIOServer(port: number, options?: ServerOptions) {
+    const corsOrigin =
+      process.env.NODE_ENV === 'production'
+        ? getAllowedOrigins()
+        : true;
+
     const mergedOptions = {
       ...options,
       path: '/socket.io',
       cors: {
-        origin: true,
+        origin: corsOrigin,
         credentials: true,
       },
       transports: ['websocket', 'polling'] as ('websocket' | 'polling')[],

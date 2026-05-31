@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Mail, UserPlus } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import { SearchUser } from "@/src/lib/discovery";
+import { resolveProfileImageUrl } from "@/src/lib/profileMedia";
 import { toggleFollow } from "@/src/lib/posts";
 
 type SearchUserCardProps = {
@@ -51,7 +52,7 @@ export default function SearchUserCard({
           {user.avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={user.avatarUrl}
+              src={resolveProfileImageUrl(user.avatarUrl) ?? user.avatarUrl}
               alt=""
               className="h-12 w-12 rounded-xl object-cover ring-2 ring-brand-primary/20"
             />

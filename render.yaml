@@ -11,3 +11,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Set in Render dashboard after DNS is verified:
+      # FRONTEND_URL=https://www.thelinkupzone.com
+      # PUBLIC_API_URL=https://api.thelinkupzone.com
+      # CORS_ORIGINS=https://thelinkupzone.com,https://www.thelinkupzone.com,https://linkup-nu-ruby.vercel.app
+      # MAIL_FROM=LinkUp <admin@thelinkupzone.com>

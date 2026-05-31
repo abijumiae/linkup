@@ -1,4 +1,5 @@
-import { apiRequest, ApiError, getApiBaseUrl } from "./api";
+import { apiRequest, ApiError } from "./api";
+import { apiWarningFromError } from "./apiWarnings";
 
 export type WatchCreator = {
   id: string;
@@ -255,23 +256,7 @@ export type WatchVideosResult = {
 };
 
 export function watchWarningFromError(error: unknown): string {
-  if (error instanceof ApiError) {
-    if (error.status === 404) {
-      const api = getApiBaseUrl();
-      if (api.includes("onrender.com")) {
-        return "Watch API is not deployed on Render yet. Redeploy linkup-backend (clear build cache), then refresh.";
-      }
-      return `Watch API returned 404 from ${api}. Run: cd linkup_backend && npm run start:dev`;
-    }
-    if (error.status === 0) {
-      if (error.message.includes("timed out")) {
-        return "Backend or database timed out. Check Neon connection and restart the backend.";
-      }
-      return error.message;
-    }
-  }
-
-  return "Watch is warming up. Try again shortly.";
+  return apiWarningFromError(error, "Watch is warming up. Try again shortly.");
 }
 
 export async function fetchWatchVideosSafe(
