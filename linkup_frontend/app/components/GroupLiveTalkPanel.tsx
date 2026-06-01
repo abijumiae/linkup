@@ -1,6 +1,6 @@
 "use client";
 
-import { Radio, Shield, Users, X } from "lucide-react";
+import { Mic, Radio, Shield, Users, X } from "lucide-react";
 import LiveTalkHostPanel from "./live-talk/LiveTalkHostPanel";
 import { LiveTalkRoom } from "@/src/lib/groupLiveTalk";
 import { useGroupLiveTalk } from "@/app/hooks/useGroupLiveTalk";
@@ -84,15 +84,18 @@ export default function GroupLiveTalkPanel({
             </p>
           ) : null}
 
-          <div className="mt-5 flex flex-wrap items-center gap-3">
+          <div className="mt-4 flex flex-wrap items-center gap-2">
             {!talk.room ? (
               talk.canStart ? (
                 <button
                   type="button"
                   disabled={talk.loading || !talk.isConnected}
                   onClick={() => void talk.start()}
-                  className="inline-flex min-h-11 items-center justify-center rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/25 disabled:opacity-50"
+                  aria-label="Start Live Talk"
+                  title="Start Live Talk"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/25 disabled:opacity-50"
                 >
+                  <Radio className="h-5 w-5" />
                   {talk.loading ? "Starting…" : "Start Live Talk"}
                 </button>
               ) : (
@@ -111,9 +114,11 @@ export default function GroupLiveTalkPanel({
                   type="button"
                   disabled={talk.loading || !talk.isConnected}
                   onClick={() => void talk.join()}
-                  className="inline-flex min-h-11 items-center justify-center rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-6 py-2.5 text-sm font-semibold text-white shadow-lg disabled:opacity-50"
+                  aria-label="Join Live Talk"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg disabled:opacity-50"
                 >
-                  {talk.loading ? "Joining…" : "Join Live Talk"}
+                  <Radio className="h-5 w-5" />
+                  {talk.loading ? "Joining…" : "Join"}
                 </button>
               </>
             ) : (
@@ -137,61 +142,57 @@ export default function GroupLiveTalkPanel({
 
       {showRoom && talk.room ? (
         <div
-          className="fixed inset-0 z-50 flex flex-col bg-slate-100 text-slate-900 dark:bg-gradient-to-b dark:from-slate-950 dark:via-[#0a0f1f] dark:to-slate-950 dark:text-white"
+          className="fixed inset-0 z-50 flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-slate-100 text-slate-900 dark:bg-gradient-to-b dark:from-slate-950 dark:via-[#0a0f1f] dark:to-slate-950 dark:text-white"
           role="dialog"
           aria-label="Live Talk room"
         >
-          <header className="safe-area-top flex shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 bg-white/90 px-3 py-3 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/90 sm:px-4">
+          <header
+            className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200/70 bg-white/90 px-3 py-2 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/90 sm:gap-3 sm:px-4 sm:py-2.5"
+            style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top, 0px))" }}
+          >
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
                   Live
                 </span>
-                <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-primary dark:text-brand-secondary">
-                  Live Talk
-                </span>
+                <h2 className="truncate text-sm font-semibold sm:text-base">
+                  {groupName}
+                </h2>
               </div>
-              <h2 className="truncate text-base font-semibold sm:text-lg">
-                {groupName}
-              </h2>
-              <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                Host {talk.room.host.name} · {talk.participantCount} in room
+              <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+                {talk.room.host.name} · {talk.participantCount} in room
+                {talk.holdingMic
+                  ? " · You are speaking"
+                  : talk.micBusy && talk.micHolderName
+                    ? ` · ${talk.micHolderName} speaking`
+                    : talk.micAvailable
+                      ? " · Mic available"
+                      : ""}
               </p>
-              {talk.holdingMic ? (
-                <p className="mt-0.5 text-xs font-medium text-brand-primary dark:text-brand-secondary">
-                  You are speaking
-                </p>
-              ) : talk.micBusy && talk.micHolderName ? (
-                <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300">
-                  Speaking now: {talk.micHolderName}
-                </p>
-              ) : talk.micAvailable ? (
-                <p className="mt-0.5 text-xs text-emerald-700 dark:text-emerald-300">
-                  Mic is available
-                </p>
-              ) : null}
             </div>
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="flex shrink-0 items-center gap-1.5">
               {canHostControls ? (
                 <button
                   type="button"
                   onClick={() => talk.setHostPanelOpen(true)}
-                  className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-brand-primary/30 bg-brand-primary/10 px-3 text-xs font-semibold text-brand-primary lg:hidden dark:text-brand-secondary"
+                  aria-label="Open host controls"
+                  title="Host controls"
+                  className="inline-flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary lg:hidden dark:text-brand-secondary"
                 >
-                  <Shield className="h-4 w-4" />
-                  Host
+                  <Shield className="h-5 w-5" />
                 </button>
               ) : null}
-              <span className="hidden items-center gap-1.5 rounded-full bg-slate-200/80 px-2.5 py-1 text-xs text-slate-600 dark:bg-white/10 dark:text-slate-300 sm:inline-flex">
+              <span className="hidden items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600 dark:bg-white/10 dark:text-slate-300 sm:inline-flex">
                 <Users className="h-3.5 w-3.5" />
                 {talk.participantCount}
               </span>
               <button
                 type="button"
                 onClick={() => void talk.leave()}
-                className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-slate-200 text-slate-600 dark:border-white/15 dark:text-slate-300"
+                className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300"
                 aria-label="Leave room"
+                title="Leave"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -203,41 +204,39 @@ export default function GroupLiveTalkPanel({
           ) : null}
 
           {talk.micPassedPrompt ? (
-            <div className="mx-3 mt-2 rounded-2xl border border-brand-primary/30 bg-brand-primary/10 p-4 dark:border-brand-secondary/30">
-              <p className="text-sm font-medium text-slate-900 dark:text-white">
+            <div className="mx-3 mt-1.5 flex items-center gap-2 rounded-xl bg-brand-primary/10 px-3 py-2 dark:bg-brand-primary/15">
+              <p className="min-w-0 flex-1 text-xs text-slate-800 dark:text-slate-200">
                 Host passed the mic to you
               </p>
-              <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
-                Open your microphone when you are ready to speak. We will not
-                turn on your mic without your tap.
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={talk.loading}
-                  onClick={() => void talk.acceptPassedMic()}
-                  className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-4 text-sm font-semibold text-white"
-                >
-                  Open Mic
-                </button>
-                <button
-                  type="button"
-                  onClick={() => talk.setMicPassedPrompt(false)}
-                  className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-slate-300 px-4 text-sm font-semibold dark:border-white/15"
-                >
-                  Not now
-                </button>
-              </div>
+              <button
+                type="button"
+                disabled={talk.loading}
+                onClick={() => void talk.acceptPassedMic()}
+                aria-label="Open microphone"
+                title="Open mic"
+                className="inline-flex h-10 w-10 min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary text-white"
+              >
+                <Mic className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => talk.setMicPassedPrompt(false)}
+                aria-label="Decline microphone"
+                title="Not now"
+                className="inline-flex h-10 w-10 min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
           ) : null}
 
           {talk.error ? (
-            <p className="mx-3 mt-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-200">
+            <p className="mx-3 mt-1.5 truncate rounded-lg bg-red-500/10 px-3 py-1.5 text-xs text-red-700 dark:text-red-200">
               {talk.error}
             </p>
           ) : null}
 
-          <div className="lg:hidden">
+          <div className="shrink-0 lg:hidden">
             <LiveTalkParticipantList
               participants={talk.participants}
               hostId={talk.room.hostId}
@@ -249,13 +248,13 @@ export default function GroupLiveTalkPanel({
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col border-slate-200/80 dark:border-white/10 lg:border-r">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:border-r lg:border-slate-200/60 dark:lg:border-white/10">
               <LiveTalkMessages
                 messages={talk.messages}
                 localUserId={talk.localUserId}
               />
             </div>
-            <div className="hidden min-h-0 w-full max-w-sm flex-col border-slate-200/80 dark:border-white/10 lg:flex lg:border-l">
+            <div className="hidden min-h-0 w-full max-w-xs flex-col overflow-hidden lg:flex xl:max-w-sm">
               {canHostControls ? (
                 <LiveTalkHostPanel
                   room={talk.room}
@@ -300,13 +299,17 @@ export default function GroupLiveTalkPanel({
                 aria-label="Close host controls"
                 onClick={() => talk.setHostPanelOpen(false)}
               />
-              <div className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-3xl bg-white shadow-2xl dark:bg-slate-950">
-                <div className="sticky top-0 flex items-center justify-between border-b border-slate-200/80 bg-white px-4 py-3 dark:border-white/10 dark:bg-slate-950">
-                  <h3 className="text-base font-semibold">Host Controls</h3>
+              <div
+                className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl bg-white shadow-2xl dark:bg-slate-950"
+                style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+              >
+                <div className="sticky top-0 flex items-center justify-between bg-white px-3 py-2 dark:bg-slate-950">
+                  <h3 className="text-sm font-semibold">Host controls</h3>
                   <button
                     type="button"
                     onClick={() => talk.setHostPanelOpen(false)}
-                    className="flex h-11 w-11 items-center justify-center rounded-full"
+                    aria-label="Close host controls"
+                    className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 dark:bg-white/10"
                   >
                     <X className="h-5 w-5" />
                   </button>
