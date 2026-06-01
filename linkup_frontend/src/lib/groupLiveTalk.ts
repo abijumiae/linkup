@@ -1,4 +1,4 @@
-import { apiRequest, ApiError } from "./api";
+import { apiRequest, ApiError, getApiBaseUrl } from "./api";
 import { clearAuth, getToken } from "./auth";
 
 export type LiveTalkUser = {
@@ -36,16 +36,38 @@ function authHeaders(): HeadersInit {
   return { Authorization: `Bearer ${token}` };
 }
 
-function mapLiveTalkApiError(error: unknown): never {
+async function liveTalkBackendHint(): Promise<string> {
+  try {
+    const health = await fetch(`${getApiBaseUrl()}/health`, {
+      signal: AbortSignal.timeout(4000),
+    });
+    if (!health.ok) {
+      return "Cannot reach the LinkUp API. Check that linkup_backend is running.";
+    }
+    const body = (await health.json()) as {
+      features?: { liveTalk?: boolean };
+    };
+    if (body.features?.liveTalk) {
+      return "Live Talk route failed unexpectedly. Refresh and try again.";
+    }
+  } catch {
+    // fall through
+  }
+
+  if (process.env.NODE_ENV === "development") {
+    return "Live Talk needs a fresh backend. In linkup_backend run: npm run build && npm run start:dev (stop any old server on port 3000 first).";
+  }
+
+  return "Live Talk is not ready yet. Redeploy linkup-backend on Render, then try again.";
+}
+
+async function mapLiveTalkApiError(error: unknown): Promise<never> {
   if (error instanceof ApiError) {
     if (
       error.status === 404 &&
       /cannot (post|get|patch)/i.test(error.message)
     ) {
-      throw new ApiError(
-        "Live Talk is not ready yet. Please try again after deployment.",
-        error.status,
-      );
+      throw new ApiError(await liveTalkBackendHint(), error.status);
     }
     if (error.status === 401) {
       clearAuth();
@@ -58,7 +80,7 @@ async function withAuth<T>(request: () => Promise<T>): Promise<T> {
   try {
     return await request();
   } catch (error) {
-    mapLiveTalkApiError(error);
+    return await mapLiveTalkApiError(error);
   }
 }
 

@@ -35,6 +35,9 @@ export class AppController {
         database: 'connected',
         realtime: 'socket.io',
         socketPath: '/socket.io',
+        features: {
+          liveTalk: true,
+        },
         time: new Date().toISOString(),
       };
     } catch {

@@ -13,12 +13,13 @@ import { SafeUser } from '../users/users.service';
 import { UpdateLiveTalkMuteDto } from './dto/update-live-talk-mute.dto';
 import { GroupLiveTalkService } from './group-live-talk.service';
 
-@Controller('groups/:groupId/live-talk')
+/** Full paths on each handler so Nest registers routes reliably. */
+@Controller()
 @UseGuards(JwtAuthGuard)
 export class GroupLiveTalkController {
   constructor(private readonly groupLiveTalkService: GroupLiveTalkService) {}
 
-  @Post('start')
+  @Post('groups/:groupId/live-talk/start')
   start(
     @Param('groupId') groupId: string,
     @Req() req: { user: SafeUser },
@@ -26,7 +27,7 @@ export class GroupLiveTalkController {
     return this.groupLiveTalkService.startRoom(groupId, req.user.id);
   }
 
-  @Get('active')
+  @Get('groups/:groupId/live-talk/active')
   active(
     @Param('groupId') groupId: string,
     @Req() req: { user: SafeUser },
@@ -34,7 +35,7 @@ export class GroupLiveTalkController {
     return this.groupLiveTalkService.getActiveRoom(groupId, req.user.id);
   }
 
-  @Post(':roomId/join')
+  @Post('groups/:groupId/live-talk/:roomId/join')
   join(
     @Param('groupId') groupId: string,
     @Param('roomId') roomId: string,
@@ -43,7 +44,7 @@ export class GroupLiveTalkController {
     return this.groupLiveTalkService.joinRoom(groupId, roomId, req.user.id);
   }
 
-  @Post(':roomId/leave')
+  @Post('groups/:groupId/live-talk/:roomId/leave')
   leave(
     @Param('groupId') groupId: string,
     @Param('roomId') roomId: string,
@@ -52,7 +53,7 @@ export class GroupLiveTalkController {
     return this.groupLiveTalkService.leaveRoom(groupId, roomId, req.user.id);
   }
 
-  @Post(':roomId/end')
+  @Post('groups/:groupId/live-talk/:roomId/end')
   end(
     @Param('groupId') groupId: string,
     @Param('roomId') roomId: string,
@@ -61,7 +62,7 @@ export class GroupLiveTalkController {
     return this.groupLiveTalkService.endRoom(groupId, roomId, req.user.id);
   }
 
-  @Patch(':roomId/mute')
+  @Patch('groups/:groupId/live-talk/:roomId/mute')
   mute(
     @Param('groupId') groupId: string,
     @Param('roomId') roomId: string,
