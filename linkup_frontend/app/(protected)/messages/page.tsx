@@ -66,6 +66,7 @@ import OnlineStatusBadge from "../../components/OnlineStatusBadge";
 import EmojiPicker from "../../components/EmojiPicker";
 import LiveRoomCard from "../../components/LiveRoomCard";
 import MessageBubble from "../../components/MessageBubble";
+import { getChatInitialsClass, getChatRingClass } from "@/src/lib/chatColors";
 import ChatsEmptyState from "../../components/messages/ChatsEmptyState";
 import NewChatModal from "../../components/messages/NewChatModal";
 import {
@@ -195,9 +196,13 @@ export default function MessagesPage() {
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const threadScrollRef = useRef<{ key: string; count: number }>({
+    key: "",
+    count: 0,
+  });
 
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
   }, []);
 
   const showFeatureNotice = useCallback((message: string | null) => {
@@ -332,7 +337,7 @@ export default function MessagesPage() {
           chatType: "direct",
           targetId: peerId,
         });
-        setTimeout(scrollToBottom, 50);
+        setTimeout(() => scrollToBottom("auto"), 50);
       } catch (err) {
         if (err instanceof ApiError && err.status === 401) {
           router.replace("/login");
@@ -372,7 +377,7 @@ export default function MessagesPage() {
           chatType: "group",
           targetId: groupId,
         });
-        setTimeout(scrollToBottom, 50);
+        setTimeout(() => scrollToBottom("auto"), 50);
       } catch (err) {
         if (err instanceof ApiError && err.status === 401) {
           router.replace("/login");
@@ -606,7 +611,7 @@ export default function MessagesPage() {
             }
             return [...current, message];
           });
-          setTimeout(scrollToBottom, 50);
+          setTimeout(() => scrollToBottom("auto"), 50);
         }
         return;
       }
@@ -639,7 +644,7 @@ export default function MessagesPage() {
           }
           return [...current, message];
         });
-        setTimeout(scrollToBottom, 50);
+        setTimeout(() => scrollToBottom("auto"), 50);
       }
     };
 
@@ -853,8 +858,43 @@ export default function MessagesPage() {
   }, [selectedUserId, listingId]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, groupMessages, scrollToBottom]);
+    const threadKey =
+      chatTab === "direct"
+        ? `direct:${activeUser?.id ?? ""}`
+        : `group:${activeGroup?.id ?? ""}`;
+    const messageCount =
+      chatTab === "direct" ? messages.length : groupMessages.length;
+
+    if (!threadKey.endsWith(":")) {
+      if (threadScrollRef.current.key !== threadKey) {
+        threadScrollRef.current = { key: threadKey, count: messageCount };
+        scrollToBottom("auto");
+        return;
+      }
+
+      if (messageCount > threadScrollRef.current.count) {
+        scrollToBottom("smooth");
+      }
+      threadScrollRef.current.count = messageCount;
+    }
+  }, [
+    chatTab,
+    activeUser?.id,
+    activeGroup?.id,
+    messages.length,
+    groupMessages.length,
+    scrollToBottom,
+  ]);
+
+  const handleReplyToMessage = useCallback((quote: string) => {
+    setMessageInput((current) =>
+      current.trim() ? `${current}\n> ${quote}` : `> ${quote}`,
+    );
+  }, []);
+
+  const handleMessageCopied = useCallback(() => {
+    showFeatureNotice("Message copied");
+  }, [showFeatureNotice]);
 
   async function handleSelectConversation(userId: string) {
     router.replace(`/messages?userId=${userId}`);
@@ -1637,10 +1677,12 @@ export default function MessagesPage() {
                           <img
                             src={activeUser.avatarUrl}
                             alt=""
-                            className="h-11 w-11 shrink-0 rounded-2xl object-cover ring-2 ring-brand-primary/15"
+                            className={`h-11 w-11 shrink-0 rounded-2xl object-cover ring-2 ${getChatRingClass(activeUser.id)}`}
                           />
                         ) : (
-                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white">
+                          <div
+                            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-semibold text-white shadow-md ${getChatInitialsClass(activeUser.id)}`}
+                          >
                             {getInitials(activeUser.name)}
                           </div>
                         )}
@@ -1662,7 +1704,9 @@ export default function MessagesPage() {
                       </>
                     ) : activeGroup ? (
                       <>
-                        <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-primary to-brand-secondary text-white">
+                        <div
+                          className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white shadow-md ${getChatInitialsClass(activeGroup.id)}`}
+                        >
                           <Users className="h-5 w-5" />
                         </div>
                         <div className="min-w-0">
@@ -1731,6 +1775,9 @@ export default function MessagesPage() {
                           time={formatMessageTime(message.createdAt)}
                           fromMe={message.senderId === currentUserId}
                           read={message.read}
+                          senderId={message.senderId}
+                          onReply={handleReplyToMessage}
+                          onCopied={handleMessageCopied}
                         />
                       ))
                     )
@@ -1747,11 +1794,14 @@ export default function MessagesPage() {
                         text={message.content}
                         time={formatMessageTime(message.createdAt)}
                         fromMe={message.senderId === currentUserId}
+                        senderId={message.senderId}
                         senderName={
                           message.senderId === currentUserId
                             ? undefined
                             : message.sender.name
                         }
+                        onReply={handleReplyToMessage}
+                        onCopied={handleMessageCopied}
                       />
                     ))
                   )}
@@ -1782,7 +1832,7 @@ export default function MessagesPage() {
                     <button
                       type="button"
                       onClick={() => setShowEmoji((current) => !current)}
-                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-brand-primary dark:hover:bg-white/10 dark:hover:text-brand-secondary"
+                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-500 transition duration-150 hover:scale-105 hover:bg-slate-100 active:scale-95 hover:text-brand-primary dark:hover:bg-white/10 dark:hover:text-brand-secondary"
                       aria-label="Add emoji"
                     >
                       <Smile className="h-5 w-5" />
@@ -1800,7 +1850,7 @@ export default function MessagesPage() {
                       onClick={() =>
                         showFeatureNotice("Attachments are coming soon.")
                       }
-                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-brand-primary dark:hover:bg-white/10 dark:hover:text-brand-secondary"
+                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-500 transition duration-150 hover:scale-105 hover:bg-slate-100 active:scale-95 hover:text-brand-primary dark:hover:bg-white/10 dark:hover:text-brand-secondary"
                       aria-label="Attach file"
                     >
                       <Paperclip className="h-5 w-5" />

@@ -1,5 +1,6 @@
 import { memo } from "react";
 import OnlineStatusBadge from "./OnlineStatusBadge";
+import { getChatInitialsClass, getChatRingClass } from "@/src/lib/chatColors";
 
 type ChatListItemProps = {
   name: string;
@@ -61,10 +62,12 @@ function ChatListItemComponent({
             <img
               src={avatarUrl}
               alt=""
-              className="h-12 w-12 rounded-2xl object-cover ring-2 ring-brand-primary/15"
+              className={`h-12 w-12 rounded-2xl object-cover ring-2 ${getChatRingClass(userId)}`}
             />
           ) : (
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white shadow-md shadow-brand-primary/20">
+            <div
+              className={`flex h-12 w-12 items-center justify-center rounded-2xl text-sm font-semibold text-white shadow-md ${getChatInitialsClass(userId)}`}
+            >
               {getInitials(name)}
             </div>
           )}
