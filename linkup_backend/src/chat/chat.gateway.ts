@@ -857,6 +857,7 @@ export class ChatGateway
         name: client.data.userName ?? 'LinkUp user',
         avatarUrl: client.data.userAvatarUrl ?? null,
         isMuted: dbParticipant.isMuted,
+        handRaised: dbParticipant.handRaised,
       };
 
       client.join(roomKey);
@@ -992,6 +993,97 @@ export class ChatGateway
     } catch {
       // Ignore invalid mute updates.
     }
+  }
+
+  @SubscribeMessage('live_talk_message')
+  async handleLiveTalkMessage(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: { groupId: string; roomId: string; content: string },
+  ) {
+    const userId = client.data?.userId;
+    if (!userId || !payload?.groupId || !payload?.roomId || !payload?.content) {
+      return;
+    }
+
+    const roomKey = getGroupLiveTalkRoom(payload.groupId, payload.roomId);
+    if (client.data.liveTalkRoomKey !== roomKey) {
+      return;
+    }
+
+    try {
+      await this.groupLiveTalkService.postMessage(
+        payload.groupId,
+        payload.roomId,
+        userId,
+        payload.content,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Could not send message';
+      client.emit('live_talk_error', { message });
+    }
+  }
+
+  @SubscribeMessage('live_talk_hand_changed')
+  async handleLiveTalkHandChanged(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: { groupId: string; roomId: string; handRaised: boolean },
+  ) {
+    const userId = client.data?.userId;
+    if (!userId || !payload?.groupId || !payload?.roomId) {
+      return;
+    }
+
+    const roomKey = getGroupLiveTalkRoom(payload.groupId, payload.roomId);
+    if (client.data.liveTalkRoomKey !== roomKey) {
+      return;
+    }
+
+    try {
+      await this.groupLiveTalkService.setHandRaised(
+        payload.groupId,
+        payload.roomId,
+        userId,
+        Boolean(payload.handRaised),
+      );
+      this.groupLiveTalkManager.setHandRaised(
+        roomKey,
+        userId,
+        Boolean(payload.handRaised),
+      );
+    } catch {
+      // Ignore invalid hand updates.
+    }
+  }
+
+  @SubscribeMessage('live_talk_speaking_changed')
+  handleLiveTalkSpeakingChanged(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: {
+      groupId: string;
+      roomId: string;
+      speaking: boolean;
+    },
+  ) {
+    const userId = client.data?.userId;
+    if (!userId || !payload?.groupId || !payload?.roomId) {
+      return;
+    }
+
+    const roomKey = getGroupLiveTalkRoom(payload.groupId, payload.roomId);
+    if (client.data.liveTalkRoomKey !== roomKey) {
+      return;
+    }
+
+    client.to(roomKey).emit('live_talk_speaking_changed', {
+      groupId: payload.groupId,
+      roomId: payload.roomId,
+      userId,
+      speaking: Boolean(payload.speaking),
+    });
   }
 
   @SubscribeMessage('live_talk_end')

@@ -12,9 +12,20 @@ export type LiveTalkParticipant = {
   id: string;
   userId: string;
   isMuted: boolean;
+  handRaised: boolean;
   joinedAt: string;
   leftAt: string | null;
   user: LiveTalkUser;
+};
+
+export type LiveTalkMessage = {
+  id: string;
+  roomId: string;
+  userId: string | null;
+  kind: "text" | "system";
+  content: string;
+  createdAt: string;
+  user: LiveTalkUser | null;
 };
 
 export type LiveTalkRoom = {
@@ -160,6 +171,52 @@ export async function setLiveTalkMuted(
         method: "PATCH",
         headers: authHeaders(),
         body: JSON.stringify({ isMuted }),
+      },
+    ),
+  );
+}
+
+export async function setLiveTalkHand(
+  groupId: string,
+  roomId: string,
+  handRaised: boolean,
+): Promise<LiveTalkParticipant> {
+  return withAuth(() =>
+    apiRequest<LiveTalkParticipant>(
+      `/groups/${groupId}/live-talk/${roomId}/hand`,
+      {
+        method: "PATCH",
+        headers: authHeaders(),
+        body: JSON.stringify({ handRaised }),
+      },
+    ),
+  );
+}
+
+export async function fetchLiveTalkMessages(
+  groupId: string,
+  roomId: string,
+): Promise<LiveTalkMessage[]> {
+  return withAuth(() =>
+    apiRequest<LiveTalkMessage[]>(
+      `/groups/${groupId}/live-talk/${roomId}/messages`,
+      { headers: authHeaders() },
+    ),
+  );
+}
+
+export async function postLiveTalkMessage(
+  groupId: string,
+  roomId: string,
+  content: string,
+): Promise<LiveTalkMessage> {
+  return withAuth(() =>
+    apiRequest<LiveTalkMessage>(
+      `/groups/${groupId}/live-talk/${roomId}/messages`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ content }),
       },
     ),
   );

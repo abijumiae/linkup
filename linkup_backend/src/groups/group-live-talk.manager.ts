@@ -3,6 +3,7 @@ export type LiveTalkSocketParticipant = {
   name: string;
   avatarUrl: string | null;
   isMuted: boolean;
+  handRaised: boolean;
 };
 
 export function groupLiveTalkSocketRoom(
@@ -67,6 +68,16 @@ export class GroupLiveTalkManager {
       return false;
     }
     participant.isMuted = isMuted;
+    return true;
+  }
+
+  setHandRaised(roomKey: string, userId: string, handRaised: boolean): boolean {
+    const room = this.rooms.get(roomKey);
+    const participant = room?.get(userId);
+    if (!participant) {
+      return false;
+    }
+    participant.handRaised = handRaised;
     return true;
   }
 

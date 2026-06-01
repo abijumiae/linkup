@@ -11,7 +11,10 @@ import {
 } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeEmitter } from '../chat/realtime.emitter';
-import { getGroupRoom } from '../chat/chat-rooms.util';
+import {
+  getGroupLiveTalkRoom,
+  getGroupRoom,
+} from '../chat/chat-rooms.util';
 
 const userSelect = {
   id: true,
@@ -24,9 +27,20 @@ export type LiveTalkParticipantDto = {
   id: string;
   userId: string;
   isMuted: boolean;
+  handRaised: boolean;
   joinedAt: Date;
   leftAt: Date | null;
   user: Prisma.UserGetPayload<{ select: typeof userSelect }>;
+};
+
+export type LiveTalkMessageDto = {
+  id: string;
+  roomId: string;
+  userId: string | null;
+  kind: 'text' | 'system';
+  content: string;
+  createdAt: Date;
+  user: Prisma.UserGetPayload<{ select: typeof userSelect }> | null;
 };
 
 export type LiveTalkRoomDto = {
@@ -96,10 +110,153 @@ export class GroupLiveTalkService {
         id: p.id,
         userId: p.userId,
         isMuted: p.isMuted,
+        handRaised: p.handRaised,
         joinedAt: p.joinedAt,
         leftAt: p.leftAt,
         user: p.user,
       })),
+    };
+  }
+
+  private mapMessage(
+    message: Prisma.GroupLiveTalkMessageGetPayload<{
+      include: { user: { select: typeof userSelect } };
+    }>,
+  ): LiveTalkMessageDto {
+    return {
+      id: message.id,
+      roomId: message.roomId,
+      userId: message.userId,
+      kind: message.kind === 'system' ? 'system' : 'text',
+      content: message.content,
+      createdAt: message.createdAt,
+      user: message.user,
+    };
+  }
+
+  private messageInclude() {
+    return { user: { select: userSelect } };
+  }
+
+  async getMessages(
+    groupId: string,
+    roomId: string,
+    userId: string,
+    limit = 100,
+  ): Promise<LiveTalkMessageDto[]> {
+    await this.assertGroupMember(groupId, userId);
+    await this.getActiveRoomRecord(groupId, roomId);
+
+    const rows = await this.prisma.groupLiveTalkMessage.findMany({
+      where: { roomId },
+      orderBy: { createdAt: 'asc' },
+      take: limit,
+      include: this.messageInclude(),
+    });
+
+    return rows.map((row) => this.mapMessage(row));
+  }
+
+  async postMessage(
+    groupId: string,
+    roomId: string,
+    userId: string,
+    content: string,
+  ): Promise<LiveTalkMessageDto> {
+    await this.assertGroupMember(groupId, userId);
+    await this.getActiveRoomRecord(groupId, roomId);
+    await this.assertActiveParticipant(roomId, userId);
+
+    const trimmed = content.trim();
+    if (!trimmed) {
+      throw new BadRequestException('Message cannot be empty');
+    }
+
+    const created = await this.prisma.groupLiveTalkMessage.create({
+      data: {
+        roomId,
+        userId,
+        kind: 'text',
+        content: trimmed,
+      },
+      include: this.messageInclude(),
+    });
+
+    const mapped = this.mapMessage(created);
+    this.emitRoomMessage(groupId, roomId, mapped);
+    return mapped;
+  }
+
+  async postSystemMessage(
+    roomId: string,
+    groupId: string,
+    content: string,
+  ): Promise<LiveTalkMessageDto> {
+    const created = await this.prisma.groupLiveTalkMessage.create({
+      data: {
+        roomId,
+        kind: 'system',
+        content,
+      },
+      include: this.messageInclude(),
+    });
+
+    const mapped = this.mapMessage(created);
+    this.emitRoomMessage(groupId, roomId, mapped);
+    return mapped;
+  }
+
+  private emitRoomMessage(
+    groupId: string,
+    roomId: string,
+    message: LiveTalkMessageDto,
+  ) {
+    this.realtimeEmitter.emitToRoom(
+      getGroupLiveTalkRoom(groupId, roomId),
+      'live_talk_message',
+      { groupId, roomId, message },
+    );
+  }
+
+  async setHandRaised(
+    groupId: string,
+    roomId: string,
+    userId: string,
+    handRaised: boolean,
+  ): Promise<LiveTalkParticipantDto> {
+    await this.assertGroupMember(groupId, userId);
+    await this.getActiveRoomRecord(groupId, roomId);
+
+    const participant = await this.prisma.groupLiveParticipant.findFirst({
+      where: { roomId, userId, leftAt: null },
+      include: { user: { select: userSelect } },
+    });
+
+    if (!participant) {
+      throw new BadRequestException('You are not in this Live Talk');
+    }
+
+    const updated = await this.prisma.groupLiveParticipant.update({
+      where: { id: participant.id },
+      data: { handRaised },
+      include: { user: { select: userSelect } },
+    });
+
+    const event = handRaised ? 'live_talk_hand_raised' : 'live_talk_hand_lowered';
+    this.realtimeEmitter.emitToRoom(
+      getGroupLiveTalkRoom(groupId, roomId),
+      event,
+      { groupId, roomId, userId },
+    );
+
+    return {
+      id: updated.id,
+      userId: updated.userId,
+      isMuted: updated.isMuted,
+      handRaised: updated.handRaised,
+      joinedAt: updated.joinedAt,
+      leftAt: updated.leftAt,
+      user: updated.user,
     };
   }
 
@@ -165,6 +322,12 @@ export class GroupLiveTalkService {
     });
 
     const mapped = await this.mapRoom(room);
+    const hostName = mapped.host.name ?? 'Someone';
+    await this.postSystemMessage(
+      room.id,
+      groupId,
+      `${hostName} started Live Talk`,
+    );
     this.realtimeEmitter.emitToRoom(getGroupRoom(groupId), 'live_talk_started', {
       groupId,
       room: mapped,
@@ -180,7 +343,22 @@ export class GroupLiveTalkService {
   ): Promise<LiveTalkRoomDto> {
     await this.assertGroupMember(groupId, userId);
     const room = await this.getActiveRoomRecord(groupId, roomId);
+    const wasInRoom = await this.prisma.groupLiveParticipant.findFirst({
+      where: { roomId: room.id, userId, leftAt: null },
+    });
     await this.addParticipant(room.id, userId);
+
+    if (!wasInRoom) {
+      const member = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true },
+      });
+      await this.postSystemMessage(
+        room.id,
+        groupId,
+        `${member?.name ?? 'Someone'} joined Live Talk`,
+      );
+    }
 
     const refreshed = await this.prisma.groupLiveRoom.findUniqueOrThrow({
       where: { id: room.id },
@@ -198,7 +376,16 @@ export class GroupLiveTalkService {
     await this.assertGroupMember(groupId, userId);
     const room = await this.getActiveRoomRecord(groupId, roomId);
 
+    const member = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
     await this.markParticipantLeft(room.id, userId);
+    await this.postSystemMessage(
+      room.id,
+      groupId,
+      `${member?.name ?? 'Someone'} left Live Talk`,
+    );
 
     if (room.hostId === userId) {
       return this.endRoomInternal(room.id, groupId);
@@ -265,6 +452,7 @@ export class GroupLiveTalkService {
       id: updated.id,
       userId: updated.userId,
       isMuted: updated.isMuted,
+      handRaised: updated.handRaised,
       joinedAt: updated.joinedAt,
       leftAt: updated.leftAt,
       user: updated.user,
@@ -334,7 +522,12 @@ export class GroupLiveTalkService {
     if (previous?.leftAt) {
       return this.prisma.groupLiveParticipant.update({
         where: { id: previous.id },
-        data: { leftAt: null, joinedAt: new Date(), isMuted: false },
+        data: {
+          leftAt: null,
+          joinedAt: new Date(),
+          isMuted: false,
+          handRaised: false,
+        },
       });
     }
 
@@ -376,6 +569,8 @@ export class GroupLiveTalkService {
       where: { roomId, leftAt: null },
       data: { leftAt: new Date() },
     });
+
+    await this.postSystemMessage(roomId, groupId, 'Live Talk ended');
 
     const ended = await this.prisma.groupLiveRoom.update({
       where: { id: roomId },

@@ -8,6 +8,7 @@ export type LiveTalkSocketParticipant = {
   name: string;
   avatarUrl: string | null;
   isMuted: boolean;
+  handRaised: boolean;
 };
 
 export interface GroupLiveTalkSessionOptions {
@@ -21,6 +22,8 @@ export interface GroupLiveTalkSessionOptions {
   onParticipantJoined: (participant: LiveTalkSocketParticipant) => void;
   onParticipantLeft: (userId: string) => void;
   onMuteChanged: (userId: string, isMuted: boolean) => void;
+  onHandChanged?: (userId: string, handRaised: boolean) => void;
+  onRemoteSpeaking?: (userId: string, speaking: boolean) => void;
   onConnected: () => void;
   onEnded: () => void;
   onError: (message: string) => void;
@@ -96,6 +99,12 @@ export class GroupLiveTalkSession {
     this.options.socket.on("live_talk_answer", this.onAnswer);
     this.options.socket.on("live_talk_ice_candidate", this.onIceCandidate);
     this.options.socket.on("live_talk_mute_changed", this.onMuteChanged);
+    this.options.socket.on("live_talk_hand_raised", this.onHandRaised);
+    this.options.socket.on("live_talk_hand_lowered", this.onHandLowered);
+    this.options.socket.on(
+      "live_talk_speaking_changed",
+      this.onSpeakingChanged,
+    );
     this.options.socket.on("live_talk_ended", this.onEndedEvent);
     this.options.socket.on("live_talk_error", this.onLiveTalkError);
   }
@@ -114,6 +123,12 @@ export class GroupLiveTalkSession {
     this.options.socket.off("live_talk_answer", this.onAnswer);
     this.options.socket.off("live_talk_ice_candidate", this.onIceCandidate);
     this.options.socket.off("live_talk_mute_changed", this.onMuteChanged);
+    this.options.socket.off("live_talk_hand_raised", this.onHandRaised);
+    this.options.socket.off("live_talk_hand_lowered", this.onHandLowered);
+    this.options.socket.off(
+      "live_talk_speaking_changed",
+      this.onSpeakingChanged,
+    );
     this.options.socket.off("live_talk_ended", this.onEndedEvent);
     this.options.socket.off("live_talk_error", this.onLiveTalkError);
   }
@@ -196,6 +211,53 @@ export class GroupLiveTalkSession {
       return;
     }
     this.options.onMuteChanged(payload.userId, payload.isMuted);
+  };
+
+  private onHandRaised = (payload: {
+    groupId: string;
+    roomId: string;
+    userId: string;
+  }) => {
+    if (
+      payload.groupId !== this.options.groupId ||
+      payload.roomId !== this.options.roomId
+    ) {
+      return;
+    }
+    this.options.onHandChanged?.(payload.userId, true);
+  };
+
+  private onHandLowered = (payload: {
+    groupId: string;
+    roomId: string;
+    userId: string;
+  }) => {
+    if (
+      payload.groupId !== this.options.groupId ||
+      payload.roomId !== this.options.roomId
+    ) {
+      return;
+    }
+    this.options.onHandChanged?.(payload.userId, false);
+  };
+
+  private onSpeakingChanged = (payload: {
+    groupId: string;
+    roomId: string;
+    userId: string;
+    speaking: boolean;
+  }) => {
+    if (
+      payload.groupId !== this.options.groupId ||
+      payload.roomId !== this.options.roomId
+    ) {
+      return;
+    }
+    this.options.onRemoteSpeaking?.(payload.userId, payload.speaking);
+    if (payload.userId === this.options.localUserId) {
+      return;
+    }
+    this.options.onSpeaking?.(payload.userId, payload.speaking);
   };
 
   private onEndedEvent = (payload: { groupId: string; roomId: string }) => {
@@ -439,6 +501,11 @@ export class GroupLiveTalkSession {
         if (next !== speaking) {
           speaking = next;
           this.options.onSpeaking?.(userId, speaking);
+          this.options.socket.emit("live_talk_speaking_changed", {
+            groupId: this.options.groupId,
+            roomId: this.options.roomId,
+            speaking: next,
+          });
         }
         const state = this.peers.get(userId);
         if (state?.analyser === analyser && !this.ended) {
@@ -461,6 +528,13 @@ export class GroupLiveTalkSession {
       groupId: this.options.groupId,
       roomId: this.options.roomId,
       isMuted: muted,
+    });
+  }
+
+  /** Push-to-talk: temporarily unmute while held (does not change mute toggle state). */
+  setPushToTalk(active: boolean) {
+    this.localStream?.getAudioTracks().forEach((track) => {
+      track.enabled = active ? true : !this.muted;
     });
   }
 

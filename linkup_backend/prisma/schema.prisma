@@ -121,6 +121,7 @@ model User {
   moderationLogs        ModerationLog[] @relation("ModerationActor")
   hostedGroupLiveRooms  GroupLiveRoom[] @relation("GroupLiveRoomHost")
   groupLiveParticipations GroupLiveParticipant[]
+  groupLiveTalkMessages   GroupLiveTalkMessage[]
 }
 
 model ModerationLog {
@@ -242,18 +243,20 @@ model GroupLiveRoom {
   group        Group                    @relation(fields: [groupId], references: [id], onDelete: Cascade)
   host         User                     @relation("GroupLiveRoomHost", fields: [hostId], references: [id], onDelete: Cascade)
   participants GroupLiveParticipant[]
+  messages     GroupLiveTalkMessage[]
 
   @@index([groupId, status])
   @@index([hostId])
 }
 
 model GroupLiveParticipant {
-  id       String    @id @default(cuid())
-  roomId   String
-  userId   String
-  isMuted  Boolean   @default(false)
-  joinedAt DateTime  @default(now())
-  leftAt   DateTime?
+  id         String    @id @default(cuid())
+  roomId     String
+  userId     String
+  isMuted    Boolean   @default(false)
+  handRaised Boolean   @default(false)
+  joinedAt   DateTime  @default(now())
+  leftAt     DateTime?
 
   room GroupLiveRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -261,6 +264,20 @@ model GroupLiveParticipant {
   @@index([roomId])
   @@index([userId])
   @@index([roomId, leftAt])
+}
+
+model GroupLiveTalkMessage {
+  id        String   @id @default(cuid())
+  roomId    String
+  userId    String?
+  kind      String   @default("text")
+  content   String
+  createdAt DateTime @default(now())
+
+  room GroupLiveRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([roomId, createdAt])
 }
 
 model GroupMember {
