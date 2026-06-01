@@ -5,6 +5,8 @@ import { useState } from "react";
 import { MessageCircle, UserPlus } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
 import { connectUser } from "@/src/lib/connections";
+import OnlineStatusDot from "../OnlineStatusDot";
+import OnlineStatusBadge from "../OnlineStatusBadge";
 
 type QuickConnectSuggestion = {
   id: string;
@@ -103,8 +105,11 @@ export default function QuickConnectPanel({
                 className="rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white to-slate-50/70 px-4 py-3.5 dark:border-white/10 dark:from-brand-dark/85 dark:to-brand-dark/60"
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white shadow-md shadow-brand-primary/20">
-                    {getInitials(person.name)}
+                  <div className="relative shrink-0">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white shadow-md shadow-brand-primary/20">
+                      {getInitials(person.name)}
+                    </div>
+                    <OnlineStatusDot userId={person.id} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold text-slate-900 dark:text-white">
@@ -113,6 +118,13 @@ export default function QuickConnectPanel({
                     <p className="truncate text-xs text-slate-500 dark:text-slate-400">
                       @{person.username}
                     </p>
+                    <div className="mt-0.5">
+                      <OnlineStatusBadge
+                        userId={person.id}
+                        showLabel
+                        size="sm"
+                      />
+                    </div>
                     {person.subtitle ? (
                       <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
                         {person.subtitle}

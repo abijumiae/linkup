@@ -7,6 +7,7 @@ import { ApiError } from "@/src/lib/api";
 import { DiscoverPerson } from "@/src/lib/discovery";
 import { formatAccountType, toggleFollow } from "@/src/lib/posts";
 import OnlineStatusDot from "../OnlineStatusDot";
+import OnlineStatusBadge from "../OnlineStatusBadge";
 
 type DiscoverPersonCardProps = {
   user: DiscoverPerson;
@@ -70,6 +71,11 @@ export default function DiscoverPersonCard({
             <p className="text-sm text-slate-600 dark:text-slate-400">
               @{user.username}
             </p>
+            {!isSelf ? (
+              <div className="mt-1">
+                <OnlineStatusBadge userId={user.id} showLabel size="sm" />
+              </div>
+            ) : null}
             <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
               {formatAccountType(user.accountType)}
               {user.isVerified ? " · Verified" : ""}

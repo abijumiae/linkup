@@ -1,7 +1,8 @@
 "use client";
 
-import { Hand, Mic, MicOff, Volume2 } from "lucide-react";
+import { Hand, Mic, MicOff } from "lucide-react";
 import { LiveTalkParticipantView } from "@/app/hooks/useGroupLiveTalk";
+import OnlineStatusBadge from "../OnlineStatusBadge";
 
 type LiveTalkParticipantListProps = {
   participants: LiveTalkParticipantView[];
@@ -116,27 +117,34 @@ export default function LiveTalkParticipantList({
                     </span>
                   ) : null}
                 </p>
-                <p className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-                  {p.isMuted ? (
-                    <>
-                      <MicOff className="h-3 w-3" /> Muted
-                    </>
-                  ) : p.speaking ? (
-                    <>
-                      <Volume2 className="h-3 w-3 text-brand-secondary" />{" "}
-                      Speaking
-                    </>
-                  ) : (
-                    <>
-                      <Mic className="h-3 w-3" /> Connected
-                    </>
-                  )}
-                  {p.handRaised ? (
-                    <span className="text-amber-500 dark:text-amber-400">
-                      · Hand raised
-                    </span>
-                  ) : null}
-                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <OnlineStatusBadge
+                    userId={p.userId}
+                    showLabel
+                    size="sm"
+                  />
+                  <span className="rounded bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-600 dark:text-rose-300">
+                    In call
+                  </span>
+                  <p className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                    {p.isMuted ? (
+                      <>
+                        <MicOff className="h-3 w-3" /> Muted
+                      </>
+                    ) : p.speaking ? (
+                      <span className="text-brand-secondary">Speaking</span>
+                    ) : (
+                      <>
+                        <Mic className="h-3 w-3" /> In room
+                      </>
+                    )}
+                    {p.handRaised ? (
+                      <span className="text-amber-500 dark:text-amber-400">
+                        · Hand raised
+                      </span>
+                    ) : null}
+                  </p>
+                </div>
               </div>
             </li>
           );

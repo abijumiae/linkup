@@ -19,6 +19,7 @@ import AuthLoadingScreen from "./AuthLoadingScreen";
 import FeedPostCard from "./FeedPostCard";
 import HubChallengeCard from "./linkup/HubChallengeCard";
 import GroupLiveTalkPanel from "./GroupLiveTalkPanel";
+import OnlineStatusBadge from "./OnlineStatusBadge";
 import {
   fetchActiveLiveTalk,
   LiveTalkRoom,
@@ -150,8 +151,9 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
               {group.membersCount === 1 ? "hub member" : "hub members"}
             </span>
             <span>·</span>
-            <span>
+            <span className="inline-flex flex-wrap items-center gap-2">
               Host: {group.owner.name} (@{group.owner.username})
+              <OnlineStatusBadge userId={group.ownerId} showLabel size="sm" />
             </span>
           </div>
           <div className="mt-6 flex flex-wrap gap-3">

@@ -7,6 +7,7 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { Prisma, User } from '../generated/prisma/client';
+import { PresenceService } from '../chat/presence.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -41,6 +42,8 @@ export class UsersService {
     private readonly prisma: PrismaService,
     @Inject(forwardRef(() => NotificationsService))
     private readonly notificationsService: NotificationsService,
+    @Inject(forwardRef(() => PresenceService))
+    private readonly presenceService: PresenceService,
   ) {}
 
   findByEmail(email: string): Promise<User | null> {
@@ -194,15 +197,12 @@ export class UsersService {
   }
 
   async getOnlineUserIds(): Promise<string[]> {
-    const users = await this.prisma.user.findMany({
-      where: {
-        online: true,
-        showOnlineStatus: true,
-      },
-      select: { id: true },
-    });
+    const snapshot = await this.presenceService.getOnlineStatusSnapshot();
+    return snapshot.onlineUserIds;
+  }
 
-    return users.map((user) => user.id);
+  async getOnlineStatus() {
+    return this.presenceService.getOnlineStatusSnapshot();
   }
 
   async findByIdSafe(id: string): Promise<SafeUser> {

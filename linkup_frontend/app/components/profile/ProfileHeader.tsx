@@ -19,6 +19,7 @@ import {
   resolveProfileImageUrl,
 } from "@/src/lib/profileMedia";
 import OnlineStatusDot from "../OnlineStatusDot";
+import OnlineStatusBadge from "../OnlineStatusBadge";
 
 type ProfileHeaderProps = {
   user: ProfileUser;
@@ -141,6 +142,9 @@ export default function ProfileHeader({
               <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                 @{user.username}
               </p>
+              <div className="mt-1.5">
+                <OnlineStatusBadge userId={user.id} showLabel size="md" />
+              </div>
               <p className="mt-2 inline-flex items-center rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-semibold text-brand-primary dark:text-brand-secondary">
                 {formatAccountType(user.accountType)}
               </p>

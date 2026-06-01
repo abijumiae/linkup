@@ -15,6 +15,15 @@ export class UsersController {
     return { userIds };
   }
 
+  @Get('online-status')
+  async getOnlineStatus() {
+    const snapshot = await this.usersService.getOnlineStatus();
+    return {
+      onlineUserIds: snapshot.onlineUserIds,
+      users: snapshot.users,
+    };
+  }
+
   @Get('me')
   async getMe(@Req() req: { user: SafeUser }) {
     const user = await this.usersService.getProfile(req.user.id);

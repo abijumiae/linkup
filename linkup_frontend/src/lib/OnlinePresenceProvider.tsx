@@ -7,26 +7,71 @@ import {
   useEffect,
   useMemo,
   useState,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
 } from "react";
 import { useSocket } from "@/src/components/SocketProvider";
-import { fetchOnlineUserIds } from "@/src/lib/presence";
+import { getCurrentUser } from "@/src/lib/auth";
+import { fetchOnlineStatus } from "@/src/lib/presence";
 
 type OnlinePresenceContextValue = {
   onlineUsers: Set<string>;
+  lastSeenAt: Map<string, string>;
   isUserOnline: (userId: string) => boolean;
+  getLastSeenAt: (userId: string) => string | null;
 };
 
 const OnlinePresenceContext = createContext<OnlinePresenceContextValue | null>(
   null,
 );
 
+function applyStatusPayload(
+  payload: { onlineUserIds?: string[]; users?: { id: string; lastSeenAt: string | null }[] },
+  setOnlineUsers: Dispatch<SetStateAction<Set<string>>>,
+  setLastSeenAt: Dispatch<SetStateAction<Map<string, string>>>,
+) {
+  if (payload.onlineUserIds?.length) {
+    setOnlineUsers((current) => {
+      const next = new Set(current);
+      payload.onlineUserIds?.forEach((userId) => next.add(userId));
+      return next;
+    });
+  }
+
+  const users = payload.users;
+  if (users?.length) {
+    setOnlineUsers((current) => {
+      const next = new Set(current);
+      for (const user of users) {
+        if (user.id) {
+          next.add(user.id);
+        }
+      }
+      return next;
+    });
+    setLastSeenAt((current) => {
+      const next = new Map(current);
+      for (const user of payload.users ?? []) {
+        if (user.lastSeenAt) {
+          next.set(user.id, user.lastSeenAt);
+        }
+      }
+      return next;
+    });
+  }
+}
+
 export function OnlinePresenceProvider({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const { socket, isConnected } = useSocket();
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+  const [lastSeenAt, setLastSeenAt] = useState<Map<string, string>>(
+    () => new Map(),
+  );
 
   useEffect(() => {
     if (!socket || !isConnected) {
@@ -44,7 +89,7 @@ export function OnlinePresenceProvider({
       });
     };
 
-    const removeUser = (userId: string) => {
+    const removeUser = (userId: string, seenAt?: string) => {
       setOnlineUsers((current) => {
         if (!current.has(userId)) {
           return current;
@@ -53,6 +98,13 @@ export function OnlinePresenceProvider({
         next.delete(userId);
         return next;
       });
+      if (seenAt) {
+        setLastSeenAt((current) => {
+          const next = new Map(current);
+          next.set(userId, seenAt);
+          return next;
+        });
+      }
     };
 
     const onOnlineUsers = (payload: { userIds?: string[] }) => {
@@ -72,23 +124,16 @@ export function OnlinePresenceProvider({
       }
     };
 
-    const onUserOffline = (payload: { userId: string }) => {
+    const onUserOffline = (payload: { userId: string; lastSeenAt?: string }) => {
       if (payload.userId) {
-        removeUser(payload.userId);
+        removeUser(payload.userId, payload.lastSeenAt);
       }
     };
 
     const syncOnlineUsers = () => {
       socket.emit("get_online_users");
-      void fetchOnlineUserIds().then((userIds) => {
-        if (userIds.length === 0) {
-          return;
-        }
-        setOnlineUsers((current) => {
-          const next = new Set(current);
-          userIds.forEach((userId) => next.add(userId));
-          return next;
-        });
+      void fetchOnlineStatus().then((status) => {
+        applyStatusPayload(status, setOnlineUsers, setLastSeenAt);
       });
     };
 
@@ -108,16 +153,29 @@ export function OnlinePresenceProvider({
   }, [socket, isConnected]);
 
   const isUserOnline = useCallback(
-    (userId: string) => onlineUsers.has(userId),
-    [onlineUsers],
+    (userId: string) => {
+      const self = getCurrentUser();
+      if (self?.id === userId && isConnected) {
+        return true;
+      }
+      return onlineUsers.has(userId);
+    },
+    [onlineUsers, isConnected],
+  );
+
+  const getLastSeenAt = useCallback(
+    (userId: string) => lastSeenAt.get(userId) ?? null,
+    [lastSeenAt],
   );
 
   const value = useMemo(
     () => ({
       onlineUsers,
+      lastSeenAt,
       isUserOnline,
+      getLastSeenAt,
     }),
-    [onlineUsers, isUserOnline],
+    [onlineUsers, lastSeenAt, isUserOnline, getLastSeenAt],
   );
 
   return (

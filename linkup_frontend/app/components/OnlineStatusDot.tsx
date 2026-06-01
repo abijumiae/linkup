@@ -1,6 +1,6 @@
 "use client";
 
-import { useOnlinePresence } from "@/src/lib/OnlinePresenceProvider";
+import { useOnlineStatus } from "@/app/hooks/useOnlineStatus";
 
 type OnlineStatusDotProps = {
   userId: string;
@@ -15,8 +15,8 @@ export default function OnlineStatusDot({
   live = false,
   showOffline = true,
 }: OnlineStatusDotProps) {
-  const { isUserOnline } = useOnlinePresence();
-  const online = isUserOnline(userId);
+  const { isOnline } = useOnlineStatus();
+  const online = isOnline(userId);
 
   if (!showOffline && !online && !live) {
     return null;

@@ -176,8 +176,11 @@ export class RealtimeEmitter {
     this.server?.emit('user_online', { userId });
   }
 
-  emitUserOffline(userId: string) {
-    this.server?.emit('user_offline', { userId });
+  emitUserOffline(userId: string, lastSeenAt?: string) {
+    this.server?.emit('user_offline', {
+      userId,
+      lastSeenAt: lastSeenAt ?? new Date().toISOString(),
+    });
   }
 
   emitDirectMessage(message: RealtimeDirectMessage) {

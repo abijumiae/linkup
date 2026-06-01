@@ -62,6 +62,7 @@ import {
   GroupCallSession,
 } from "@/src/lib/groupWebrtc";
 import ChatListItem from "../../components/ChatListItem";
+import OnlineStatusBadge from "../../components/OnlineStatusBadge";
 import EmojiPicker from "../../components/EmojiPicker";
 import LiveRoomCard from "../../components/LiveRoomCard";
 import MessageBubble from "../../components/MessageBubble";
@@ -1403,11 +1404,6 @@ export default function MessagesPage() {
     chatTab !== "live" &&
     (chatTab === "direct" ? Boolean(activeUser) : Boolean(activeGroup));
 
-  const isDirectOnline =
-    chatTab === "direct" && activeUser
-      ? isUserOnline(activeUser.id)
-      : false;
-
   return (
     <div className="linkup-page overflow-x-hidden pb-24 lg:pb-8">
       <div className="linkup-container-wide min-w-0">
@@ -1539,6 +1535,7 @@ export default function MessagesPage() {
                     <ChatListItem
                       key={conversation.user.id}
                       variant="direct"
+                      userId={conversation.user.id}
                       name={conversation.user.name}
                       avatarUrl={conversation.user.avatarUrl}
                       lastMessage={conversation.lastMessage.content}
@@ -1647,9 +1644,16 @@ export default function MessagesPage() {
                           <h2 className="truncate text-lg font-semibold text-slate-900 dark:text-white">
                             {activeUser.name}
                           </h2>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
-                            {isDirectOnline ? "Online" : "Offline"} · Direct chat
-                          </p>
+                          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                            <OnlineStatusBadge
+                              userId={activeUser.id}
+                              showLabel
+                              size="sm"
+                            />
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                              · Direct chat
+                            </span>
+                          </div>
                         </div>
                       </>
                     ) : activeGroup ? (

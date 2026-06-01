@@ -1,10 +1,12 @@
 import { memo } from "react";
+import OnlineStatusBadge from "./OnlineStatusBadge";
 
 type ChatListItemProps = {
   name: string;
   lastMessage: string;
   time: string;
   avatarUrl?: string | null;
+  userId?: string;
   unread?: number;
   active?: boolean;
   onClick?: () => void;
@@ -37,6 +39,7 @@ function ChatListItemComponent({
   active,
   onClick,
   variant = "direct",
+  userId,
   online,
   memberCount,
   live,
@@ -96,6 +99,11 @@ function ChatListItemComponent({
               {badgeLabels[variant]}
             </span>
           </div>
+          {variant === "direct" && userId ? (
+            <div className="mt-0.5 hidden sm:block">
+              <OnlineStatusBadge userId={userId} showLabel size="sm" />
+            </div>
+          ) : null}
           {memberCount !== undefined && memberCount > 0 ? (
             <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
               {memberCount} member{memberCount === 1 ? "" : "s"}

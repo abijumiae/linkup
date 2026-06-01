@@ -8,6 +8,7 @@ import { SearchUser } from "@/src/lib/discovery";
 import { resolveProfileImageUrl } from "@/src/lib/profileMedia";
 import { toggleFollow } from "@/src/lib/posts";
 import OnlineStatusDot from "./OnlineStatusDot";
+import OnlineStatusBadge from "./OnlineStatusBadge";
 
 type SearchUserCardProps = {
   user: SearchUser;
@@ -72,6 +73,11 @@ export default function SearchUserCard({
             <p className="text-sm text-slate-600 dark:text-slate-400">
               @{user.username}
             </p>
+            {!isSelf ? (
+              <div className="mt-1">
+                <OnlineStatusBadge userId={user.id} showLabel size="sm" />
+              </div>
+            ) : null}
           </div>
         </div>
         {!isSelf ? (
