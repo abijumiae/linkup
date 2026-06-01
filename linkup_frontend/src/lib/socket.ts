@@ -48,7 +48,9 @@ function attachStatusListeners(activeSocket: Socket) {
 
   activeSocket.on("connect", () => {
     lastConnectErrorLogAt = 0;
-    console.log("Socket connected:", activeSocket.id);
+    if (process.env.NODE_ENV === "development") {
+      console.log("Socket connected:", activeSocket.id);
+    }
     notifyStatus("connected");
   });
 

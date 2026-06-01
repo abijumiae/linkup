@@ -109,11 +109,23 @@ export async function leaveGroup(id: string): Promise<GroupDetail> {
   );
 }
 
-export async function fetchGroupPosts(groupId: string): Promise<FeedPost[]> {
+export type PaginatedGroupPosts = {
+  items: FeedPost[];
+  page: number;
+  limit: number;
+  hasMore: boolean;
+};
+
+export async function fetchGroupPosts(
+  groupId: string,
+  page = 1,
+  limit = 20,
+): Promise<PaginatedGroupPosts> {
   return withAuth(() =>
-    apiRequest<FeedPost[]>(`/groups/${groupId}/posts`, {
-      headers: authHeaders(),
-    }),
+    apiRequest<PaginatedGroupPosts>(
+      `/groups/${groupId}/posts?page=${page}&limit=${limit}`,
+      { headers: authHeaders() },
+    ),
   );
 }
 

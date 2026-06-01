@@ -77,8 +77,12 @@ export class GroupsController {
   }
 
   @Get(':id/posts')
-  getPosts(@Param('id') id: string, @Req() req: { user: SafeUser }) {
-    return this.groupsService.getGroupPosts(id, req.user.id);
+  getPosts(
+    @Param('id') id: string,
+    @Req() req: { user: SafeUser },
+    @Query() query: { page?: string; limit?: string },
+  ) {
+    return this.groupsService.getGroupPosts(id, req.user.id, query);
   }
 
   @Post(':id/posts')

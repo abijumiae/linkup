@@ -47,7 +47,7 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
     try {
       const [groupData, postsData, activeLiveTalk] = await Promise.all([
         fetchGroup(groupId),
-        fetchGroupPosts(groupId),
+        fetchGroupPosts(groupId).then((data) => data.items),
         fetchLiveTalkStatus(groupId)
           .then((status) => status.room)
           .catch(() => null),

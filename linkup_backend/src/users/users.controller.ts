@@ -46,8 +46,6 @@ export class UsersController {
     @Req() req: { user: SafeUser },
     @Body() dto: CompleteOnboardingDto,
   ) {
-    console.log('Onboarding request received for user:', req.user.id);
-
     const user = await this.usersService.completeOnboarding(req.user.id, {
       username: dto.username.trim(),
       accountType: dto.accountType,

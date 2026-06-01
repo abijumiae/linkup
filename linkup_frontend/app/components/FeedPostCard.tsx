@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { memo, useEffect, useState } from "react";
 import {
   Bookmark,
@@ -20,9 +21,14 @@ import {
   blockUser,
   fetchBlockStatus,
 } from "@/src/lib/safety";
-import ReportModal from "./ReportModal";
-import EditPostModal from "./EditPostModal";
-import DeletePostDialog from "./DeletePostDialog";
+const EditPostModal = dynamic(() => import("./EditPostModal"), { ssr: false });
+const DeletePostDialog = dynamic(() => import("./DeletePostDialog"), {
+  ssr: false,
+});
+const ReportModal = dynamic(() => import("./ReportModal"), { ssr: false });
+const CommentsDrawer = dynamic(() => import("./CommentsDrawer"), {
+  ssr: false,
+});
 import {
   FeedPost,
   deletePost,
@@ -33,7 +39,6 @@ import {
   toggleSave,
 } from "@/src/lib/posts";
 import BoostReactionHints from "./linkup/BoostReactionHints";
-import CommentsDrawer from "./CommentsDrawer";
 import OnlineStatusDot from "./OnlineStatusDot";
 
 function isModeratorRole(role: Role | null | undefined): boolean {
@@ -98,14 +103,18 @@ function FeedPostCard({
   }, [post]);
 
   useEffect(() => {
-    if (!currentUserId || localPost.authorId === currentUserId) {
+    if (
+      (!menuOpen && !reportOpen) ||
+      !currentUserId ||
+      localPost.authorId === currentUserId
+    ) {
       return;
     }
 
     void fetchBlockStatus(localPost.authorId)
       .then((status) => setBlockedByMe(status.blockedByMe))
       .catch(() => undefined);
-  }, [currentUserId, localPost.authorId]);
+  }, [menuOpen, reportOpen, currentUserId, localPost.authorId]);
 
   useEffect(() => {
     setLiked(localPost.liked);
@@ -226,26 +235,32 @@ function FeedPostCard({
 
   return (
     <>
-      <EditPostModal
-        open={editOpen}
-        post={localPost}
-        onClose={() => setEditOpen(false)}
-        onUpdated={handlePostUpdated}
-      />
-      <DeletePostDialog
-        open={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
-        onConfirm={handleDeleteConfirm}
-        isDeleting={isDeleting}
-      />
-      <ReportModal
-        open={reportOpen}
-        targetType="POST"
-        targetId={localPost.id}
-        targetLabel="Report spark"
-        onClose={() => setReportOpen(false)}
-        onSubmitted={() => setShareNotice("Thanks. Your report has been sent.")}
-      />
+      {editOpen ? (
+        <EditPostModal
+          open={editOpen}
+          post={localPost}
+          onClose={() => setEditOpen(false)}
+          onUpdated={handlePostUpdated}
+        />
+      ) : null}
+      {deleteOpen ? (
+        <DeletePostDialog
+          open={deleteOpen}
+          onClose={() => setDeleteOpen(false)}
+          onConfirm={handleDeleteConfirm}
+          isDeleting={isDeleting}
+        />
+      ) : null}
+      {reportOpen ? (
+        <ReportModal
+          open={reportOpen}
+          targetType="POST"
+          targetId={localPost.id}
+          targetLabel="Report spark"
+          onClose={() => setReportOpen(false)}
+          onSubmitted={() => setShareNotice("Thanks. Your report has been sent.")}
+        />
+      ) : null}
       <article className="linkup-card p-5 transition hover:border-brand-primary/25 hover:shadow-xl hover:shadow-brand-primary/5 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
@@ -255,6 +270,8 @@ function FeedPostCard({
                 <img
                   src={avatarSrc}
                   alt=""
+                  loading="lazy"
+                  decoding="async"
                   className="h-12 w-12 shrink-0 rounded-full object-cover ring-2 ring-brand-primary/20"
                 />
               ) : (
@@ -383,6 +400,7 @@ function FeedPostCard({
               src={imageSrc}
               alt=""
               loading="lazy"
+              decoding="async"
               className="max-h-[28rem] w-full object-contain bg-slate-100 dark:bg-brand-dark/60"
             />
           </div>
@@ -393,6 +411,8 @@ function FeedPostCard({
             <video
               src={videoSrc}
               controls
+              preload="metadata"
+              playsInline
               className="max-h-[28rem] w-full bg-slate-100 dark:bg-brand-dark/60"
             />
           </div>
@@ -478,16 +498,18 @@ function FeedPostCard({
         ) : null}
       </article>
 
-      <CommentsDrawer
-        open={commentsOpen}
-        postId={localPost.id}
-        currentUserId={currentUserId}
-        initialCount={commentCount}
-        pulseLabels={useSparkWording}
-        onClose={() => setCommentsOpen(false)}
-        onCountChange={setCommentCount}
-        postIdForDelete={localPost.id}
-      />
+      {commentsOpen ? (
+        <CommentsDrawer
+          open={commentsOpen}
+          postId={localPost.id}
+          currentUserId={currentUserId}
+          initialCount={commentCount}
+          pulseLabels={useSparkWording}
+          onClose={() => setCommentsOpen(false)}
+          onCountChange={setCommentCount}
+          postIdForDelete={localPost.id}
+        />
+      ) : null}
     </>
   );
 }

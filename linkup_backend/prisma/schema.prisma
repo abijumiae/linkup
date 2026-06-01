@@ -211,6 +211,7 @@ model Post {
   @@index([authorId])
   @@index([groupId])
   @@index([createdAt])
+  @@index([groupId, createdAt(sort: Desc)])
 }
 
 model Group {
@@ -326,6 +327,7 @@ model Comment {
   author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([postId])
+  @@index([postId, createdAt])
   @@index([authorId])
 }
 

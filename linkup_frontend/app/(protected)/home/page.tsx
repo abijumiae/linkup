@@ -223,27 +223,42 @@ export default function HomeDashboardPage() {
   const displaySparkCount = posts.length;
 
   useEffect(() => {
+    let cancelled = false;
+
     setFeedLoading(true);
     setFeedError(null);
     fetchFeed(1)
       .then((data) => {
+        if (cancelled) {
+          return;
+        }
         setPosts(data.items.map(mapPostToFeedPost));
         setFeedPage(1);
         setFeedHasMore(data.hasMore);
+        if (process.env.NODE_ENV === "development") {
+          performance.mark("linkup-feed-loaded");
+        }
       })
       .catch(() => {
+        if (cancelled) {
+          return;
+        }
         setFeedError("Could not load your feed. Showing sample Sparks.");
         setPosts(mapStaticPosts());
         setFeedHasMore(false);
       })
-      .finally(() => setFeedLoading(false));
+      .finally(() => {
+        if (!cancelled) {
+          setFeedLoading(false);
+        }
+      });
 
     async function loadPulseCounts() {
       try {
         const [groups, jobs, events, suggestions, connections] = await Promise.all([
-          fetchGroups(1, 50).catch(() => ({ items: [], hasMore: false })),
-          fetchJobs({ page: 1, limit: 50 }).catch(() => ({ items: [], hasMore: false })),
-          fetchEvents({ page: 1, limit: 50 }).catch(() => ({ items: [], hasMore: false })),
+          fetchGroups(1, 10).catch(() => ({ items: [], hasMore: false })),
+          fetchJobs({ page: 1, limit: 10 }).catch(() => ({ items: [], hasMore: false })),
+          fetchEvents({ page: 1, limit: 10 }).catch(() => ({ items: [], hasMore: false })),
           fetchConnectionSuggestionsSafe(),
           fetchMyConnections().catch(() => ({
             following: [],
@@ -252,11 +267,16 @@ export default function HomeDashboardPage() {
             followersCount: 0,
           })),
         ]);
+        if (cancelled) {
+          return;
+        }
         setPulseCounts((current) => ({
           ...current,
-          hubs: groups.items.length,
-          work: jobs.items.length,
-          happenings: events.items.length,
+          hubs: groups.hasMore ? groups.items.length + 1 : groups.items.length,
+          work: jobs.hasMore ? jobs.items.length + 1 : jobs.items.length,
+          happenings: events.hasMore
+            ? events.items.length + 1
+            : events.items.length,
           connects: connections.followingCount,
         }));
         setConnectSuggestions(
@@ -273,8 +293,17 @@ export default function HomeDashboardPage() {
       }
     }
 
-    void loadPulseCounts();
-    loadMoments();
+    const deferSecondary = window.setTimeout(() => {
+      if (!cancelled) {
+        void loadPulseCounts();
+        loadMoments();
+      }
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(deferSecondary);
+    };
   }, []);
 
   async function loadMoreFeed() {

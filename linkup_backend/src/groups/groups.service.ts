@@ -191,18 +191,27 @@ export class GroupsService {
     return this.findOne(groupId, userId);
   }
 
-  async getGroupPosts(groupId: string, userId: string): Promise<FeedPost[]> {
+  async getGroupPosts(
+    groupId: string,
+    userId: string,
+    query?: { page?: string; limit?: string },
+  ): Promise<PaginatedResult<FeedPost>> {
     const group = await this.prisma.group.findUnique({
       where: { id: groupId },
+      select: { id: true },
     });
 
     if (!group) {
       throw new NotFoundException('Group not found');
     }
 
+    const pagination = parsePaginationQuery(query ?? {});
+
     const posts = await this.prisma.post.findMany({
       where: { groupId },
       orderBy: { createdAt: 'desc' },
+      skip: pagination.skip,
+      take: pagination.limit + 1,
       include: {
         author: { select: authorSelect },
         _count: { select: { likes: true, comments: true } },
@@ -213,7 +222,8 @@ export class GroupsService {
     const authorIds = [...new Set(posts.map((post) => post.authorId))];
     const followingSet = await this.getFollowingSet(userId, authorIds);
 
-    return posts.map((post) => this.mapPost(post, followingSet));
+    const mapped = posts.map((post) => this.mapPost(post, followingSet));
+    return buildPaginatedResult(mapped, pagination);
   }
 
   async createGroupPost(

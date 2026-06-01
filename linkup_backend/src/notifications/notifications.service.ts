@@ -35,6 +35,14 @@ export class NotificationsService {
     private readonly safetyService: SafetyService,
   ) {}
 
+  private async getActorName(actorId: string): Promise<string | null> {
+    const actor = await this.prisma.user.findUnique({
+      where: { id: actorId },
+      select: { name: true },
+    });
+    return actor?.name ?? null;
+  }
+
   async notifyLike(actorId: string, postId: string) {
     const post = await this.prisma.post.findUnique({ where: { id: postId } });
 
@@ -42,9 +50,9 @@ export class NotificationsService {
       return;
     }
 
-    const actor = await this.prisma.user.findUnique({ where: { id: actorId } });
+    const actorName = await this.getActorName(actorId);
 
-    if (!actor) {
+    if (!actorName) {
       return;
     }
 
@@ -53,7 +61,7 @@ export class NotificationsService {
       recipientId: post.authorId,
       actorId,
       postId,
-      message: `${actor.name} boosted your Spark`,
+      message: `${actorName} boosted your Spark`,
     });
   }
 
@@ -81,9 +89,9 @@ export class NotificationsService {
       return;
     }
 
-    const actor = await this.prisma.user.findUnique({ where: { id: actorId } });
+    const actorName = await this.getActorName(actorId);
 
-    if (!actor) {
+    if (!actorName) {
       return;
     }
 
@@ -92,7 +100,7 @@ export class NotificationsService {
       recipientId: post.authorId,
       actorId,
       postId,
-      message: `${actor.name} replied to your Spark`,
+      message: `${actorName} replied to your Spark`,
     });
   }
 
@@ -113,9 +121,9 @@ export class NotificationsService {
       return;
     }
 
-    const actor = await this.prisma.user.findUnique({ where: { id: actorId } });
+    const actorName = await this.getActorName(actorId);
 
-    if (!actor) {
+    if (!actorName) {
       return;
     }
 
@@ -124,7 +132,7 @@ export class NotificationsService {
       recipientId: sellerId,
       actorId,
       marketplaceItemId,
-      message: `${actor.name} inquired about your listing "${item.title}"`,
+      message: `${actorName} inquired about your listing "${item.title}"`,
     });
   }
 
@@ -135,9 +143,9 @@ export class NotificationsService {
       return;
     }
 
-    const actor = await this.prisma.user.findUnique({ where: { id: actorId } });
+    const actorName = await this.getActorName(actorId);
 
-    if (!actor) {
+    if (!actorName) {
       return;
     }
 
@@ -146,7 +154,7 @@ export class NotificationsService {
       recipientId: event.organizerId,
       actorId,
       eventId,
-      message: `${actor.name} is going to your event "${event.title}"`,
+      message: `${actorName} is going to your event "${event.title}"`,
     });
   }
 
@@ -157,9 +165,9 @@ export class NotificationsService {
       return;
     }
 
-    const actor = await this.prisma.user.findUnique({ where: { id: actorId } });
+    const actorName = await this.getActorName(actorId);
 
-    if (!actor) {
+    if (!actorName) {
       return;
     }
 
@@ -168,7 +176,7 @@ export class NotificationsService {
       recipientId: job.posterId,
       actorId,
       jobId,
-      message: `${actor.name} applied to your job "${job.title}"`,
+      message: `${actorName} applied to your job "${job.title}"`,
     });
   }
 
@@ -182,9 +190,9 @@ export class NotificationsService {
       return;
     }
 
-    const actor = await this.prisma.user.findUnique({ where: { id: actorId } });
+    const actorName = await this.getActorName(actorId);
 
-    if (!actor) {
+    if (!actorName) {
       return;
     }
 
@@ -193,7 +201,7 @@ export class NotificationsService {
       recipientId: group.ownerId,
       actorId,
       groupId,
-      message: `${actor.name} joined your group "${group.name}"`,
+      message: `${actorName} joined your group "${group.name}"`,
     });
   }
 
@@ -202,9 +210,9 @@ export class NotificationsService {
       return;
     }
 
-    const actor = await this.prisma.user.findUnique({ where: { id: actorId } });
+    const actorName = await this.getActorName(actorId);
 
-    if (!actor) {
+    if (!actorName) {
       return;
     }
 
@@ -213,7 +221,7 @@ export class NotificationsService {
       recipientId,
       actorId,
       postId: null,
-      message: `${actor.name} connected with you`,
+      message: `${actorName} connected with you`,
     });
   }
 
@@ -239,18 +247,20 @@ export class NotificationsService {
   ) {
     const pagination = parsePaginationQuery(query ?? {});
 
-    const [notifications, unreadCount] = await Promise.all([
-      this.prisma.notification.findMany({
-        where: { recipientId },
-        orderBy: { createdAt: 'desc' },
-        skip: pagination.skip,
-        take: pagination.limit + 1,
-        include: notificationInclude,
-      }),
-      this.prisma.notification.count({
-        where: { recipientId, read: false },
-      }),
-    ]);
+    const notifications = await this.prisma.notification.findMany({
+      where: { recipientId },
+      orderBy: { createdAt: 'desc' },
+      skip: pagination.skip,
+      take: pagination.limit + 1,
+      include: notificationInclude,
+    });
+
+    const unreadCount =
+      pagination.page === 1
+        ? await this.prisma.notification.count({
+            where: { recipientId, read: false },
+          })
+        : 0;
 
     const page = buildPaginatedResult(notifications, pagination);
 

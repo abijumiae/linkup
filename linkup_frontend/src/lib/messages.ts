@@ -177,10 +177,6 @@ export async function uploadVoiceNote(file: File): Promise<UploadVoiceResult> {
   const responseText = await response.text();
   const responseBody = parseJsonBody(responseText);
 
-  console.log("VOICE UPLOAD STATUS:", response.status);
-  console.log("VOICE UPLOAD BODY:", responseText);
-  console.log("VOICE UPLOAD PATH:", "/messages/upload-audio");
-
   if (!response.ok) {
     if (response.status === 401) {
       clearAuth();
@@ -208,7 +204,6 @@ export async function uploadVoiceNote(file: File): Promise<UploadVoiceResult> {
     throw new ApiError("Upload response missing audio URL", 500);
   }
 
-  console.log("VOICE UPLOAD URL:", uploaded.url);
   return uploaded as UploadVoiceResult;
 }
 
@@ -248,13 +243,6 @@ export async function sendVoiceMessageByUrl(
     requestBody.content = payload.content.trim();
   }
 
-  console.log("VOICE MESSAGE PAYLOAD:", {
-    receiverId,
-    type: requestBody.type,
-    hasMediaUrl: Boolean(requestBody.mediaUrl),
-    duration: requestBody.duration,
-  });
-
   const response = await fetch(`${apiUrl}/messages/${encodeURIComponent(receiverId)}`, {
     method: "POST",
     headers: {
@@ -266,9 +254,6 @@ export async function sendVoiceMessageByUrl(
 
   const responseText = await response.text();
   const responseBody = parseJsonBody(responseText);
-
-  console.log("VOICE MESSAGE STATUS:", response.status);
-  console.log("VOICE MESSAGE BODY:", responseText);
 
   if (!response.ok) {
     if (response.status === 401) {

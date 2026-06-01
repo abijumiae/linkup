@@ -86,9 +86,28 @@ function authHeaders(): HeadersInit {
   return { Authorization: `Bearer ${token}` };
 }
 
+function isLiveTalkRouteMissing(error: ApiError): boolean {
+  return (
+    error.status === 404 && /cannot (post|get|patch)/i.test(error.message)
+  );
+}
+
 async function liveTalkBackendHint(): Promise<string> {
+  const base = getApiBaseUrl();
+
   try {
-    const health = await fetch(`${getApiBaseUrl()}/health`, {
+    const probe = await fetch(`${base}/groups/probe/live-talk/active`, {
+      signal: AbortSignal.timeout(4000),
+    });
+    if (probe.status === 401) {
+      return "Live Talk backend is outdated. Stop the old server on port 3000, then in linkup_backend run: npm run start:dev";
+    }
+  } catch {
+    // fall through
+  }
+
+  try {
+    const health = await fetch(`${base}/health`, {
       signal: AbortSignal.timeout(4000),
     });
     if (!health.ok) {
@@ -98,7 +117,7 @@ async function liveTalkBackendHint(): Promise<string> {
       features?: { liveTalk?: boolean };
     };
     if (body.features?.liveTalk) {
-      return "Live Talk route failed unexpectedly. Refresh and try again.";
+      return "Live Talk backend is outdated. Stop the old server on port 3000, then in linkup_backend run: npm run start:dev";
     }
   } catch {
     // fall through
@@ -108,7 +127,57 @@ async function liveTalkBackendHint(): Promise<string> {
     return "Live Talk needs a fresh backend. In linkup_backend run: npm run build && npm run start:dev (stop any old server on port 3000 first).";
   }
 
-  return "Live Talk is not ready yet. Redeploy linkup-backend on Render, then try again.";
+  return "Live Talk is not ready yet. Redeploy linkup-backend on Render (clear build cache), then try again.";
+}
+
+function normalizeLiveTalkStatus(response: LiveTalkStatus): LiveTalkStatus {
+  const raisedHands =
+    response.raisedHands ?? response.room?.raisedHands ?? [];
+
+  return {
+    ...response,
+    raisedHands,
+    room: response.room
+      ? {
+          ...response.room,
+          raisedHands: response.room.raisedHands ?? raisedHands,
+        }
+      : null,
+  };
+}
+
+function liveTalkStatusFromRoom(room: LiveTalkRoom | null): LiveTalkStatus {
+  const activeParticipants =
+    room?.participants.filter((p) => !p.leftAt) ?? [];
+
+  const raisedHands =
+    room?.raisedHands ??
+    activeParticipants
+      .filter((p) => p.handRaised)
+      .map((p) => ({
+        userId: p.userId,
+        handRaisedAt: p.handRaisedAt ?? p.joinedAt,
+        groupRole: p.groupRole,
+        user: p.user,
+      }))
+      .sort(
+        (a, b) =>
+          new Date(a.handRaisedAt).getTime() -
+          new Date(b.handRaisedAt).getTime(),
+      );
+
+  return {
+    active: room?.status === "ACTIVE",
+    roomId: room?.id ?? null,
+    room,
+    participants: activeParticipants.map((p) => ({
+      ...p,
+      speaking: false,
+      inCall: false,
+    })),
+    raisedHands,
+    speakingUserIds: [],
+  };
 }
 
 function mapLiveTalkMessage(error: ApiError): string {
@@ -126,10 +195,7 @@ function mapLiveTalkMessage(error: ApiError): string {
 
 async function mapLiveTalkApiError(error: unknown): Promise<never> {
   if (error instanceof ApiError) {
-    if (
-      error.status === 404 &&
-      /cannot (post|get|patch)/i.test(error.message)
-    ) {
+    if (isLiveTalkRouteMissing(error)) {
       throw new ApiError(await liveTalkBackendHint(), error.status);
     }
     if (error.status === 401) {
@@ -167,22 +233,30 @@ export async function fetchActiveLiveTalk(
 export async function fetchLiveTalkStatus(
   groupId: string,
 ): Promise<LiveTalkStatus> {
-  const response = await withAuth(() =>
-    apiRequest<LiveTalkStatus>(`/groups/${groupId}/live-talk/status`, {
-      headers: authHeaders(),
-    }),
-  );
-
-  const raisedHands =
-    response.raisedHands ?? response.room?.raisedHands ?? [];
-
-  return {
-    ...response,
-    raisedHands,
-    room: response.room
-      ? { ...response.room, raisedHands: response.room.raisedHands ?? raisedHands }
-      : null,
-  };
+  try {
+    const response = await apiRequest<LiveTalkStatus>(
+      `/groups/${groupId}/live-talk/status`,
+      { headers: authHeaders() },
+    );
+    return normalizeLiveTalkStatus(response);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      clearAuth();
+      throw new LiveTalkAuthError(mapLiveTalkMessage(error), 401);
+    }
+    if (error instanceof ApiError && error.status === 403) {
+      throw new ApiError(mapLiveTalkMessage(error), 403);
+    }
+    if (error instanceof ApiError && isLiveTalkRouteMissing(error)) {
+      try {
+        const room = await fetchActiveLiveTalk(groupId);
+        return liveTalkStatusFromRoom(room);
+      } catch {
+        throw new ApiError(await liveTalkBackendHint(), 404);
+      }
+    }
+    throw error;
+  }
 }
 
 export async function startLiveTalk(groupId: string): Promise<LiveTalkRoom> {
