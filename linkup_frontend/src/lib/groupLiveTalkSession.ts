@@ -28,6 +28,8 @@ export interface GroupLiveTalkSessionOptions {
   onEnded: () => void;
   onError: (message: string) => void;
   onSpeaking?: (userId: string, speaking: boolean) => void;
+  onMicOpened?: (userId: string) => void;
+  onMicReleased?: (userId: string) => void;
 }
 
 /** STUN only for MVP. TURN server required for reliable calls behind strict networks. */
@@ -47,8 +49,9 @@ export class GroupLiveTalkSession {
   private readonly peers = new Map<string, PeerState>();
   private readonly options: GroupLiveTalkSessionOptions;
   private ended = false;
-  private muted = false;
+  private muted = true;
   private audioContext: AudioContext | null = null;
+  private activeMicUserId: string | null = null;
 
   constructor(options: GroupLiveTalkSessionOptions) {
     this.options = options;
@@ -61,23 +64,89 @@ export class GroupLiveTalkSession {
       return;
     }
 
-    try {
-      this.localStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: false,
-      });
-      this.setupLocalSpeakingMonitor();
+    this.bindSocketListeners();
+    this.options.socket.emit("live_talk_join", {
+      groupId: this.options.groupId,
+      roomId: this.options.roomId,
+    });
+  }
 
-      this.bindSocketListeners();
-      this.options.socket.emit("live_talk_join", {
-        groupId: this.options.groupId,
-        roomId: this.options.roomId,
+  async openMicAudio() {
+    if (!isWebRTCSupported()) {
+      throw new Error("Live Talk is not supported on this browser.");
+    }
+
+    try {
+      if (!this.localStream) {
+        this.localStream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: false,
+        });
+      }
+
+      this.muted = false;
+      this.localStream.getAudioTracks().forEach((track) => {
+        track.enabled = true;
       });
+      this.activeMicUserId = this.options.localUserId;
+      this.setupLocalSpeakingMonitor();
+      this.syncPeerConnectionsForActiveMic();
     } catch {
-      this.options.onError(
+      throw new Error(
         "Could not access microphone. Please allow microphone permission.",
       );
-      this.leave(false);
+    }
+  }
+
+  releaseMicAudio() {
+    this.muted = true;
+    this.activeMicUserId = null;
+    this.localStream?.getAudioTracks().forEach((track) => {
+      track.enabled = false;
+    });
+    if (this.options.onSpeaking) {
+      this.options.onSpeaking(this.options.localUserId, false);
+    }
+  }
+
+  setActiveMicHolder(userId: string | null) {
+    const previous = this.activeMicUserId;
+    this.activeMicUserId = userId;
+
+    if (previous && previous !== userId && previous !== this.options.localUserId) {
+      this.removePeer(previous);
+    }
+
+    if (!userId) {
+      return;
+    }
+
+    if (userId === this.options.localUserId) {
+      return;
+    }
+
+    void this.connectToActiveSpeaker(userId);
+  }
+
+  private syncPeerConnectionsForActiveMic() {
+    if (this.activeMicUserId !== this.options.localUserId) {
+      return;
+    }
+
+    for (const userId of this.peers.keys()) {
+      if (userId !== this.options.localUserId) {
+        this.removePeer(userId);
+      }
+    }
+  }
+
+  private async connectToActiveSpeaker(userId: string) {
+    if (userId === this.options.localUserId || this.peers.has(userId)) {
+      return;
+    }
+
+    if (this.options.localUserId < userId) {
+      await this.createOffer(userId);
     }
   }
 
@@ -105,6 +174,10 @@ export class GroupLiveTalkSession {
       "live_talk_speaking_changed",
       this.onSpeakingChanged,
     );
+    this.options.socket.on("user_speaking", this.onSpeakingChanged);
+    this.options.socket.on("live_talk_mic_opened", this.onMicOpened);
+    this.options.socket.on("live_talk_mic_released", this.onMicReleased);
+    this.options.socket.on("live_talk_mic_passed", this.onMicPassed);
     this.options.socket.on("live_talk_ended", this.onEndedEvent);
     this.options.socket.on("live_talk_error", this.onLiveTalkError);
   }
@@ -129,9 +202,72 @@ export class GroupLiveTalkSession {
       "live_talk_speaking_changed",
       this.onSpeakingChanged,
     );
+    this.options.socket.off("user_speaking", this.onSpeakingChanged);
+    this.options.socket.off("live_talk_mic_opened", this.onMicOpened);
+    this.options.socket.off("live_talk_mic_released", this.onMicReleased);
+    this.options.socket.off("live_talk_mic_passed", this.onMicPassed);
     this.options.socket.off("live_talk_ended", this.onEndedEvent);
     this.options.socket.off("live_talk_error", this.onLiveTalkError);
   }
+
+  private onMicOpened = (payload: {
+    groupId: string;
+    roomId: string;
+    userId: string;
+  }) => {
+    if (
+      payload.groupId !== this.options.groupId ||
+      payload.roomId !== this.options.roomId ||
+      this.ended
+    ) {
+      return;
+    }
+
+    this.setActiveMicHolder(payload.userId);
+    this.options.onMicOpened?.(payload.userId);
+  };
+
+  private onMicReleased = (payload: {
+    groupId: string;
+    roomId: string;
+    userId: string;
+  }) => {
+    if (
+      payload.groupId !== this.options.groupId ||
+      payload.roomId !== this.options.roomId ||
+      this.ended
+    ) {
+      return;
+    }
+
+    if (payload.userId === this.options.localUserId) {
+      this.releaseMicAudio();
+    } else {
+      this.removePeer(payload.userId);
+    }
+    this.setActiveMicHolder(null);
+    this.options.onMicReleased?.(payload.userId);
+  };
+
+  private onMicPassed = (payload: {
+    groupId: string;
+    roomId: string;
+    toUserId: string;
+  }) => {
+    if (
+      payload.groupId !== this.options.groupId ||
+      payload.roomId !== this.options.roomId ||
+      this.ended
+    ) {
+      return;
+    }
+
+    if (payload.toUserId === this.options.localUserId) {
+      void this.openMicAudio();
+    } else {
+      this.setActiveMicHolder(payload.toUserId);
+    }
+  };
 
   private onParticipants = async (payload: {
     groupId: string;
@@ -149,13 +285,11 @@ export class GroupLiveTalkSession {
     this.options.onParticipants(payload.participants);
     this.options.onConnected();
 
-    for (const participant of payload.participants) {
-      if (participant.userId === this.options.localUserId) {
-        continue;
-      }
-      if (this.options.localUserId < participant.userId) {
-        await this.createOffer(participant.userId);
-      }
+    if (
+      this.activeMicUserId &&
+      this.activeMicUserId !== this.options.localUserId
+    ) {
+      await this.connectToActiveSpeaker(this.activeMicUserId);
     }
   };
 
@@ -178,8 +312,19 @@ export class GroupLiveTalkSession {
 
     this.options.onParticipantJoined(payload.participant);
 
-    if (this.options.localUserId < payload.participant.userId) {
+    if (
+      this.activeMicUserId === this.options.localUserId &&
+      payload.participant.userId !== this.options.localUserId &&
+      this.options.localUserId < payload.participant.userId
+    ) {
       await this.createOffer(payload.participant.userId);
+    }
+
+    if (
+      this.activeMicUserId === payload.participant.userId &&
+      payload.participant.userId !== this.options.localUserId
+    ) {
+      await this.connectToActiveSpeaker(payload.participant.userId);
     }
   };
 
@@ -375,9 +520,15 @@ export class GroupLiveTalkSession {
     }
 
     const connection = new RTCPeerConnection({ iceServers: ICE_SERVERS });
-    this.localStream?.getTracks().forEach((track) => {
-      connection.addTrack(track, this.localStream!);
-    });
+    if (
+      this.localStream &&
+      this.activeMicUserId === this.options.localUserId &&
+      !this.muted
+    ) {
+      this.localStream.getTracks().forEach((track) => {
+        connection.addTrack(track, this.localStream!);
+      });
+    }
 
     connection.ontrack = (event) => {
       const [stream] = event.streams;
@@ -520,6 +671,9 @@ export class GroupLiveTalkSession {
   }
 
   setMuted(muted: boolean) {
+    if (this.activeMicUserId !== this.options.localUserId) {
+      return;
+    }
     this.muted = muted;
     this.localStream?.getAudioTracks().forEach((track) => {
       track.enabled = !muted;
@@ -528,13 +682,6 @@ export class GroupLiveTalkSession {
       groupId: this.options.groupId,
       roomId: this.options.roomId,
       isMuted: muted,
-    });
-  }
-
-  /** Push-to-talk: temporarily unmute while held (does not change mute toggle state). */
-  setPushToTalk(active: boolean) {
-    this.localStream?.getAudioTracks().forEach((track) => {
-      track.enabled = active ? true : !this.muted;
     });
   }
 
@@ -561,8 +708,10 @@ export class GroupLiveTalkSession {
       this.removePeer(userId);
     }
 
+    this.releaseMicAudio();
     this.localStream?.getTracks().forEach((track) => track.stop());
     this.localStream = null;
+    this.activeMicUserId = null;
 
     void this.audioContext?.close();
     this.audioContext = null;

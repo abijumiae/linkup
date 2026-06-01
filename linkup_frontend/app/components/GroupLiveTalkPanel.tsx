@@ -14,6 +14,7 @@ type GroupLiveTalkPanelProps = {
   groupName: string;
   activeRoom: LiveTalkRoom | null;
   isMember: boolean;
+  canStart?: boolean;
   canEndRoom: boolean;
   onRoomChange: (room: LiveTalkRoom | null) => void;
 };
@@ -23,12 +24,14 @@ export default function GroupLiveTalkPanel({
   groupName,
   activeRoom,
   isMember,
+  canStart = true,
   canEndRoom,
   onRoomChange,
 }: GroupLiveTalkPanelProps) {
   const talk = useGroupLiveTalk({
     groupId,
     activeRoom,
+    canStart,
     onRoomChange,
   });
 
@@ -79,14 +82,20 @@ export default function GroupLiveTalkPanel({
 
           <div className="mt-5 flex flex-wrap items-center gap-3">
             {!talk.room ? (
-              <button
-                type="button"
-                disabled={talk.loading || !talk.isConnected}
-                onClick={() => void talk.start()}
-                className="inline-flex min-h-11 items-center justify-center rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/25 disabled:opacity-50"
-              >
-                {talk.loading ? "Starting…" : "Start Live Talk"}
-              </button>
+              talk.canStart ? (
+                <button
+                  type="button"
+                  disabled={talk.loading || !talk.isConnected}
+                  onClick={() => void talk.start()}
+                  className="inline-flex min-h-11 items-center justify-center rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/25 disabled:opacity-50"
+                >
+                  {talk.loading ? "Starting…" : "Start Live Talk"}
+                </button>
+              ) : (
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Only the hub host or moderators can start a voice room.
+                </p>
+              )
             ) : !talk.inRoom ? (
               <>
                 <p className="text-sm text-slate-700 dark:text-slate-300">
@@ -145,6 +154,19 @@ export default function GroupLiveTalkPanel({
               <p className="truncate text-xs text-slate-500 dark:text-slate-400">
                 Host {talk.room.host.name} · {talk.participantCount} in room
               </p>
+              {talk.holdingMic ? (
+                <p className="mt-0.5 text-xs font-medium text-brand-primary dark:text-brand-secondary">
+                  You are speaking
+                </p>
+              ) : talk.micBusy && talk.micHolderName ? (
+                <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300">
+                  Speaking now: {talk.micHolderName}
+                </p>
+              ) : talk.micAvailable ? (
+                <p className="mt-0.5 text-xs text-emerald-700 dark:text-emerald-300">
+                  Mic is available
+                </p>
+              ) : null}
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <span className="hidden items-center gap-1.5 rounded-full bg-slate-200/80 px-2.5 py-1 text-xs text-slate-600 dark:bg-white/10 dark:text-slate-300 sm:inline-flex">
@@ -170,6 +192,7 @@ export default function GroupLiveTalkPanel({
             <LiveTalkParticipantList
               participants={talk.participants}
               hostId={talk.room.hostId}
+              activeMicUserId={talk.activeMicUserId}
               localUserId={talk.localUserId}
               isUserOnline={talk.isUserOnline}
               compact
@@ -187,6 +210,7 @@ export default function GroupLiveTalkPanel({
               <LiveTalkParticipantList
                 participants={talk.participants}
                 hostId={talk.room.hostId}
+                activeMicUserId={talk.activeMicUserId}
                 localUserId={talk.localUserId}
                 isUserOnline={talk.isUserOnline}
               />
@@ -196,15 +220,18 @@ export default function GroupLiveTalkPanel({
           <LiveTalkControls
             muted={talk.muted}
             handRaised={talk.handRaised}
-            pushToTalk={talk.pushToTalk}
+            holdingMic={talk.holdingMic}
+            micBusy={talk.micBusy}
+            micAvailable={talk.micAvailable}
+            micHolderName={talk.micHolderName}
             loading={talk.loading}
             canEnd={canEnd}
             messageDraft={talk.messageDraft}
             onMessageDraftChange={talk.setMessageDraft}
+            onOpenMic={() => void talk.openMic()}
+            onReleaseMic={() => void talk.releaseMic()}
             onToggleMute={() => void talk.toggleMute()}
             onToggleHand={() => void talk.toggleHand()}
-            onPushToTalkStart={talk.pushToTalkStart}
-            onPushToTalkEnd={talk.pushToTalkEnd}
             onLeave={() => void talk.leave()}
             onEnd={() => void talk.end()}
             onSendMessage={() => void talk.sendMessage()}

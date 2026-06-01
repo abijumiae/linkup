@@ -1,17 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ApiError } from "@/src/lib/api";
 import { getCurrentUser } from "@/src/lib/auth";
 import {
   endLiveTalk,
   fetchLiveTalkMessages,
+  fetchLiveTalkStatus,
   joinLiveTalk,
   leaveLiveTalk,
+  LiveTalkAuthError,
   LiveTalkMessage,
   LiveTalkRoom,
+  lowerLiveTalkHand,
+  openLiveTalkMic,
   postLiveTalkMessage,
-  setLiveTalkHand,
+  raiseLiveTalkHand,
+  releaseLiveTalkMic,
   setLiveTalkMuted,
   startLiveTalk,
 } from "@/src/lib/groupLiveTalk";
@@ -32,6 +38,7 @@ export type UseGroupLiveTalkOptions = {
   groupId: string;
   activeRoom: LiveTalkRoom | null;
   hostId?: string;
+  canStart?: boolean;
   onRoomChange: (room: LiveTalkRoom | null) => void;
 };
 
@@ -39,8 +46,10 @@ export function useGroupLiveTalk({
   groupId,
   activeRoom,
   hostId,
+  canStart = true,
   onRoomChange,
 }: UseGroupLiveTalkOptions) {
+  const router = useRouter();
   const { socket, isConnected } = useSocket();
   const { isUserOnline } = useOnlinePresence();
   const currentUser = getCurrentUser();
@@ -50,9 +59,8 @@ export function useGroupLiveTalk({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
-  const [muted, setMuted] = useState(false);
+  const [muted, setMuted] = useState(true);
   const [handRaised, setHandRaised] = useState(false);
-  const [pushToTalk, setPushToTalk] = useState(false);
   const [participants, setParticipants] = useState<LiveTalkParticipantView[]>(
     [],
   );
@@ -65,6 +73,14 @@ export function useGroupLiveTalk({
 
   const room = activeRoom?.status === "ACTIVE" ? activeRoom : null;
   const isHost = room?.hostId === localUserId;
+  const activeMicUserId = room?.activeMicUserId ?? null;
+  const holdingMic = Boolean(activeMicUserId && activeMicUserId === localUserId);
+  const micBusy = Boolean(activeMicUserId && !holdingMic);
+  const micHolderName =
+    room?.activeMicUser?.name ??
+    participants.find((p) => p.userId === activeMicUserId)?.name ??
+    null;
+  const micAvailable = !activeMicUserId;
 
   const syncParticipantsFromRoom = useCallback(
     (r: LiveTalkRoom) => {
@@ -85,12 +101,20 @@ export function useGroupLiveTalk({
   useEffect(() => {
     if (room) {
       syncParticipantsFromRoom(room);
+      const self = room.participants.find((p) => p.userId === localUserId);
+      if (self) {
+        setHandRaised(self.handRaised);
+        setMuted(self.isMuted);
+      }
+      sessionRef.current?.setActiveMicHolder(room.activeMicUserId);
     } else {
       setParticipants([]);
       setInRoom(false);
       setMessages([]);
+      setMuted(true);
+      setHandRaised(false);
     }
-  }, [room, syncParticipantsFromRoom]);
+  }, [room, syncParticipantsFromRoom, localUserId]);
 
   const teardownSession = useCallback(() => {
     sessionRef.current?.leave(false);
@@ -103,7 +127,7 @@ export function useGroupLiveTalk({
     setInRoom(false);
     setMuted(false);
     setHandRaised(false);
-    setPushToTalk(false);
+    setMuted(true);
   }, []);
 
   const attachRemoteStream = useCallback(
@@ -126,15 +150,43 @@ export function useGroupLiveTalk({
     [],
   );
 
+  const handleLiveTalkError = useCallback(
+    (err: unknown, fallback: string) => {
+      if (err instanceof LiveTalkAuthError) {
+        router.replace("/login");
+        return;
+      }
+      setError(err instanceof ApiError ? err.message : fallback);
+    },
+    [router],
+  );
+
   const refreshActiveRoom = useCallback(async () => {
-    const { fetchActiveLiveTalk } = await import("@/src/lib/groupLiveTalk");
     try {
-      const next = await fetchActiveLiveTalk(groupId);
-      onRoomChange(next);
-    } catch {
+      const status = await fetchLiveTalkStatus(groupId);
+      onRoomChange(status.room);
+      if (status.speakingUserIds.length > 0) {
+        setParticipants((prev) =>
+          prev.map((p) => ({
+            ...p,
+            speaking: status.speakingUserIds.includes(p.userId),
+          })),
+        );
+      }
+    } catch (err) {
+      if (err instanceof LiveTalkAuthError) {
+        router.replace("/login");
+        return;
+      }
       onRoomChange(null);
     }
-  }, [groupId, onRoomChange]);
+  }, [groupId, onRoomChange, router]);
+
+  const applySpeaking = useCallback((userId: string, speaking: boolean) => {
+    setParticipants((prev) =>
+      prev.map((p) => (p.userId === userId ? { ...p, speaking } : p)),
+    );
+  }, []);
 
   const loadMessages = useCallback(
     async (roomId: string) => {
@@ -149,9 +201,11 @@ export function useGroupLiveTalk({
   );
 
   useEffect(() => {
-    if (!socket || !room) {
+    if (!socket || !isConnected) {
       return;
     }
+
+    socket.emit("join_group_chat", { groupId });
 
     const onStarted = (payload: { groupId: string; room: LiveTalkRoom }) => {
       if (payload.groupId === groupId) {
@@ -166,6 +220,127 @@ export function useGroupLiveTalk({
         teardownSession();
       }
     };
+
+    const onJoined = (payload: { groupId: string; userId: string }) => {
+      if (payload.groupId === groupId) {
+        void refreshActiveRoom();
+      }
+    };
+
+    const onLeft = (payload: { groupId: string; userId: string }) => {
+      if (payload.groupId === groupId) {
+        void refreshActiveRoom();
+      }
+    };
+
+    const onSpeaking = (payload: {
+      groupId: string;
+      userId: string;
+      speaking: boolean;
+    }) => {
+      if (payload.groupId === groupId) {
+        applySpeaking(payload.userId, payload.speaking);
+      }
+    };
+
+    const onMicOpened = (payload: {
+      groupId: string;
+      roomId: string;
+      room?: LiveTalkRoom;
+    }) => {
+      if (payload.groupId !== groupId) {
+        return;
+      }
+      if (payload.room) {
+        onRoomChange(payload.room);
+      } else {
+        void refreshActiveRoom();
+      }
+      if (payload.room?.activeMicUserId === localUserId) {
+        setInfo("You are speaking");
+      } else if (payload.room?.activeMicUser) {
+        setInfo(
+          `Mic in use by ${payload.room.activeMicUser.name}`,
+        );
+      }
+    };
+
+    const onMicReleased = (payload: {
+      groupId: string;
+      room?: LiveTalkRoom;
+    }) => {
+      if (payload.groupId !== groupId) {
+        return;
+      }
+      if (payload.room) {
+        onRoomChange(payload.room);
+      } else {
+        void refreshActiveRoom();
+      }
+      setInfo("Mic is available");
+    };
+
+    const onMicBusy = (payload: {
+      groupId: string;
+      activeMicUserName?: string;
+      message?: string;
+    }) => {
+      if (payload.groupId === groupId) {
+        setError(
+          payload.activeMicUserName
+            ? `Mic is in use by ${payload.activeMicUserName}`
+            : payload.message ?? "Mic is already in use.",
+        );
+      }
+    };
+
+    const onMicPassed = (payload: {
+      groupId: string;
+      room?: LiveTalkRoom;
+    }) => {
+      if (payload.groupId !== groupId) {
+        return;
+      }
+      if (payload.room) {
+        onRoomChange(payload.room);
+      }
+    };
+
+    socket.on("live_talk_started", onStarted);
+    socket.on("live_talk_ended", onEnded);
+    socket.on("user_joined_liveTalk", onJoined);
+    socket.on("user_left_liveTalk", onLeft);
+    socket.on("user_speaking", onSpeaking);
+    socket.on("live_talk_mic_opened", onMicOpened);
+    socket.on("live_talk_mic_released", onMicReleased);
+    socket.on("live_talk_mic_busy", onMicBusy);
+    socket.on("live_talk_mic_passed", onMicPassed);
+
+    return () => {
+      socket.off("live_talk_started", onStarted);
+      socket.off("live_talk_ended", onEnded);
+      socket.off("user_joined_liveTalk", onJoined);
+      socket.off("user_left_liveTalk", onLeft);
+      socket.off("user_speaking", onSpeaking);
+      socket.off("live_talk_mic_opened", onMicOpened);
+      socket.off("live_talk_mic_released", onMicReleased);
+      socket.off("live_talk_mic_busy", onMicBusy);
+      socket.off("live_talk_mic_passed", onMicPassed);
+    };
+  }, [
+    socket,
+    isConnected,
+    groupId,
+    onRoomChange,
+    teardownSession,
+    refreshActiveRoom,
+    applySpeaking,
+  ]);
+
+  useEffect(() => {
+    if (!socket || !room) {
+      return;
+    }
 
     const onMessage = (payload: {
       groupId: string;
@@ -183,16 +358,12 @@ export function useGroupLiveTalk({
       });
     };
 
-    socket.on("live_talk_started", onStarted);
-    socket.on("live_talk_ended", onEnded);
     socket.on("live_talk_message", onMessage);
 
     return () => {
-      socket.off("live_talk_started", onStarted);
-      socket.off("live_talk_ended", onEnded);
       socket.off("live_talk_message", onMessage);
     };
-  }, [socket, room, groupId, onRoomChange, teardownSession]);
+  }, [socket, room, groupId]);
 
   const enterAudioSession = useCallback(
     async (r: LiveTalkRoom) => {
@@ -279,9 +450,24 @@ export function useGroupLiveTalk({
               ),
             );
           },
+          onMicOpened: (userId) => {
+            if (userId === localUserId) {
+              setInfo("You are speaking");
+            }
+          },
+          onMicReleased: () => {
+            setMuted(true);
+          },
           onConnected: () => {
             setInRoom(true);
-            setInfo(null);
+            setInfo(
+              joined.activeMicUserId
+                ? joined.activeMicUser
+                  ? `Mic in use by ${joined.activeMicUser.name}`
+                  : "Mic is in use"
+                : "Mic is available — tap Open Mic to speak",
+            );
+            session.setActiveMicHolder(joined.activeMicUserId);
           },
           onEnded: () => {
             setInfo("Live Talk ended.");
@@ -297,12 +483,9 @@ export function useGroupLiveTalk({
         sessionRef.current = session;
         await session.join();
         setInRoom(true);
+        setMuted(true);
       } catch (err) {
-        setError(
-          err instanceof ApiError
-            ? err.message
-            : "Could not join Live Talk. Please try again.",
-        );
+        handleLiveTalkError(err, "Could not join Live Talk. Please try again.");
         teardownSession();
       } finally {
         setLoading(false);
@@ -319,10 +502,15 @@ export function useGroupLiveTalk({
       attachRemoteStream,
       teardownSession,
       refreshActiveRoom,
+      handleLiveTalkError,
     ],
   );
 
   const start = async () => {
+    if (!canStart) {
+      setError("Only the hub host or moderators can start Live Talk.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -330,11 +518,7 @@ export function useGroupLiveTalk({
       onRoomChange(created);
       await enterAudioSession(created);
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : "Could not start Live Talk. Please try again.",
-      );
+      handleLiveTalkError(err, "Could not start Live Talk. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -347,6 +531,49 @@ export function useGroupLiveTalk({
     await enterAudioSession(room);
   };
 
+  const openMic = async () => {
+    if (!room) {
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const updated = await openLiveTalkMic(groupId, room.id);
+      onRoomChange(updated);
+      await sessionRef.current?.openMicAudio();
+      setMuted(false);
+      setHandRaised(false);
+      setInfo("You are speaking");
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        setError(err.message || "Mic is already in use.");
+      } else {
+        handleLiveTalkError(err, "Could not open mic.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const releaseMic = async () => {
+    if (!room) {
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      sessionRef.current?.releaseMicAudio();
+      const updated = await releaseLiveTalkMic(groupId, room.id);
+      onRoomChange(updated);
+      setMuted(true);
+      setInfo("Mic is available");
+    } catch (err) {
+      handleLiveTalkError(err, "Could not release mic.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const leave = async () => {
     if (!room) {
       teardownSession();
@@ -354,15 +581,20 @@ export function useGroupLiveTalk({
     }
     setLoading(true);
     try {
+      if (holdingMic) {
+        try {
+          await releaseLiveTalkMic(groupId, room.id);
+        } catch {
+          // Best-effort before leaving.
+        }
+      }
       sessionRef.current?.leave(true);
       teardownSession();
       await leaveLiveTalk(groupId, room.id);
       await refreshActiveRoom();
       setInfo("You left Live Talk.");
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Could not leave Live Talk.",
-      );
+      handleLiveTalkError(err, "Could not leave Live Talk.");
     } finally {
       setLoading(false);
     }
@@ -382,16 +614,14 @@ export function useGroupLiveTalk({
       onRoomChange(null);
       setInfo("Live Talk ended.");
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Could not end Live Talk.",
-      );
+      handleLiveTalkError(err, "Could not end Live Talk.");
     } finally {
       setLoading(false);
     }
   };
 
   const toggleMute = async () => {
-    if (!room) {
+    if (!room || !holdingMic) {
       return;
     }
     const next = !muted;
@@ -410,18 +640,15 @@ export function useGroupLiveTalk({
     }
     const next = !handRaised;
     setHandRaised(next);
-    if (socket) {
-      socket.emit("live_talk_hand_changed", {
-        groupId,
-        roomId: room.id,
-        handRaised: next,
-      });
-    }
     try {
-      await setLiveTalkHand(groupId, room.id, next);
-    } catch {
+      if (next) {
+        await raiseLiveTalkHand(groupId, room.id);
+      } else {
+        await lowerLiveTalkHand(groupId, room.id);
+      }
+    } catch (err) {
       setHandRaised(!next);
-      setError("Could not update raise hand.");
+      handleLiveTalkError(err, "Could not update raise hand.");
     }
   };
 
@@ -448,16 +675,6 @@ export function useGroupLiveTalk({
     }
   };
 
-  const pushToTalkStart = () => {
-    setPushToTalk(true);
-    sessionRef.current?.setPushToTalk(true);
-  };
-
-  const pushToTalkEnd = () => {
-    setPushToTalk(false);
-    sessionRef.current?.setPushToTalk(false);
-  };
-
   const unlockAudio = async () => {
     for (const audio of audioElementsRef.current.values()) {
       try {
@@ -482,7 +699,11 @@ export function useGroupLiveTalk({
     info,
     muted,
     handRaised,
-    pushToTalk,
+    holdingMic,
+    micBusy,
+    micAvailable,
+    micHolderName,
+    activeMicUserId,
     participants,
     messages,
     needsAudioUnlock,
@@ -494,15 +715,16 @@ export function useGroupLiveTalk({
     currentUser,
     participantCount,
     isConnected,
+    canStart,
     start,
     join,
+    openMic,
+    releaseMic,
     leave,
     end,
     toggleMute,
     toggleHand,
     sendMessage,
-    pushToTalkStart,
-    pushToTalkEnd,
     unlockAudio,
     hostId: hostId ?? room?.hostId,
   };

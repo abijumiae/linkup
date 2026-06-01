@@ -121,6 +121,7 @@ model User {
   reportsFiled          Report[]       @relation("ReportReporter")
   moderationLogs        ModerationLog[] @relation("ModerationActor")
   hostedGroupLiveRooms  GroupLiveRoom[] @relation("GroupLiveRoomHost")
+  activeMicLiveRooms    GroupLiveRoom[] @relation("GroupLiveRoomActiveMic")
   groupLiveParticipations GroupLiveParticipant[]
   groupLiveTalkMessages   GroupLiveTalkMessage[]
 }
@@ -232,29 +233,33 @@ model Group {
 }
 
 model GroupLiveRoom {
-  id        String              @id @default(cuid())
-  groupId   String
-  hostId    String
-  status    GroupLiveRoomStatus @default(ACTIVE)
-  startedAt DateTime            @default(now())
-  endedAt   DateTime?
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
+  id                 String              @id @default(cuid())
+  groupId            String
+  hostId             String
+  status             GroupLiveRoomStatus @default(ACTIVE)
+  activeMicUserId    String?
+  activeMicStartedAt DateTime?
+  startedAt          DateTime            @default(now())
+  endedAt            DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
-  group        Group                    @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  host         User                     @relation("GroupLiveRoomHost", fields: [hostId], references: [id], onDelete: Cascade)
-  participants GroupLiveParticipant[]
-  messages     GroupLiveTalkMessage[]
+  group         Group                    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  host          User                     @relation("GroupLiveRoomHost", fields: [hostId], references: [id], onDelete: Cascade)
+  activeMicUser User?                    @relation("GroupLiveRoomActiveMic", fields: [activeMicUserId], references: [id], onDelete: SetNull)
+  participants  GroupLiveParticipant[]
+  messages      GroupLiveTalkMessage[]
 
   @@index([groupId, status])
   @@index([hostId])
+  @@index([activeMicUserId])
 }
 
 model GroupLiveParticipant {
   id         String    @id @default(cuid())
   roomId     String
   userId     String
-  isMuted    Boolean   @default(false)
+  isMuted    Boolean   @default(true)
   handRaised Boolean   @default(false)
   joinedAt   DateTime  @default(now())
   leftAt     DateTime?

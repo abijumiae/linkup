@@ -30,4 +30,14 @@ else
   echo "INFO: POST /groups/:id/live-talk/start → ${status}"
 fi
 
+status_get="$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/groups/verify-live-talk-check/live-talk/status")"
+if [ "$status_get" = "401" ]; then
+  echo "OK: GET /groups/:id/live-talk/status → 401 (route exists, auth required)"
+elif [ "$status_get" = "404" ]; then
+  echo "FAIL: GET /groups/:id/live-talk/status → 404 (route not registered)"
+  exit 1
+else
+  echo "INFO: GET /groups/:id/live-talk/status → ${status_get}"
+fi
+
 echo "Done."

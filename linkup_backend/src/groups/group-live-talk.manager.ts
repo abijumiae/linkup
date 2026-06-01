@@ -1,3 +1,5 @@
+import { Injectable } from '@nestjs/common';
+
 export type LiveTalkSocketParticipant = {
   userId: string;
   name: string;
@@ -13,11 +15,13 @@ export function groupLiveTalkSocketRoom(
   return `group_live_talk:${groupId}:${roomId}`;
 }
 
+@Injectable()
 export class GroupLiveTalkManager {
   private readonly rooms = new Map<
     string,
     Map<string, LiveTalkSocketParticipant>
   >();
+  private readonly speakingByRoom = new Map<string, Set<string>>();
 
   join(
     roomKey: string,
@@ -38,8 +42,10 @@ export class GroupLiveTalkManager {
 
     const removed = room.get(userId) ?? null;
     room.delete(userId);
+    this.speakingByRoom.get(roomKey)?.delete(userId);
     if (room.size === 0) {
       this.rooms.delete(roomKey);
+      this.speakingByRoom.delete(roomKey);
     }
     return removed;
   }
@@ -50,6 +56,29 @@ export class GroupLiveTalkManager {
       return [];
     }
     return Array.from(room.values());
+  }
+
+  getSpeakingUserIds(roomKey: string): string[] {
+    const set = this.speakingByRoom.get(roomKey);
+    if (!set) {
+      return [];
+    }
+    return Array.from(set);
+  }
+
+  setSpeaking(roomKey: string, userId: string, speaking: boolean): void {
+    if (!this.speakingByRoom.has(roomKey)) {
+      this.speakingByRoom.set(roomKey, new Set());
+    }
+    const set = this.speakingByRoom.get(roomKey)!;
+    if (speaking) {
+      set.add(userId);
+    } else {
+      set.delete(userId);
+    }
+    if (set.size === 0) {
+      this.speakingByRoom.delete(roomKey);
+    }
   }
 
   findRoomKeyForUser(userId: string): string | null {
@@ -83,5 +112,10 @@ export class GroupLiveTalkManager {
 
   isRoomActive(roomKey: string): boolean {
     return (this.rooms.get(roomKey)?.size ?? 0) > 0;
+  }
+
+  clearRoom(roomKey: string): void {
+    this.rooms.delete(roomKey);
+    this.speakingByRoom.delete(roomKey);
   }
 }

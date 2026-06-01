@@ -14,15 +14,18 @@ import {
 type LiveTalkControlsProps = {
   muted: boolean;
   handRaised: boolean;
-  pushToTalk: boolean;
+  holdingMic: boolean;
+  micBusy: boolean;
+  micAvailable: boolean;
+  micHolderName: string | null;
   loading: boolean;
   canEnd: boolean;
   messageDraft: string;
   onMessageDraftChange: (value: string) => void;
+  onOpenMic: () => void;
+  onReleaseMic: () => void;
   onToggleMute: () => void;
   onToggleHand: () => void;
-  onPushToTalkStart: () => void;
-  onPushToTalkEnd: () => void;
   onLeave: () => void;
   onEnd: () => void;
   onSendMessage: () => void;
@@ -31,21 +34,29 @@ type LiveTalkControlsProps = {
 export default function LiveTalkControls({
   muted,
   handRaised,
-  pushToTalk,
+  holdingMic,
+  micBusy,
+  micAvailable,
+  micHolderName,
   loading,
   canEnd,
   messageDraft,
   onMessageDraftChange,
+  onOpenMic,
+  onReleaseMic,
   onToggleMute,
   onToggleHand,
-  onPushToTalkStart,
-  onPushToTalkEnd,
   onLeave,
   onEnd,
   onSendMessage,
 }: LiveTalkControlsProps) {
   return (
     <footer className="safe-area-bottom shrink-0 border-t border-slate-200/80 bg-white/95 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/95">
+      <p className="border-b border-slate-200/60 px-3 py-2 text-center text-[11px] leading-relaxed text-slate-500 dark:border-white/10 dark:text-slate-400 sm:px-4">
+        Your microphone is used only while you hold the mic or join Live Talk.
+        Live audio is not recorded.
+      </p>
+
       <div className="flex items-center gap-2 border-b border-slate-200/60 px-3 py-2 dark:border-white/10 sm:px-4">
         <input
           type="text"
@@ -72,49 +83,89 @@ export default function LiveTalkControls({
         </button>
       </div>
 
+      {micBusy && micHolderName ? (
+        <p className="px-3 pt-2 text-center text-xs font-medium text-slate-600 dark:text-slate-300 sm:px-4">
+          Mic in use by{" "}
+          <span className="text-brand-primary dark:text-brand-secondary">
+            {micHolderName}
+          </span>
+        </p>
+      ) : micAvailable ? (
+        <p className="px-3 pt-2 text-center text-xs text-emerald-700 dark:text-emerald-300 sm:px-4">
+          Mic is available
+        </p>
+      ) : null}
+
       <div className="flex flex-wrap items-center justify-center gap-2 px-3 py-3 sm:gap-3 sm:px-4">
-        <button
-          type="button"
-          onClick={onToggleMute}
-          aria-label={muted ? "Unmute microphone" : "Mute microphone"}
-          className={`flex h-12 w-12 min-h-[44px] min-w-[44px] items-center justify-center rounded-full transition ${
-            muted
-              ? "bg-red-500/90 text-white"
-              : "bg-slate-200 text-slate-800 dark:bg-white/15 dark:text-white"
-          }`}
-        >
-          {muted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-        </button>
+        {holdingMic ? (
+          <>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={onReleaseMic}
+              className="flex h-12 min-h-[44px] min-w-[8.5rem] flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/25 disabled:opacity-50 sm:flex-none sm:min-w-[10rem]"
+            >
+              <MicOff className="h-5 w-5" />
+              Release Mic
+            </button>
+            <button
+              type="button"
+              onClick={onToggleMute}
+              aria-label={muted ? "Unmute microphone" : "Mute microphone"}
+              className={`flex h-12 w-12 min-h-[44px] min-w-[44px] items-center justify-center rounded-full transition ${
+                muted
+                  ? "bg-red-500/90 text-white"
+                  : "bg-slate-200 text-slate-800 dark:bg-white/15 dark:text-white"
+              }`}
+            >
+              {muted ? (
+                <MicOff className="h-5 w-5" />
+              ) : (
+                <Mic className="h-5 w-5" />
+              )}
+            </button>
+          </>
+        ) : micBusy ? (
+          <button
+            type="button"
+            disabled={loading}
+            onClick={onToggleHand}
+            aria-label={handRaised ? "Lower hand" : "Raise hand"}
+            className={`flex h-12 min-h-[44px] flex-1 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold sm:flex-none sm:min-w-[9rem] ${
+              handRaised
+                ? "bg-amber-500/90 text-white"
+                : "border border-brand-primary/30 bg-brand-primary/10 text-brand-primary dark:text-brand-secondary"
+            }`}
+          >
+            <Hand className="h-5 w-5" />
+            {handRaised ? "Lower Hand" : "Raise Hand"}
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={loading}
+            onClick={onOpenMic}
+            className="flex h-12 min-h-[44px] min-w-[8.5rem] flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/25 disabled:opacity-50 sm:flex-none sm:min-w-[10rem]"
+          >
+            <Radio className="h-5 w-5" />
+            Open Mic
+          </button>
+        )}
 
-        <button
-          type="button"
-          onPointerDown={onPushToTalkStart}
-          onPointerUp={onPushToTalkEnd}
-          onPointerLeave={onPushToTalkEnd}
-          onPointerCancel={onPushToTalkEnd}
-          aria-label="Hold to talk"
-          className={`flex h-12 min-h-[44px] min-w-[5.5rem] items-center justify-center gap-1.5 rounded-full px-4 text-xs font-semibold transition sm:min-w-[7rem] sm:text-sm ${
-            pushToTalk
-              ? "bg-emerald-500 text-white"
-              : "border border-brand-primary/30 bg-brand-primary/10 text-brand-primary dark:text-brand-secondary"
-          }`}
-        >
-          <Radio className="h-4 w-4" />
-          {pushToTalk ? "Talking…" : "Hold"}
-        </button>
-
-        <button
-          type="button"
-          onClick={onToggleHand}
-          aria-label={handRaised ? "Lower hand" : "Raise hand"}
-          className={`flex h-12 w-12 min-h-[44px] min-w-[44px] items-center justify-center rounded-full transition ${
-            handRaised
-              ? "bg-amber-500/90 text-white"
-              : "bg-slate-200 text-slate-800 dark:bg-white/15 dark:text-white"
-          }`}
-        >
-          <Hand className="h-5 w-5" />
-        </button>
+        {!holdingMic && !micBusy ? (
+          <button
+            type="button"
+            onClick={onToggleHand}
+            aria-label={handRaised ? "Lower hand" : "Raise hand"}
+            className={`flex h-12 w-12 min-h-[44px] min-w-[44px] items-center justify-center rounded-full transition ${
+              handRaised
+                ? "bg-amber-500/90 text-white"
+                : "bg-slate-200 text-slate-800 dark:bg-white/15 dark:text-white"
+            }`}
+          >
+            <Hand className="h-5 w-5" />
+          </button>
+        ) : null}
 
         <button
           type="button"

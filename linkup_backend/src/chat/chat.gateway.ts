@@ -68,7 +68,6 @@ export class ChatGateway
 
   private readonly groupCallManager = new GroupCallManager();
   private readonly liveRoomManager = new LiveRoomManager();
-  private readonly groupLiveTalkManager = new GroupLiveTalkManager();
 
   constructor(
     private readonly wsAuthService: WsAuthService,
@@ -76,6 +75,7 @@ export class ChatGateway
     @Inject(forwardRef(() => MessagesService))
     private readonly messagesService: MessagesService,
     private readonly realtimeEmitter: RealtimeEmitter,
+    private readonly groupLiveTalkManager: GroupLiveTalkManager,
     @Inject(forwardRef(() => GroupLiveTalkService))
     private readonly groupLiveTalkService: GroupLiveTalkService,
   ) {}
@@ -881,6 +881,14 @@ export class ChatGateway
         roomId: payload.roomId,
         participant,
       });
+
+      const joinedPayload = { userId, groupId: payload.groupId };
+      this.server.to(roomKey).emit('user_joined_liveTalk', joinedPayload);
+      this.realtimeEmitter.emitToRoom(
+        getGroupRoom(payload.groupId),
+        'user_joined_liveTalk',
+        joinedPayload,
+      );
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Could not join Live Talk';
@@ -956,6 +964,144 @@ export class ChatGateway
     });
   }
 
+  @SubscribeMessage('live_talk_open_mic')
+  async handleLiveTalkOpenMic(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody() payload: { groupId: string; roomId: string },
+  ) {
+    const userId = client.data?.userId;
+    if (!userId || !payload?.groupId || !payload?.roomId) {
+      return;
+    }
+
+    try {
+      const room = await this.groupLiveTalkService.openMic(
+        payload.groupId,
+        payload.roomId,
+        userId,
+      );
+      client.emit('live_talk_mic_opened', {
+        groupId: payload.groupId,
+        roomId: payload.roomId,
+        userId,
+        room,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Could not open mic';
+      if (message.includes('already in use')) {
+        client.emit('live_talk_mic_busy', {
+          groupId: payload.groupId,
+          roomId: payload.roomId,
+          message,
+        });
+      }
+      client.emit('live_talk_error', { message });
+    }
+  }
+
+  @SubscribeMessage('live_talk_release_mic')
+  async handleLiveTalkReleaseMic(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody() payload: { groupId: string; roomId: string },
+  ) {
+    const userId = client.data?.userId;
+    if (!userId || !payload?.groupId || !payload?.roomId) {
+      return;
+    }
+
+    try {
+      await this.groupLiveTalkService.releaseMic(
+        payload.groupId,
+        payload.roomId,
+        userId,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Could not release mic';
+      client.emit('live_talk_error', { message });
+    }
+  }
+
+  @SubscribeMessage('live_talk_raise_hand')
+  async handleLiveTalkRaiseHand(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody() payload: { groupId: string; roomId: string },
+  ) {
+    const userId = client.data?.userId;
+    if (!userId || !payload?.groupId || !payload?.roomId) {
+      return;
+    }
+
+    const roomKey = getGroupLiveTalkRoom(payload.groupId, payload.roomId);
+    if (client.data.liveTalkRoomKey !== roomKey) {
+      return;
+    }
+
+    try {
+      await this.groupLiveTalkService.raiseHand(
+        payload.groupId,
+        payload.roomId,
+        userId,
+      );
+      this.groupLiveTalkManager.setHandRaised(roomKey, userId, true);
+    } catch {
+      // Ignore invalid hand updates.
+    }
+  }
+
+  @SubscribeMessage('live_talk_lower_hand')
+  async handleLiveTalkLowerHand(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody() payload: { groupId: string; roomId: string },
+  ) {
+    const userId = client.data?.userId;
+    if (!userId || !payload?.groupId || !payload?.roomId) {
+      return;
+    }
+
+    const roomKey = getGroupLiveTalkRoom(payload.groupId, payload.roomId);
+    if (client.data.liveTalkRoomKey !== roomKey) {
+      return;
+    }
+
+    try {
+      await this.groupLiveTalkService.lowerHand(
+        payload.groupId,
+        payload.roomId,
+        userId,
+      );
+      this.groupLiveTalkManager.setHandRaised(roomKey, userId, false);
+    } catch {
+      // Ignore invalid hand updates.
+    }
+  }
+
+  @SubscribeMessage('live_talk_pass_mic')
+  async handleLiveTalkPassMic(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: { groupId: string; roomId: string; targetUserId: string },
+  ) {
+    const userId = client.data?.userId;
+    if (!userId || !payload?.groupId || !payload?.roomId || !payload?.targetUserId) {
+      return;
+    }
+
+    try {
+      await this.groupLiveTalkService.passMic(
+        payload.groupId,
+        payload.roomId,
+        userId,
+        payload.targetUserId,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Could not pass mic';
+      client.emit('live_talk_error', { message });
+    }
+  }
+
   @SubscribeMessage('live_talk_mute_changed')
   async handleLiveTalkMuteChanged(
     @ConnectedSocket() client: AuthedSocket,
@@ -984,12 +1130,6 @@ export class ChatGateway
         userId,
         Boolean(payload.isMuted),
       );
-      this.server.to(roomKey).emit('live_talk_mute_changed', {
-        groupId: payload.groupId,
-        roomId: payload.roomId,
-        userId,
-        isMuted: Boolean(payload.isMuted),
-      });
     } catch {
       // Ignore invalid mute updates.
     }
@@ -1078,12 +1218,23 @@ export class ChatGateway
       return;
     }
 
-    client.to(roomKey).emit('live_talk_speaking_changed', {
+    const speaking = Boolean(payload.speaking);
+    this.groupLiveTalkManager.setSpeaking(roomKey, userId, speaking);
+
+    const speakingPayload = {
       groupId: payload.groupId,
       roomId: payload.roomId,
       userId,
-      speaking: Boolean(payload.speaking),
-    });
+      speaking,
+    };
+
+    client.to(roomKey).emit('live_talk_speaking_changed', speakingPayload);
+    this.server.to(roomKey).emit('user_speaking', speakingPayload);
+    this.realtimeEmitter.emitToRoom(
+      getGroupRoom(payload.groupId),
+      'user_speaking',
+      speakingPayload,
+    );
   }
 
   @SubscribeMessage('live_talk_end')
@@ -1326,6 +1477,13 @@ export class ChatGateway
         roomId: resolvedRoomId,
         userId,
       });
+      const leftPayload = { userId, groupId: resolvedGroupId };
+      this.server.to(roomKey).emit('user_left_liveTalk', leftPayload);
+      this.realtimeEmitter.emitToRoom(
+        getGroupRoom(resolvedGroupId),
+        'user_left_liveTalk',
+        leftPayload,
+      );
       return;
     }
 
@@ -1342,8 +1500,7 @@ export class ChatGateway
     client: AuthedSocket,
   ) {
     const roomKey = getGroupLiveTalkRoom(groupId, roomId);
-    this.groupLiveTalkManager.leave(roomKey, client.data?.userId ?? '');
-    client.leave(roomKey);
+    this.groupLiveTalkManager.clearRoom(roomKey);
     delete client.data.liveTalkRoomKey;
     delete client.data.liveTalkGroupId;
     delete client.data.liveTalkRoomId;

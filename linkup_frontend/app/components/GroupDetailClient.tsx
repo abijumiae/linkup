@@ -21,7 +21,7 @@ import HubChallengeCard from "./linkup/HubChallengeCard";
 import GroupLiveTalkPanel from "./GroupLiveTalkPanel";
 import OnlineStatusBadge from "./OnlineStatusBadge";
 import {
-  fetchActiveLiveTalk,
+  fetchLiveTalkStatus,
   LiveTalkRoom,
 } from "@/src/lib/groupLiveTalk";
 
@@ -48,7 +48,9 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
       const [groupData, postsData, activeLiveTalk] = await Promise.all([
         fetchGroup(groupId),
         fetchGroupPosts(groupId),
-        fetchActiveLiveTalk(groupId).catch(() => null),
+        fetchLiveTalkStatus(groupId)
+          .then((status) => status.room)
+          .catch(() => null),
       ]);
       setGroup(groupData);
       setPosts(postsData);
@@ -196,6 +198,11 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
             groupName={group.name}
             activeRoom={liveTalkRoom}
             isMember={group.isMember}
+            canStart={
+              group.isOwner ||
+              group.role === "ADMIN" ||
+              group.role === "OWNER"
+            }
             canEndRoom={
               group.isOwner ||
               group.role === "ADMIN" ||

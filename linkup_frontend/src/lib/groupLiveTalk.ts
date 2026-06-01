@@ -33,11 +33,37 @@ export type LiveTalkRoom = {
   groupId: string;
   hostId: string;
   status: "ACTIVE" | "ENDED";
+  activeMicUserId: string | null;
+  activeMicStartedAt: string | null;
   startedAt: string;
   endedAt: string | null;
   host: LiveTalkUser;
+  activeMicUser: LiveTalkUser | null;
   participants: LiveTalkParticipant[];
 };
+
+export type LiveTalkStatusParticipant = LiveTalkParticipant & {
+  speaking: boolean;
+  inCall: boolean;
+};
+
+export type LiveTalkStatus = {
+  active: boolean;
+  roomId: string | null;
+  room: LiveTalkRoom | null;
+  participants: LiveTalkStatusParticipant[];
+  speakingUserIds: string[];
+};
+
+export class LiveTalkAuthError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "LiveTalkAuthError";
+    this.status = status;
+  }
+}
 
 function authHeaders(): HeadersInit {
   const token = getToken();
@@ -72,6 +98,19 @@ async function liveTalkBackendHint(): Promise<string> {
   return "Live Talk is not ready yet. Redeploy linkup-backend on Render, then try again.";
 }
 
+function mapLiveTalkMessage(error: ApiError): string {
+  if (error.status === 403) {
+    return (
+      error.message ||
+      "You do not have permission to perform this Live Talk action."
+    );
+  }
+  if (error.status === 401) {
+    return "Please sign in to use Live Talk.";
+  }
+  return error.message;
+}
+
 async function mapLiveTalkApiError(error: unknown): Promise<never> {
   if (error instanceof ApiError) {
     if (
@@ -82,6 +121,13 @@ async function mapLiveTalkApiError(error: unknown): Promise<never> {
     }
     if (error.status === 401) {
       clearAuth();
+      throw new LiveTalkAuthError(mapLiveTalkMessage(error), 401);
+    }
+    if (error.status === 403) {
+      throw new ApiError(mapLiveTalkMessage(error), 403);
+    }
+    if (error.status === 409) {
+      throw new ApiError(error.message || "Mic is already in use.", 409);
     }
   }
   throw error;
@@ -105,6 +151,16 @@ export async function fetchActiveLiveTalk(
   );
 }
 
+export async function fetchLiveTalkStatus(
+  groupId: string,
+): Promise<LiveTalkStatus> {
+  return withAuth(() =>
+    apiRequest<LiveTalkStatus>(`/groups/${groupId}/live-talk/status`, {
+      headers: authHeaders(),
+    }),
+  );
+}
+
 export async function startLiveTalk(groupId: string): Promise<LiveTalkRoom> {
   return withAuth(() =>
     apiRequest<LiveTalkRoom>(`/groups/${groupId}/live-talk/start`, {
@@ -116,31 +172,31 @@ export async function startLiveTalk(groupId: string): Promise<LiveTalkRoom> {
 
 export async function joinLiveTalk(
   groupId: string,
-  roomId: string,
+  roomId?: string,
 ): Promise<LiveTalkRoom> {
+  const path = roomId
+    ? `/groups/${groupId}/live-talk/${roomId}/join`
+    : `/groups/${groupId}/live-talk/join`;
   return withAuth(() =>
-    apiRequest<LiveTalkRoom>(
-      `/groups/${groupId}/live-talk/${roomId}/join`,
-      {
-        method: "POST",
-        headers: authHeaders(),
-      },
-    ),
+    apiRequest<LiveTalkRoom>(path, {
+      method: "POST",
+      headers: authHeaders(),
+    }),
   );
 }
 
 export async function leaveLiveTalk(
   groupId: string,
-  roomId: string,
+  roomId?: string,
 ): Promise<LiveTalkRoom | null> {
+  const path = roomId
+    ? `/groups/${groupId}/live-talk/${roomId}/leave`
+    : `/groups/${groupId}/live-talk/leave`;
   return withAuth(() =>
-    apiRequest<LiveTalkRoom | null>(
-      `/groups/${groupId}/live-talk/${roomId}/leave`,
-      {
-        method: "POST",
-        headers: authHeaders(),
-      },
-    ),
+    apiRequest<LiveTalkRoom | null>(path, {
+      method: "POST",
+      headers: authHeaders(),
+    }),
   );
 }
 
@@ -151,6 +207,83 @@ export async function endLiveTalk(
   return withAuth(() =>
     apiRequest<LiveTalkRoom | null>(
       `/groups/${groupId}/live-talk/${roomId}/end`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+      },
+    ),
+  );
+}
+
+export async function openLiveTalkMic(
+  groupId: string,
+  roomId: string,
+): Promise<LiveTalkRoom> {
+  return withAuth(() =>
+    apiRequest<LiveTalkRoom>(
+      `/groups/${groupId}/live-talk/${roomId}/open-mic`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+      },
+    ),
+  );
+}
+
+export async function releaseLiveTalkMic(
+  groupId: string,
+  roomId: string,
+): Promise<LiveTalkRoom> {
+  return withAuth(() =>
+    apiRequest<LiveTalkRoom>(
+      `/groups/${groupId}/live-talk/${roomId}/release-mic`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+      },
+    ),
+  );
+}
+
+export async function passLiveTalkMic(
+  groupId: string,
+  roomId: string,
+  targetUserId: string,
+): Promise<LiveTalkRoom> {
+  return withAuth(() =>
+    apiRequest<LiveTalkRoom>(
+      `/groups/${groupId}/live-talk/${roomId}/pass-mic`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ targetUserId }),
+      },
+    ),
+  );
+}
+
+export async function raiseLiveTalkHand(
+  groupId: string,
+  roomId: string,
+): Promise<LiveTalkParticipant> {
+  return withAuth(() =>
+    apiRequest<LiveTalkParticipant>(
+      `/groups/${groupId}/live-talk/${roomId}/raise-hand`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+      },
+    ),
+  );
+}
+
+export async function lowerLiveTalkHand(
+  groupId: string,
+  roomId: string,
+): Promise<LiveTalkParticipant> {
+  return withAuth(() =>
+    apiRequest<LiveTalkParticipant>(
+      `/groups/${groupId}/live-talk/${roomId}/lower-hand`,
       {
         method: "POST",
         headers: authHeaders(),
