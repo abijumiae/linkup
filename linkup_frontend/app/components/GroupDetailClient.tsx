@@ -208,6 +208,11 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
               group.role === "ADMIN" ||
               group.role === "OWNER"
             }
+            canHostControls={
+              group.isOwner ||
+              group.role === "ADMIN" ||
+              group.role === "OWNER"
+            }
             onRoomChange={setLiveTalkRoom}
           />
         ) : null}

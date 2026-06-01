@@ -1102,6 +1102,135 @@ export class ChatGateway
     }
   }
 
+  @SubscribeMessage('live_talk_force_release_mic')
+  async handleLiveTalkForceReleaseMic(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody() payload: { groupId: string; roomId: string },
+  ) {
+    const userId = client.data?.userId;
+    if (!userId || !payload?.groupId || !payload?.roomId) {
+      return;
+    }
+
+    try {
+      await this.groupLiveTalkService.forceReleaseMic(
+        payload.groupId,
+        payload.roomId,
+        userId,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Could not release mic';
+      client.emit('live_talk_error', { message });
+    }
+  }
+
+  @SubscribeMessage('live_talk_mute_participant')
+  async handleLiveTalkMuteParticipant(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: {
+      groupId: string;
+      roomId: string;
+      targetUserId: string;
+      isMuted: boolean;
+    },
+  ) {
+    const userId = client.data?.userId;
+    if (!userId || !payload?.groupId || !payload?.roomId || !payload?.targetUserId) {
+      return;
+    }
+
+    try {
+      await this.groupLiveTalkService.muteParticipant(
+        payload.groupId,
+        payload.roomId,
+        userId,
+        payload.targetUserId,
+        Boolean(payload.isMuted),
+      );
+      const roomKey = getGroupLiveTalkRoom(payload.groupId, payload.roomId);
+      this.groupLiveTalkManager.setMuted(
+        roomKey,
+        payload.targetUserId,
+        Boolean(payload.isMuted),
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Could not mute participant';
+      client.emit('live_talk_error', { message });
+    }
+  }
+
+  @SubscribeMessage('live_talk_remove_participant')
+  async handleLiveTalkRemoveParticipant(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: { groupId: string; roomId: string; targetUserId: string },
+  ) {
+    const userId = client.data?.userId;
+    if (!userId || !payload?.groupId || !payload?.roomId || !payload?.targetUserId) {
+      return;
+    }
+
+    try {
+      await this.groupLiveTalkService.removeParticipant(
+        payload.groupId,
+        payload.roomId,
+        userId,
+        payload.targetUserId,
+      );
+
+      const roomKey = getGroupLiveTalkRoom(payload.groupId, payload.roomId);
+      const sockets = await this.server.in(roomKey).fetchSockets();
+      for (const remote of sockets) {
+        const authed = remote as unknown as AuthedSocket;
+        if (authed.data?.userId === payload.targetUserId) {
+          void this.leaveActiveGroupLiveTalk(
+            authed,
+            payload.groupId,
+            payload.roomId,
+          );
+        }
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Could not remove participant';
+      client.emit('live_talk_error', { message });
+    }
+  }
+
+  @SubscribeMessage('live_talk_clear_hand')
+  async handleLiveTalkClearHand(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: { groupId: string; roomId: string; targetUserId: string },
+  ) {
+    const userId = client.data?.userId;
+    if (!userId || !payload?.groupId || !payload?.roomId || !payload?.targetUserId) {
+      return;
+    }
+
+    try {
+      await this.groupLiveTalkService.clearHand(
+        payload.groupId,
+        payload.roomId,
+        userId,
+        payload.targetUserId,
+      );
+      const roomKey = getGroupLiveTalkRoom(payload.groupId, payload.roomId);
+      this.groupLiveTalkManager.setHandRaised(
+        roomKey,
+        payload.targetUserId,
+        false,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Could not clear raised hand';
+      client.emit('live_talk_error', { message });
+    }
+  }
+
   @SubscribeMessage('live_talk_mute_changed')
   async handleLiveTalkMuteChanged(
     @ConnectedSocket() client: AuthedSocket,

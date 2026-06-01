@@ -8,13 +8,24 @@ export type LiveTalkUser = {
   avatarUrl: string | null;
 };
 
+export type LiveTalkGroupRole = "OWNER" | "ADMIN" | "MEMBER";
+
 export type LiveTalkParticipant = {
   id: string;
   userId: string;
   isMuted: boolean;
   handRaised: boolean;
+  handRaisedAt: string | null;
   joinedAt: string;
   leftAt: string | null;
+  groupRole: LiveTalkGroupRole;
+  user: LiveTalkUser;
+};
+
+export type RaisedHandQueueItem = {
+  userId: string;
+  handRaisedAt: string;
+  groupRole: LiveTalkGroupRole;
   user: LiveTalkUser;
 };
 
@@ -40,6 +51,7 @@ export type LiveTalkRoom = {
   host: LiveTalkUser;
   activeMicUser: LiveTalkUser | null;
   participants: LiveTalkParticipant[];
+  raisedHands: RaisedHandQueueItem[];
 };
 
 export type LiveTalkStatusParticipant = LiveTalkParticipant & {
@@ -52,6 +64,7 @@ export type LiveTalkStatus = {
   roomId: string | null;
   room: LiveTalkRoom | null;
   participants: LiveTalkStatusParticipant[];
+  raisedHands: RaisedHandQueueItem[];
   speakingUserIds: string[];
 };
 
@@ -154,11 +167,22 @@ export async function fetchActiveLiveTalk(
 export async function fetchLiveTalkStatus(
   groupId: string,
 ): Promise<LiveTalkStatus> {
-  return withAuth(() =>
+  const response = await withAuth(() =>
     apiRequest<LiveTalkStatus>(`/groups/${groupId}/live-talk/status`, {
       headers: authHeaders(),
     }),
   );
+
+  const raisedHands =
+    response.raisedHands ?? response.room?.raisedHands ?? [];
+
+  return {
+    ...response,
+    raisedHands,
+    room: response.room
+      ? { ...response.room, raisedHands: response.room.raisedHands ?? raisedHands }
+      : null,
+  };
 }
 
 export async function startLiveTalk(groupId: string): Promise<LiveTalkRoom> {
@@ -253,6 +277,73 @@ export async function passLiveTalkMic(
   return withAuth(() =>
     apiRequest<LiveTalkRoom>(
       `/groups/${groupId}/live-talk/${roomId}/pass-mic`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ targetUserId }),
+      },
+    ),
+  );
+}
+
+export async function forceReleaseLiveTalkMic(
+  groupId: string,
+  roomId: string,
+): Promise<LiveTalkRoom> {
+  return withAuth(() =>
+    apiRequest<LiveTalkRoom>(
+      `/groups/${groupId}/live-talk/${roomId}/force-release-mic`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+      },
+    ),
+  );
+}
+
+export async function muteLiveTalkParticipant(
+  groupId: string,
+  roomId: string,
+  targetUserId: string,
+  isMuted: boolean,
+): Promise<LiveTalkRoom> {
+  return withAuth(() =>
+    apiRequest<LiveTalkRoom>(
+      `/groups/${groupId}/live-talk/${roomId}/mute-participant`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ targetUserId, isMuted }),
+      },
+    ),
+  );
+}
+
+export async function removeLiveTalkParticipant(
+  groupId: string,
+  roomId: string,
+  targetUserId: string,
+): Promise<LiveTalkRoom | null> {
+  return withAuth(() =>
+    apiRequest<LiveTalkRoom | null>(
+      `/groups/${groupId}/live-talk/${roomId}/remove-participant`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ targetUserId }),
+      },
+    ),
+  );
+}
+
+export async function clearLiveTalkHand(
+  groupId: string,
+  roomId: string,
+  targetUserId: string,
+): Promise<LiveTalkRoom> {
+  return withAuth(() =>
+    apiRequest<LiveTalkRoom>(
+      `/groups/${groupId}/live-talk/${roomId}/clear-hand`,
       {
         method: "POST",
         headers: authHeaders(),

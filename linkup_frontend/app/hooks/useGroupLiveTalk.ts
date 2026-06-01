@@ -5,19 +5,24 @@ import { useRouter } from "next/navigation";
 import { ApiError } from "@/src/lib/api";
 import { getCurrentUser } from "@/src/lib/auth";
 import {
+  clearLiveTalkHand,
   endLiveTalk,
   fetchLiveTalkMessages,
   fetchLiveTalkStatus,
+  forceReleaseLiveTalkMic,
   joinLiveTalk,
   leaveLiveTalk,
   LiveTalkAuthError,
   LiveTalkMessage,
   LiveTalkRoom,
   lowerLiveTalkHand,
+  muteLiveTalkParticipant,
   openLiveTalkMic,
+  passLiveTalkMic,
   postLiveTalkMessage,
   raiseLiveTalkHand,
   releaseLiveTalkMic,
+  removeLiveTalkParticipant,
   setLiveTalkMuted,
   startLiveTalk,
 } from "@/src/lib/groupLiveTalk";
@@ -31,7 +36,7 @@ import { useOnlinePresence } from "@/src/lib/OnlinePresenceProvider";
 export type LiveTalkParticipantView = LiveTalkSocketParticipant & {
   speaking?: boolean;
   isHost?: boolean;
-  role?: string | null;
+  groupRole?: string;
 };
 
 export type UseGroupLiveTalkOptions = {
@@ -39,6 +44,7 @@ export type UseGroupLiveTalkOptions = {
   activeRoom: LiveTalkRoom | null;
   hostId?: string;
   canStart?: boolean;
+  canHostControls?: boolean;
   onRoomChange: (room: LiveTalkRoom | null) => void;
 };
 
@@ -47,6 +53,7 @@ export function useGroupLiveTalk({
   activeRoom,
   hostId,
   canStart = true,
+  canHostControls = false,
   onRoomChange,
 }: UseGroupLiveTalkOptions) {
   const router = useRouter();
@@ -67,6 +74,8 @@ export function useGroupLiveTalk({
   const [messages, setMessages] = useState<LiveTalkMessage[]>([]);
   const [needsAudioUnlock, setNeedsAudioUnlock] = useState(false);
   const [messageDraft, setMessageDraft] = useState("");
+  const [micPassedPrompt, setMicPassedPrompt] = useState(false);
+  const [hostPanelOpen, setHostPanelOpen] = useState(false);
 
   const sessionRef = useRef<GroupLiveTalkSession | null>(null);
   const audioElementsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
@@ -82,20 +91,28 @@ export function useGroupLiveTalk({
     null;
   const micAvailable = !activeMicUserId;
 
-  const syncParticipantsFromRoom = useCallback(
-    (r: LiveTalkRoom) => {
-      setParticipants(
-        r.participants.map((p) => ({
-          userId: p.userId,
-          name: p.user.name,
-          avatarUrl: p.user.avatarUrl,
-          isMuted: p.isMuted,
-          handRaised: p.handRaised ?? false,
-          isHost: p.userId === r.hostId,
-        })),
-      );
+  const syncParticipantsFromRoom = useCallback((r: LiveTalkRoom) => {
+    setParticipants(
+      r.participants.map((p) => ({
+        userId: p.userId,
+        name: p.user.name,
+        avatarUrl: p.user.avatarUrl,
+        isMuted: p.isMuted,
+        handRaised: p.handRaised ?? false,
+        isHost: p.userId === r.hostId,
+        groupRole: p.groupRole,
+      })),
+    );
+  }, []);
+
+  const applyRoomUpdate = useCallback(
+    (next: LiveTalkRoom | null) => {
+      onRoomChange(next);
+      if (next) {
+        syncParticipantsFromRoom(next);
+      }
     },
-    [],
+    [onRoomChange, syncParticipantsFromRoom],
   );
 
   useEffect(() => {
@@ -267,13 +284,18 @@ export function useGroupLiveTalk({
 
     const onMicReleased = (payload: {
       groupId: string;
+      userId?: string;
       room?: LiveTalkRoom;
     }) => {
       if (payload.groupId !== groupId) {
         return;
       }
+      if (payload.userId === localUserId) {
+        sessionRef.current?.releaseMicAudio();
+        setMuted(true);
+      }
       if (payload.room) {
-        onRoomChange(payload.room);
+        applyRoomUpdate(payload.room);
       } else {
         void refreshActiveRoom();
       }
@@ -296,13 +318,52 @@ export function useGroupLiveTalk({
 
     const onMicPassed = (payload: {
       groupId: string;
+      toUserId?: string;
       room?: LiveTalkRoom;
+      requiresUserAction?: boolean;
     }) => {
       if (payload.groupId !== groupId) {
         return;
       }
       if (payload.room) {
-        onRoomChange(payload.room);
+        applyRoomUpdate(payload.room);
+      }
+      if (
+        payload.toUserId === localUserId &&
+        payload.requiresUserAction !== false
+      ) {
+        setMicPassedPrompt(true);
+        setInfo("Host passed the mic to you. Tap Open Mic when you are ready.");
+      }
+    };
+
+    const onRoomUpdated = (payload: {
+      groupId: string;
+      room?: LiveTalkRoom;
+    }) => {
+      if (payload.groupId === groupId && payload.room) {
+        applyRoomUpdate(payload.room);
+      }
+    };
+
+    const onParticipantRemoved = (payload: {
+      groupId: string;
+      userId: string;
+      room?: LiveTalkRoom;
+    }) => {
+      if (payload.groupId !== groupId) {
+        return;
+      }
+      if (payload.userId === localUserId) {
+        sessionRef.current?.releaseMicAudio();
+        teardownSession();
+        setError("You were removed from Live Talk.");
+        setMicPassedPrompt(false);
+      }
+      if (payload.room) {
+        applyRoomUpdate(payload.room);
+      } else {
+        void refreshActiveRoom();
       }
     };
 
@@ -315,6 +376,8 @@ export function useGroupLiveTalk({
     socket.on("live_talk_mic_released", onMicReleased);
     socket.on("live_talk_mic_busy", onMicBusy);
     socket.on("live_talk_mic_passed", onMicPassed);
+    socket.on("live_talk_room_updated", onRoomUpdated);
+    socket.on("live_talk_participant_removed", onParticipantRemoved);
 
     return () => {
       socket.off("live_talk_started", onStarted);
@@ -326,15 +389,19 @@ export function useGroupLiveTalk({
       socket.off("live_talk_mic_released", onMicReleased);
       socket.off("live_talk_mic_busy", onMicBusy);
       socket.off("live_talk_mic_passed", onMicPassed);
+      socket.off("live_talk_room_updated", onRoomUpdated);
+      socket.off("live_talk_participant_removed", onParticipantRemoved);
     };
   }, [
     socket,
     isConnected,
     groupId,
+    localUserId,
     onRoomChange,
     teardownSession,
     refreshActiveRoom,
     applySpeaking,
+    applyRoomUpdate,
   ]);
 
   useEffect(() => {
@@ -675,6 +742,104 @@ export function useGroupLiveTalk({
     }
   };
 
+  const acceptPassedMic = async () => {
+    setMicPassedPrompt(false);
+    await openMic();
+  };
+
+  const forceReleaseMic = async () => {
+    if (!room || !canHostControls) {
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const updated = await forceReleaseLiveTalkMic(groupId, room.id);
+      applyRoomUpdate(updated);
+      setInfo("Mic released by host");
+    } catch (err) {
+      handleLiveTalkError(err, "Could not force release mic.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const passMicTo = async (targetUserId: string) => {
+    if (!room || !canHostControls) {
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const updated = await passLiveTalkMic(groupId, room.id, targetUserId);
+      applyRoomUpdate(updated);
+      setInfo("Mic passed to participant");
+    } catch (err) {
+      handleLiveTalkError(err, "Could not pass mic.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const muteParticipant = async (targetUserId: string, nextMuted: boolean) => {
+    if (!room || !canHostControls) {
+      return;
+    }
+    setLoading(true);
+    try {
+      const updated = await muteLiveTalkParticipant(
+        groupId,
+        room.id,
+        targetUserId,
+        nextMuted,
+      );
+      applyRoomUpdate(updated);
+    } catch (err) {
+      handleLiveTalkError(err, "Could not update participant mute.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const removeParticipant = async (targetUserId: string) => {
+    if (!room || !canHostControls) {
+      return;
+    }
+    setLoading(true);
+    try {
+      const updated = await removeLiveTalkParticipant(
+        groupId,
+        room.id,
+        targetUserId,
+      );
+      if (updated) {
+        applyRoomUpdate(updated);
+      } else {
+        onRoomChange(null);
+        setInfo("Live Talk ended.");
+      }
+    } catch (err) {
+      handleLiveTalkError(err, "Could not remove participant.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clearParticipantHand = async (targetUserId: string) => {
+    if (!room || !canHostControls) {
+      return;
+    }
+    setLoading(true);
+    try {
+      const updated = await clearLiveTalkHand(groupId, room.id, targetUserId);
+      applyRoomUpdate(updated);
+    } catch (err) {
+      handleLiveTalkError(err, "Could not clear raised hand.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const unlockAudio = async () => {
     for (const audio of audioElementsRef.current.values()) {
       try {
@@ -716,10 +881,22 @@ export function useGroupLiveTalk({
     participantCount,
     isConnected,
     canStart,
+    canHostControls,
+    raisedHands: room?.raisedHands ?? [],
+    micPassedPrompt,
+    setMicPassedPrompt,
+    hostPanelOpen,
+    setHostPanelOpen,
     start,
     join,
     openMic,
     releaseMic,
+    acceptPassedMic,
+    forceReleaseMic,
+    passMicTo,
+    muteParticipant,
+    removeParticipant,
+    clearParticipantHand,
     leave,
     end,
     toggleMute,

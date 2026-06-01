@@ -10,6 +10,10 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SafeUser } from '../users/users.service';
+import {
+  LiveTalkMuteParticipantDto,
+  LiveTalkTargetUserDto,
+} from './dto/live-talk-target-user.dto';
 import { PassLiveTalkMicDto } from './dto/pass-live-talk-mic.dto';
 import { PostLiveTalkMessageDto } from './dto/post-live-talk-message.dto';
 import { UpdateLiveTalkHandDto } from './dto/update-live-talk-hand.dto';
@@ -115,6 +119,65 @@ export class GroupLiveTalkController {
     @Body() dto: PassLiveTalkMicDto,
   ) {
     return this.groupLiveTalkService.passMic(
+      groupId,
+      roomId,
+      req.user.id,
+      dto.targetUserId,
+    );
+  }
+
+  @Post('groups/:groupId/live-talk/:roomId/force-release-mic')
+  forceReleaseMic(
+    @Param('groupId') groupId: string,
+    @Param('roomId') roomId: string,
+    @Req() req: { user: SafeUser },
+  ) {
+    return this.groupLiveTalkService.forceReleaseMic(
+      groupId,
+      roomId,
+      req.user.id,
+    );
+  }
+
+  @Post('groups/:groupId/live-talk/:roomId/mute-participant')
+  muteParticipant(
+    @Param('groupId') groupId: string,
+    @Param('roomId') roomId: string,
+    @Req() req: { user: SafeUser },
+    @Body() dto: LiveTalkMuteParticipantDto,
+  ) {
+    return this.groupLiveTalkService.muteParticipant(
+      groupId,
+      roomId,
+      req.user.id,
+      dto.targetUserId,
+      dto.isMuted,
+    );
+  }
+
+  @Post('groups/:groupId/live-talk/:roomId/remove-participant')
+  removeParticipant(
+    @Param('groupId') groupId: string,
+    @Param('roomId') roomId: string,
+    @Req() req: { user: SafeUser },
+    @Body() dto: LiveTalkTargetUserDto,
+  ) {
+    return this.groupLiveTalkService.removeParticipant(
+      groupId,
+      roomId,
+      req.user.id,
+      dto.targetUserId,
+    );
+  }
+
+  @Post('groups/:groupId/live-talk/:roomId/clear-hand')
+  clearHand(
+    @Param('groupId') groupId: string,
+    @Param('roomId') roomId: string,
+    @Req() req: { user: SafeUser },
+    @Body() dto: LiveTalkTargetUserDto,
+  ) {
+    return this.groupLiveTalkService.clearHand(
       groupId,
       roomId,
       req.user.id,

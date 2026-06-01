@@ -1,6 +1,7 @@
 "use client";
 
-import { Radio, Users, X } from "lucide-react";
+import { Radio, Shield, Users, X } from "lucide-react";
+import LiveTalkHostPanel from "./live-talk/LiveTalkHostPanel";
 import { LiveTalkRoom } from "@/src/lib/groupLiveTalk";
 import { useGroupLiveTalk } from "@/app/hooks/useGroupLiveTalk";
 import LiveTalkControls, {
@@ -16,6 +17,7 @@ type GroupLiveTalkPanelProps = {
   isMember: boolean;
   canStart?: boolean;
   canEndRoom: boolean;
+  canHostControls?: boolean;
   onRoomChange: (room: LiveTalkRoom | null) => void;
 };
 
@@ -26,12 +28,14 @@ export default function GroupLiveTalkPanel({
   isMember,
   canStart = true,
   canEndRoom,
+  canHostControls = false,
   onRoomChange,
 }: GroupLiveTalkPanelProps) {
   const talk = useGroupLiveTalk({
     groupId,
     activeRoom,
     canStart,
+    canHostControls,
     onRoomChange,
   });
 
@@ -169,6 +173,16 @@ export default function GroupLiveTalkPanel({
               ) : null}
             </div>
             <div className="flex shrink-0 items-center gap-2">
+              {canHostControls ? (
+                <button
+                  type="button"
+                  onClick={() => talk.setHostPanelOpen(true)}
+                  className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-brand-primary/30 bg-brand-primary/10 px-3 text-xs font-semibold text-brand-primary lg:hidden dark:text-brand-secondary"
+                >
+                  <Shield className="h-4 w-4" />
+                  Host
+                </button>
+              ) : null}
               <span className="hidden items-center gap-1.5 rounded-full bg-slate-200/80 px-2.5 py-1 text-xs text-slate-600 dark:bg-white/10 dark:text-slate-300 sm:inline-flex">
                 <Users className="h-3.5 w-3.5" />
                 {talk.participantCount}
@@ -186,6 +200,41 @@ export default function GroupLiveTalkPanel({
 
           {talk.needsAudioUnlock ? (
             <LiveTalkAudioUnlockBanner onUnlock={() => void talk.unlockAudio()} />
+          ) : null}
+
+          {talk.micPassedPrompt ? (
+            <div className="mx-3 mt-2 rounded-2xl border border-brand-primary/30 bg-brand-primary/10 p-4 dark:border-brand-secondary/30">
+              <p className="text-sm font-medium text-slate-900 dark:text-white">
+                Host passed the mic to you
+              </p>
+              <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                Open your microphone when you are ready to speak. We will not
+                turn on your mic without your tap.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={talk.loading}
+                  onClick={() => void talk.acceptPassedMic()}
+                  className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-4 text-sm font-semibold text-white"
+                >
+                  Open Mic
+                </button>
+                <button
+                  type="button"
+                  onClick={() => talk.setMicPassedPrompt(false)}
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-slate-300 px-4 text-sm font-semibold dark:border-white/15"
+                >
+                  Not now
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {talk.error ? (
+            <p className="mx-3 mt-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-200">
+              {talk.error}
+            </p>
           ) : null}
 
           <div className="lg:hidden">
@@ -206,16 +255,81 @@ export default function GroupLiveTalkPanel({
                 localUserId={talk.localUserId}
               />
             </div>
-            <div className="hidden min-h-0 lg:flex">
+            <div className="hidden min-h-0 w-full max-w-sm flex-col border-slate-200/80 dark:border-white/10 lg:flex lg:border-l">
+              {canHostControls ? (
+                <LiveTalkHostPanel
+                  room={talk.room}
+                  loading={talk.loading}
+                  micHolderName={talk.micHolderName}
+                  onForceRelease={() => void talk.forceReleaseMic()}
+                  onEndRoom={() => void talk.end()}
+                  onPassMic={(userId) => void talk.passMicTo(userId)}
+                  onClearHand={(userId) => void talk.clearParticipantHand(userId)}
+                  onMuteParticipant={(userId, isMuted) =>
+                    void talk.muteParticipant(userId, isMuted)
+                  }
+                  onRemoveParticipant={(userId) =>
+                    void talk.removeParticipant(userId)
+                  }
+                />
+              ) : null}
               <LiveTalkParticipantList
                 participants={talk.participants}
                 hostId={talk.room.hostId}
                 activeMicUserId={talk.activeMicUserId}
                 localUserId={talk.localUserId}
                 isUserOnline={talk.isUserOnline}
+                canHostControls={canHostControls}
+                onPassMic={(userId) => void talk.passMicTo(userId)}
+                onMuteParticipant={(userId, isMuted) =>
+                  void talk.muteParticipant(userId, isMuted)
+                }
+                onRemoveParticipant={(userId) =>
+                  void talk.removeParticipant(userId)
+                }
+                onClearHand={(userId) => void talk.clearParticipantHand(userId)}
               />
             </div>
           </div>
+
+          {canHostControls && talk.hostPanelOpen ? (
+            <div className="fixed inset-0 z-[60] lg:hidden">
+              <button
+                type="button"
+                className="absolute inset-0 bg-black/50"
+                aria-label="Close host controls"
+                onClick={() => talk.setHostPanelOpen(false)}
+              />
+              <div className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-3xl bg-white shadow-2xl dark:bg-slate-950">
+                <div className="sticky top-0 flex items-center justify-between border-b border-slate-200/80 bg-white px-4 py-3 dark:border-white/10 dark:bg-slate-950">
+                  <h3 className="text-base font-semibold">Host Controls</h3>
+                  <button
+                    type="button"
+                    onClick={() => talk.setHostPanelOpen(false)}
+                    className="flex h-11 w-11 items-center justify-center rounded-full"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                <LiveTalkHostPanel
+                  room={talk.room}
+                  loading={talk.loading}
+                  micHolderName={talk.micHolderName}
+                  compact
+                  onForceRelease={() => void talk.forceReleaseMic()}
+                  onEndRoom={() => void talk.end()}
+                  onPassMic={(userId) => void talk.passMicTo(userId)}
+                  onClearHand={(userId) => void talk.clearParticipantHand(userId)}
+                  onMuteParticipant={(userId, isMuted) =>
+                    void talk.muteParticipant(userId, isMuted)
+                  }
+                  onRemoveParticipant={(userId) =>
+                    void talk.removeParticipant(userId)
+                  }
+                />
+              </div>
+            </div>
+          ) : null}
 
           <LiveTalkControls
             muted={talk.muted}

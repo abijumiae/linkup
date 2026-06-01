@@ -1,0 +1,1 @@
+ALTER TABLE "GroupLiveParticipant" ADD COLUMN IF NOT EXISTS "handRaisedAt" TIMESTAMP(3);
