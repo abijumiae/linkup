@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -14,6 +15,8 @@ import { MessagesService } from '../messages/messages.service';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { CreateGroupMessageDto } from './dto/create-group-message.dto';
 import { CreateGroupPostDto } from './dto/create-group-post.dto';
+import { UpdateLiveTalkMuteDto } from './dto/update-live-talk-mute.dto';
+import { GroupLiveTalkService } from './group-live-talk.service';
 import { GroupsService } from './groups.service';
 
 @Controller('groups')
@@ -22,6 +25,7 @@ export class GroupsController {
   constructor(
     private readonly groupsService: GroupsService,
     private readonly messagesService: MessagesService,
+    private readonly groupLiveTalkService: GroupLiveTalkService,
   ) {}
 
   @Post()
@@ -41,6 +45,58 @@ export class GroupsController {
   @Get('chats/list')
   listGroupChats(@Req() req: { user: SafeUser }) {
     return this.messagesService.getGroupChatList(req.user.id);
+  }
+
+  @Post(':id/live-talk/start')
+  startLiveTalk(@Param('id') id: string, @Req() req: { user: SafeUser }) {
+    return this.groupLiveTalkService.startRoom(id, req.user.id);
+  }
+
+  @Get(':id/live-talk/active')
+  getActiveLiveTalk(@Param('id') id: string, @Req() req: { user: SafeUser }) {
+    return this.groupLiveTalkService.getActiveRoom(id, req.user.id);
+  }
+
+  @Post(':id/live-talk/:roomId/join')
+  joinLiveTalk(
+    @Param('id') id: string,
+    @Param('roomId') roomId: string,
+    @Req() req: { user: SafeUser },
+  ) {
+    return this.groupLiveTalkService.joinRoom(id, roomId, req.user.id);
+  }
+
+  @Post(':id/live-talk/:roomId/leave')
+  leaveLiveTalk(
+    @Param('id') id: string,
+    @Param('roomId') roomId: string,
+    @Req() req: { user: SafeUser },
+  ) {
+    return this.groupLiveTalkService.leaveRoom(id, roomId, req.user.id);
+  }
+
+  @Post(':id/live-talk/:roomId/end')
+  endLiveTalk(
+    @Param('id') id: string,
+    @Param('roomId') roomId: string,
+    @Req() req: { user: SafeUser },
+  ) {
+    return this.groupLiveTalkService.endRoom(id, roomId, req.user.id);
+  }
+
+  @Patch(':id/live-talk/:roomId/mute')
+  muteLiveTalk(
+    @Param('id') id: string,
+    @Param('roomId') roomId: string,
+    @Req() req: { user: SafeUser },
+    @Body() dto: UpdateLiveTalkMuteDto,
+  ) {
+    return this.groupLiveTalkService.setMuted(
+      id,
+      roomId,
+      req.user.id,
+      dto.isMuted,
+    );
   }
 
   @Get(':id')

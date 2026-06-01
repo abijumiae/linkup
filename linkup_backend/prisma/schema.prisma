@@ -56,6 +56,11 @@ enum GroupRole {
   MEMBER
 }
 
+enum GroupLiveRoomStatus {
+  ACTIVE
+  ENDED
+}
+
 model User {
   id           String      @id @default(cuid())
   name         String
@@ -114,6 +119,8 @@ model User {
   blocksReceived        Block[]        @relation("BlockTarget")
   reportsFiled          Report[]       @relation("ReportReporter")
   moderationLogs        ModerationLog[] @relation("ModerationActor")
+  hostedGroupLiveRooms  GroupLiveRoom[] @relation("GroupLiveRoomHost")
+  groupLiveParticipations GroupLiveParticipant[]
 }
 
 model ModerationLog {
@@ -217,8 +224,43 @@ model Group {
   posts         Post[]
   messages      GroupMessage[]
   notifications Notification[]
+  liveRooms     GroupLiveRoom[]
 
   @@index([ownerId])
+}
+
+model GroupLiveRoom {
+  id        String              @id @default(cuid())
+  groupId   String
+  hostId    String
+  status    GroupLiveRoomStatus @default(ACTIVE)
+  startedAt DateTime            @default(now())
+  endedAt   DateTime?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  group        Group                    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  host         User                     @relation("GroupLiveRoomHost", fields: [hostId], references: [id], onDelete: Cascade)
+  participants GroupLiveParticipant[]
+
+  @@index([groupId, status])
+  @@index([hostId])
+}
+
+model GroupLiveParticipant {
+  id       String    @id @default(cuid())
+  roomId   String
+  userId   String
+  isMuted  Boolean   @default(false)
+  joinedAt DateTime  @default(now())
+  leftAt   DateTime?
+
+  room GroupLiveRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([roomId])
+  @@index([userId])
+  @@index([roomId, leftAt])
 }
 
 model GroupMember {

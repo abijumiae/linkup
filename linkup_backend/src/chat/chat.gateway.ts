@@ -26,9 +26,12 @@ import { PresenceService } from './presence.service';
 import { WsAuthService } from './ws-auth.service';
 import {
   getDirectRoom,
+  getGroupLiveTalkRoom,
   getGroupRoom,
   getUserRoom,
 } from './chat-rooms.util';
+import { GroupLiveTalkService } from '../groups/group-live-talk.service';
+import { GroupLiveTalkManager } from '../groups/group-live-talk.manager';
 
 type AuthedSocket = Socket & {
   data: {
@@ -39,6 +42,9 @@ type AuthedSocket = Socket & {
     groupCallRoomId?: string;
     liveRoomKey?: string;
     liveRoomId?: string;
+    liveTalkRoomKey?: string;
+    liveTalkGroupId?: string;
+    liveTalkRoomId?: string;
   };
 };
 
@@ -62,6 +68,7 @@ export class ChatGateway
 
   private readonly groupCallManager = new GroupCallManager();
   private readonly liveRoomManager = new LiveRoomManager();
+  private readonly groupLiveTalkManager = new GroupLiveTalkManager();
 
   constructor(
     private readonly wsAuthService: WsAuthService,
@@ -69,6 +76,8 @@ export class ChatGateway
     @Inject(forwardRef(() => MessagesService))
     private readonly messagesService: MessagesService,
     private readonly realtimeEmitter: RealtimeEmitter,
+    @Inject(forwardRef(() => GroupLiveTalkService))
+    private readonly groupLiveTalkService: GroupLiveTalkService,
   ) {}
 
   afterInit() {
@@ -105,6 +114,7 @@ export class ChatGateway
   handleDisconnect(client: AuthedSocket) {
     this.leaveActiveGroupCall(client);
     this.leaveActiveLiveRoom(client);
+    void this.leaveActiveGroupLiveTalk(client);
 
     const userId = client.data?.userId;
     if (!userId) {
@@ -113,6 +123,7 @@ export class ChatGateway
 
     this.logger.log(`Socket disconnected userId=${userId} socketId=${client.id}`);
     void this.presenceService.unregisterConnection(userId, client.id);
+    void this.groupLiveTalkService.handleUserDisconnected(userId);
   }
 
   @SubscribeMessage('get_online_users')
@@ -815,6 +826,202 @@ export class ChatGateway
     );
   }
 
+  @SubscribeMessage('live_talk_join')
+  async handleLiveTalkJoin(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: { groupId: string; roomId: string },
+  ) {
+    const userId = client.data?.userId;
+    if (!userId || !payload?.groupId || !payload?.roomId) {
+      client.emit('live_talk_error', { message: 'Invalid Live Talk join payload' });
+      return;
+    }
+
+    try {
+      await this.groupLiveTalkService.assertGroupMember(
+        payload.groupId,
+        userId,
+      );
+      const dbParticipant =
+        await this.groupLiveTalkService.assertActiveParticipant(
+          payload.roomId,
+          userId,
+        );
+
+      await this.leaveActiveGroupLiveTalk(client);
+
+      const roomKey = getGroupLiveTalkRoom(payload.groupId, payload.roomId);
+      const participant = {
+        userId,
+        name: client.data.userName ?? 'LinkUp user',
+        avatarUrl: client.data.userAvatarUrl ?? null,
+        isMuted: dbParticipant.isMuted,
+      };
+
+      client.join(roomKey);
+      client.data.liveTalkRoomKey = roomKey;
+      client.data.liveTalkGroupId = payload.groupId;
+      client.data.liveTalkRoomId = payload.roomId;
+
+      const participants = this.groupLiveTalkManager.join(
+        roomKey,
+        participant,
+      );
+
+      client.emit('live_talk_participants', {
+        groupId: payload.groupId,
+        roomId: payload.roomId,
+        participants,
+      });
+
+      client.to(roomKey).emit('live_talk_participant_joined', {
+        groupId: payload.groupId,
+        roomId: payload.roomId,
+        participant,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Could not join Live Talk';
+      client.emit('live_talk_error', { message });
+    }
+  }
+
+  @SubscribeMessage('live_talk_leave')
+  handleLiveTalkLeave(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody() payload: { groupId: string; roomId: string },
+  ) {
+    if (!payload?.groupId || !payload?.roomId) {
+      return;
+    }
+    const roomKey = getGroupLiveTalkRoom(payload.groupId, payload.roomId);
+    if (client.data.liveTalkRoomKey === roomKey) {
+      void this.leaveActiveGroupLiveTalk(client, payload.groupId, payload.roomId);
+    }
+  }
+
+  @SubscribeMessage('live_talk_offer')
+  handleLiveTalkOffer(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: {
+      groupId: string;
+      roomId: string;
+      targetUserId: string;
+      offer: unknown;
+    },
+  ) {
+    this.relayLiveTalkSignal(client, payload, 'live_talk_offer', {
+      groupId: payload.groupId,
+      roomId: payload.roomId,
+      offer: payload.offer,
+    });
+  }
+
+  @SubscribeMessage('live_talk_answer')
+  handleLiveTalkAnswer(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: {
+      groupId: string;
+      roomId: string;
+      targetUserId: string;
+      answer: unknown;
+    },
+  ) {
+    this.relayLiveTalkSignal(client, payload, 'live_talk_answer', {
+      groupId: payload.groupId,
+      roomId: payload.roomId,
+      answer: payload.answer,
+    });
+  }
+
+  @SubscribeMessage('live_talk_ice_candidate')
+  handleLiveTalkIceCandidate(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: {
+      groupId: string;
+      roomId: string;
+      targetUserId: string;
+      candidate: unknown;
+    },
+  ) {
+    this.relayLiveTalkSignal(client, payload, 'live_talk_ice_candidate', {
+      groupId: payload.groupId,
+      roomId: payload.roomId,
+      candidate: payload.candidate,
+    });
+  }
+
+  @SubscribeMessage('live_talk_mute_changed')
+  async handleLiveTalkMuteChanged(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: { groupId: string; roomId: string; isMuted: boolean },
+  ) {
+    const userId = client.data?.userId;
+    if (!userId || !payload?.groupId || !payload?.roomId) {
+      return;
+    }
+
+    const roomKey = getGroupLiveTalkRoom(payload.groupId, payload.roomId);
+    if (client.data.liveTalkRoomKey !== roomKey) {
+      return;
+    }
+
+    try {
+      await this.groupLiveTalkService.setMuted(
+        payload.groupId,
+        payload.roomId,
+        userId,
+        Boolean(payload.isMuted),
+      );
+      this.groupLiveTalkManager.setMuted(
+        roomKey,
+        userId,
+        Boolean(payload.isMuted),
+      );
+      this.server.to(roomKey).emit('live_talk_mute_changed', {
+        groupId: payload.groupId,
+        roomId: payload.roomId,
+        userId,
+        isMuted: Boolean(payload.isMuted),
+      });
+    } catch {
+      // Ignore invalid mute updates.
+    }
+  }
+
+  @SubscribeMessage('live_talk_end')
+  async handleLiveTalkEnd(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody() payload: { groupId: string; roomId: string },
+  ) {
+    const userId = client.data?.userId;
+    if (!userId || !payload?.groupId || !payload?.roomId) {
+      return;
+    }
+
+    try {
+      await this.groupLiveTalkService.endRoom(
+        payload.groupId,
+        payload.roomId,
+        userId,
+      );
+      await this.endGroupLiveTalkSocketRoom(
+        payload.groupId,
+        payload.roomId,
+        client,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Could not end Live Talk';
+      client.emit('live_talk_error', { message });
+    }
+  }
+
   @SubscribeMessage('group_call_end')
   handleGroupCallEnd(
     @ConnectedSocket() client: AuthedSocket,
@@ -951,6 +1158,108 @@ export class ChatGateway
     client
       .to(getDirectRoom(userId, payload.targetId))
       .emit('typing', eventPayload);
+  }
+
+  private relayLiveTalkSignal(
+    client: AuthedSocket,
+    payload: { groupId?: string; roomId?: string; targetUserId?: string },
+    event: string,
+    data: Record<string, unknown>,
+  ) {
+    const fromUserId = client.data?.userId;
+    if (!fromUserId || !payload?.targetUserId || !payload.groupId || !payload.roomId) {
+      return;
+    }
+
+    const roomKey = getGroupLiveTalkRoom(payload.groupId, payload.roomId);
+    if (client.data.liveTalkRoomKey !== roomKey) {
+      return;
+    }
+
+    this.server.to(getUserRoom(payload.targetUserId)).emit(event, {
+      ...data,
+      fromUserId,
+    });
+  }
+
+  private async leaveActiveGroupLiveTalk(
+    client: AuthedSocket,
+    groupId?: string,
+    roomId?: string,
+  ) {
+    const roomKey =
+      client.data.liveTalkRoomKey ??
+      this.groupLiveTalkManager.findRoomKeyForUser(client.data?.userId ?? '');
+
+    const userId = client.data?.userId;
+    if (!roomKey || !userId) {
+      return;
+    }
+
+    const resolvedGroupId =
+      groupId ??
+      client.data.liveTalkGroupId ??
+      roomKey.split(':')[1] ??
+      '';
+    const resolvedRoomId =
+      roomId ?? client.data.liveTalkRoomId ?? roomKey.split(':')[2] ?? '';
+
+    if (!resolvedGroupId || !resolvedRoomId) {
+      return;
+    }
+
+    const removed = this.groupLiveTalkManager.leave(roomKey, userId);
+    client.leave(roomKey);
+    delete client.data.liveTalkRoomKey;
+    delete client.data.liveTalkGroupId;
+    delete client.data.liveTalkRoomId;
+
+    if (!removed) {
+      return;
+    }
+
+    try {
+      await this.groupLiveTalkService.leaveRoom(
+        resolvedGroupId,
+        resolvedRoomId,
+        userId,
+      );
+    } catch {
+      // Room may already be ended.
+    }
+
+    if (this.groupLiveTalkManager.isRoomActive(roomKey)) {
+      this.server.to(roomKey).emit('live_talk_participant_left', {
+        groupId: resolvedGroupId,
+        roomId: resolvedRoomId,
+        userId,
+      });
+      return;
+    }
+
+    await this.endGroupLiveTalkSocketRoom(
+      resolvedGroupId,
+      resolvedRoomId,
+      client,
+    );
+  }
+
+  private async endGroupLiveTalkSocketRoom(
+    groupId: string,
+    roomId: string,
+    client: AuthedSocket,
+  ) {
+    const roomKey = getGroupLiveTalkRoom(groupId, roomId);
+    this.groupLiveTalkManager.leave(roomKey, client.data?.userId ?? '');
+    client.leave(roomKey);
+    delete client.data.liveTalkRoomKey;
+    delete client.data.liveTalkGroupId;
+    delete client.data.liveTalkRoomId;
+
+    this.server.to(roomKey).emit('live_talk_ended', {
+      groupId,
+      roomId,
+    });
   }
 
   private leaveActiveLiveRoom(

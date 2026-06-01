@@ -18,6 +18,11 @@ import { FeedPost } from "@/src/lib/posts";
 import AuthLoadingScreen from "./AuthLoadingScreen";
 import FeedPostCard from "./FeedPostCard";
 import HubChallengeCard from "./linkup/HubChallengeCard";
+import GroupLiveTalkPanel from "./GroupLiveTalkPanel";
+import {
+  fetchActiveLiveTalk,
+  LiveTalkRoom,
+} from "@/src/lib/groupLiveTalk";
 
 type GroupDetailClientProps = {
   groupId: string;
@@ -35,15 +40,18 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [membershipLoading, setMembershipLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [liveTalkRoom, setLiveTalkRoom] = useState<LiveTalkRoom | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [groupData, postsData] = await Promise.all([
+      const [groupData, postsData, activeLiveTalk] = await Promise.all([
         fetchGroup(groupId),
         fetchGroupPosts(groupId),
+        fetchActiveLiveTalk(groupId).catch(() => null),
       ]);
       setGroup(groupData);
       setPosts(postsData);
+      setLiveTalkRoom(activeLiveTalk);
       setError(null);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -179,6 +187,21 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
         <div className="mb-8">
           <HubChallengeCard compact />
         </div>
+
+        {group.isMember ? (
+          <GroupLiveTalkPanel
+            groupId={groupId}
+            groupName={group.name}
+            activeRoom={liveTalkRoom}
+            isMember={group.isMember}
+            canEndRoom={
+              group.isOwner ||
+              group.role === "ADMIN" ||
+              group.role === "OWNER"
+            }
+            onRoomChange={setLiveTalkRoom}
+          />
+        ) : null}
 
         {error && (
           <p className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">

@@ -11,3 +11,7 @@ export function getUserRoom(userId: string): string {
 export function getGroupRoom(groupId: string): string {
   return `group:${groupId}`;
 }
+
+export function getGroupLiveTalkRoom(groupId: string, roomId: string): string {
+  return `group_live_talk:${groupId}:${roomId}`;
+}
