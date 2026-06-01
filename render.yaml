@@ -5,12 +5,16 @@ services:
     repo: https://github.com/abijumiae/linkup
     branch: main
     rootDir: linkup_backend
-    buildCommand: npm ci --include=dev && npx prisma generate && npx prisma migrate deploy && npm run build
-    startCommand: npm run start:prod
+    # Migrations run at start (not build) to avoid P1002 advisory lock timeouts
+    # when Neon pooler is slow or a prior deploy still holds the lock.
+    buildCommand: npm ci --include=dev && npx prisma generate && npm run build
+    startCommand: npm run start:render
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
+      - key: PRISMA_MIGRATION_ADVISORY_LOCK_TIMEOUT
+        value: "60000"
       # Set in Render dashboard after DNS is verified:
       # FRONTEND_URL=https://www.thelinkupzone.com
       # PUBLIC_API_URL=https://api.thelinkupzone.com
