@@ -36,14 +36,29 @@ function authHeaders(): HeadersInit {
   return { Authorization: `Bearer ${token}` };
 }
 
+function mapLiveTalkApiError(error: unknown): never {
+  if (error instanceof ApiError) {
+    if (
+      error.status === 404 &&
+      /cannot (post|get|patch)/i.test(error.message)
+    ) {
+      throw new ApiError(
+        "Live Talk is not ready yet. Please try again after deployment.",
+        error.status,
+      );
+    }
+    if (error.status === 401) {
+      clearAuth();
+    }
+  }
+  throw error;
+}
+
 async function withAuth<T>(request: () => Promise<T>): Promise<T> {
   try {
     return await request();
   } catch (error) {
-    if (error instanceof ApiError && error.status === 401) {
-      clearAuth();
-    }
-    throw error;
+    mapLiveTalkApiError(error);
   }
 }
 
