@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -19,17 +19,22 @@ import { FeedPost } from "@/src/lib/posts";
 import AuthLoadingScreen from "./AuthLoadingScreen";
 import FeedPostCard from "./FeedPostCard";
 import HubChallengeCard from "./linkup/HubChallengeCard";
+import OnlineStatusBadge from "./OnlineStatusBadge";
+import {
+  fetchLiveTalkStatus,
+  LiveTalkRoom,
+} from "@/src/lib/groupLiveTalk";
+
 const GroupLiveTalkPanel = dynamic(() => import("./GroupLiveTalkPanel"), {
   ssr: false,
   loading: () => (
     <div className="linkup-card h-32 animate-pulse rounded-2xl bg-slate-100 dark:bg-white/5" />
   ),
 });
-import OnlineStatusBadge from "./OnlineStatusBadge";
-import {
-  fetchLiveTalkStatus,
-  LiveTalkRoom,
-} from "@/src/lib/groupLiveTalk";
+
+function toFeedPostArray(value: FeedPost[] | null | undefined): FeedPost[] {
+  return Array.isArray(value) ? value : [];
+}
 
 type GroupDetailClientProps = {
   groupId: string;
@@ -49,24 +54,33 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
   const [error, setError] = useState<string | null>(null);
   const [liveTalkRoom, setLiveTalkRoom] = useState<LiveTalkRoom | null>(null);
 
+  const safePosts = useMemo(() => toFeedPostArray(posts), [posts]);
+  const safeLiveTalkRoom =
+    liveTalkRoom?.status === "ACTIVE" ? liveTalkRoom : null;
+
   const load = useCallback(async () => {
     try {
-      const [groupData, postsData, activeLiveTalk] = await Promise.all([
+      const [groupData, postsResult, activeLiveTalk] = await Promise.all([
         fetchGroup(groupId),
-        fetchGroupPosts(groupId).then((data) => data.items),
+        fetchGroupPosts(groupId),
         fetchLiveTalkStatus(groupId)
-          .then((status) => status.room)
+          .then((status) => status?.room ?? null)
           .catch(() => null),
       ]);
       setGroup(groupData);
-      setPosts(postsData);
-      setLiveTalkRoom(activeLiveTalk);
+      setPosts(toFeedPostArray(postsResult?.items));
+      setLiveTalkRoom(
+        activeLiveTalk?.status === "ACTIVE" ? activeLiveTalk : null,
+      );
       setError(null);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         router.replace("/login");
         return;
       }
+      setGroup(null);
+      setPosts([]);
+      setLiveTalkRoom(null);
       setError("Unable to load hub. Please try again.");
     }
   }, [groupId, router]);
@@ -86,14 +100,21 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
     }
 
     setMembershipLoading(true);
+    setError(null);
     try {
       const updated = group.isMember
         ? await leaveGroup(groupId)
         : await joinGroup(groupId);
       setGroup(updated);
     } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        router.replace("/login");
+        return;
+      }
       setError(
-        err instanceof ApiError ? err.message : "Unable to update membership.",
+        err instanceof ApiError
+          ? err.message
+          : "Could not join this Hub. Please try again.",
       );
     } finally {
       setMembershipLoading(false);
@@ -107,9 +128,10 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
     }
 
     setIsSubmitting(true);
+    setError(null);
     try {
       const created = await createGroupPost(groupId, postContent.trim());
-      setPosts((prev) => [created, ...prev]);
+      setPosts((prev) => [created, ...toFeedPostArray(prev)]);
       setPostContent("");
     } catch (err) {
       setError(
@@ -120,13 +142,31 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
     }
   };
 
+  const handlePostUpdated = useCallback((updated: FeedPost) => {
+    setPosts((current) =>
+      toFeedPostArray(current).map((item) =>
+        item.id === updated.id ? updated : item,
+      ),
+    );
+  }, []);
+
+  const handlePostDeleted = useCallback((postId: string) => {
+    setPosts((current) =>
+      toFeedPostArray(current).filter((item) => item.id !== postId),
+    );
+  }, []);
+
+  const handleLiveTalkRoomChange = useCallback((room: LiveTalkRoom | null) => {
+    setLiveTalkRoom(room?.status === "ACTIVE" ? room : null);
+  }, []);
+
   if (isLoading) {
     return <AuthLoadingScreen message="Loading hub..." />;
   }
 
   if (!group) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-700 dark:bg-brand-dark dark:text-slate-300">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 text-center text-slate-700 dark:bg-brand-dark dark:text-slate-300">
         {error ?? "Hub not found."}
       </div>
     );
@@ -155,13 +195,16 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
           </p>
           <div className="mt-5 flex flex-wrap items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
             <span>
-              {group.membersCount}{" "}
-              {group.membersCount === 1 ? "hub member" : "hub members"}
+              {group.membersCount ?? 0}{" "}
+              {(group.membersCount ?? 0) === 1 ? "hub member" : "hub members"}
             </span>
             <span>·</span>
             <span className="inline-flex flex-wrap items-center gap-2">
-              Host: {group.owner.name} (@{group.owner.username})
-              <OnlineStatusBadge userId={group.ownerId} showLabel size="sm" />
+              Host: {group.owner?.name ?? "Unknown"} (@
+              {group.owner?.username ?? "user"})
+              {group.ownerId ? (
+                <OnlineStatusBadge userId={group.ownerId} showLabel size="sm" />
+              ) : null}
             </span>
           </div>
           <div className="mt-6 flex flex-wrap gap-3">
@@ -173,8 +216,8 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
               <button
                 type="button"
                 disabled={membershipLoading}
-                onClick={handleMembership}
-                className="rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover disabled:opacity-50"
+                onClick={() => void handleMembership()}
+                className="rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition duration-150 hover:scale-[1.02] hover:from-brand-primary-hover hover:to-brand-secondary-hover active:scale-95 disabled:opacity-50"
               >
                 {membershipLoading
                   ? "Updating…"
@@ -186,7 +229,7 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
             {group.isMember ? (
               <Link
                 href={`/messages?groupId=${groupId}`}
-                className="inline-flex items-center rounded-full border border-brand-primary/25 bg-brand-primary/10 px-5 py-2.5 text-sm font-semibold text-brand-primary transition hover:bg-brand-primary/15 dark:text-brand-secondary"
+                className="inline-flex items-center rounded-full border border-brand-primary/25 bg-brand-primary/10 px-5 py-2.5 text-sm font-semibold text-brand-primary transition duration-150 hover:scale-[1.02] active:scale-95 hover:bg-brand-primary/15 dark:text-brand-secondary"
               >
                 Open Hub Chat & Calls
               </Link>
@@ -202,8 +245,8 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
           <GroupLiveTalkPanel
             groupId={groupId}
             groupName={group.name}
-            activeRoom={liveTalkRoom}
-            isMember={group.isMember}
+            activeRoom={safeLiveTalkRoom}
+            isMember={Boolean(group.isMember)}
             canStart={
               group.isOwner ||
               group.role === "ADMIN" ||
@@ -219,17 +262,17 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
               group.role === "ADMIN" ||
               group.role === "OWNER"
             }
-            onRoomChange={setLiveTalkRoom}
+            onRoomChange={handleLiveTalkRoomChange}
           />
         ) : null}
 
-        {error && (
+        {error ? (
           <p className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-200">
             {error}
           </p>
-        )}
+        ) : null}
 
-        {group.isMember && (
+        {group.isMember ? (
           <form
             onSubmit={handleCreatePost}
             className="mb-8 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-brand-dark/80"
@@ -247,18 +290,18 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
             <button
               type="submit"
               disabled={isSubmitting || !postContent.trim()}
-              className="mt-4 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover disabled:opacity-50"
+              className="mt-4 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-primary/20 transition duration-150 hover:scale-[1.02] hover:from-brand-primary-hover hover:to-brand-secondary-hover active:scale-95 disabled:opacity-50"
             >
               {isSubmitting ? "Sharing…" : "Share spark"}
             </button>
           </form>
-        )}
+        ) : null}
 
         <section className="space-y-4">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
             Hub sparks
           </h2>
-          {posts.length === 0 ? (
+          {safePosts.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center dark:border-white/15 dark:bg-brand-dark/60">
               <p className="text-sm text-slate-600 dark:text-slate-400">
                 No sparks in this hub yet.
@@ -266,24 +309,14 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
               </p>
             </div>
           ) : (
-            posts.map((post) => (
+            safePosts.map((post) => (
               <FeedPostCard
                 key={post.id}
                 post={post}
                 currentUserId={currentUserId}
                 currentUserRole={currentUserRole}
-                onPostUpdated={(updated) => {
-                  setPosts((current) =>
-                    current.map((item) =>
-                      item.id === updated.id ? updated : item,
-                    ),
-                  );
-                }}
-                onPostDeleted={(postId) => {
-                  setPosts((current) =>
-                    current.filter((item) => item.id !== postId),
-                  );
-                }}
+                onPostUpdated={handlePostUpdated}
+                onPostDeleted={handlePostDeleted}
               />
             ))
           )}

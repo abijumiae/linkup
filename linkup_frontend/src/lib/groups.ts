@@ -121,12 +121,30 @@ export async function fetchGroupPosts(
   page = 1,
   limit = 20,
 ): Promise<PaginatedGroupPosts> {
-  return withAuth(() =>
-    apiRequest<PaginatedGroupPosts>(
+  const response = await withAuth(() =>
+    apiRequest<PaginatedGroupPosts | FeedPost[]>(
       `/groups/${groupId}/posts?page=${page}&limit=${limit}`,
       { headers: authHeaders() },
     ),
   );
+
+  if (Array.isArray(response)) {
+    return {
+      items: response,
+      page: 1,
+      limit: response.length,
+      hasMore: false,
+    };
+  }
+
+  const items = Array.isArray(response?.items) ? response.items : [];
+
+  return {
+    items,
+    page: response?.page ?? page,
+    limit: response?.limit ?? limit,
+    hasMore: response?.hasMore ?? false,
+  };
 }
 
 export async function createGroupPost(
