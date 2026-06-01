@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import {
   Bookmark,
   Flag,
@@ -92,6 +92,7 @@ function FeedPostCard({
   const [blockedByMe, setBlockedByMe] = useState(false);
   const [interactionError, setInteractionError] = useState<string | null>(null);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const isOwner = Boolean(currentUserId && localPost.authorId === currentUserId);
   const canEdit = isOwner;
@@ -127,6 +128,25 @@ function FeedPostCard({
   const imageSrc = resolveMediaUrl(localPost.imageUrl);
   const videoSrc = resolveMediaUrl(localPost.videoUrl);
   const avatarSrc = resolveProfileImageUrl(localPost.author.avatarUrl);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !videoSrc) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) {
+          video.pause();
+        }
+      },
+      { threshold: 0.15 },
+    );
+
+    observer.observe(video);
+    return () => observer.disconnect();
+  }, [videoSrc]);
 
   function getInteractionError(err: unknown): string {
     if (err instanceof ApiError) {
@@ -409,6 +429,7 @@ function FeedPostCard({
         {videoSrc ? (
           <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10">
             <video
+              ref={videoRef}
               src={videoSrc}
               controls
               preload="metadata"

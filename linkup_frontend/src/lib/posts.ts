@@ -182,7 +182,10 @@ export async function fetchFeed(
   page = 1,
   limit = 20,
 ): Promise<PaginatedResponse<FeedPost>> {
-  return withAuth(() =>
+  const started =
+    process.env.NODE_ENV === "development" ? performance.now() : 0;
+
+  const result = await withAuth(() =>
     apiRequest<PaginatedResponse<FeedPost> | FeedPost[]>(
       `/posts/feed?page=${page}&limit=${limit}`,
       {
@@ -190,6 +193,14 @@ export async function fetchFeed(
       },
     ).then(unwrapPaginated),
   );
+
+  if (process.env.NODE_ENV === "development") {
+    console.debug(
+      `[perf] feed page=${page} limit=${limit} ${Math.round(performance.now() - started)}ms`,
+    );
+  }
+
+  return result;
 }
 
 export async function toggleLike(postId: string): Promise<LikeResponse> {

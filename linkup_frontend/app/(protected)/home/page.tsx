@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { useSocket } from "@/src/components/SocketProvider";
 import {
   Bookmark,
@@ -19,7 +19,7 @@ import {
 import { homePosts } from "../../data/linkupData";
 import { fetchConnectionSuggestionsSafe, fetchMyConnections } from "../../../src/lib/connections";
 import { getLocalProfilePrefs, markDailySparkComplete } from "../../../src/lib/linkupFeatures";
-import { getCurrentUser } from "../../../src/lib/auth";
+import { useAuth } from "../../../src/lib/AuthProvider";
 import { fetchEvents } from "../../../src/lib/events";
 import { fetchGroups } from "../../../src/lib/groups";
 import { fetchJobs } from "../../../src/lib/jobs";
@@ -37,8 +37,12 @@ import OpportunityBoard from "../../components/linkup/OpportunityBoard";
 import PulseFeedSkeleton from "../../components/linkup/PulseFeedSkeleton";
 import FeedPostCard from "../../components/FeedPostCard";
 import MomentsStrip from "@/src/components/MomentsStrip";
-import DropMomentModal from "@/src/components/DropMomentModal";
-import MomentViewer from "@/src/components/MomentViewer";
+const DropMomentModal = dynamic(() => import("@/src/components/DropMomentModal"), {
+  ssr: false,
+});
+const MomentViewer = dynamic(() => import("@/src/components/MomentViewer"), {
+  ssr: false,
+});
 import {
   fetchMomentsFeedSafe,
   Moment,
@@ -155,7 +159,7 @@ function getInitials(name: string): string {
 }
 
 export default function HomeDashboardPage() {
-  const currentUser = getCurrentUser();
+  const { user: currentUser, isLoading: authLoading } = useAuth();
   const currentUserId = currentUser?.id ?? null;
   const currentUserRole = currentUser?.role ?? null;
   const { socket } = useSocket();
@@ -223,6 +227,10 @@ export default function HomeDashboardPage() {
   const displaySparkCount = posts.length;
 
   useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
     let cancelled = false;
 
     setFeedLoading(true);
@@ -304,7 +312,7 @@ export default function HomeDashboardPage() {
       cancelled = true;
       window.clearTimeout(deferSecondary);
     };
-  }, []);
+  }, [authLoading]);
 
   async function loadMoreFeed() {
     if (feedLoadingMore || !feedHasMore) {
@@ -603,16 +611,16 @@ export default function HomeDashboardPage() {
     }));
   }, [displaySparkCount]);
 
-  function handleFeedPostUpdated(updated: ApiFeedPost) {
+  const handleFeedPostUpdated = useCallback((updated: ApiFeedPost) => {
     const mapped = mapPostToFeedPost(updated);
     setPosts((current) =>
       current.map((item) => (item.id === updated.id ? mapped : item)),
     );
-  }
+  }, []);
 
-  function handleFeedPostDeleted(postId: string) {
+  const handleFeedPostDeleted = useCallback((postId: string) => {
     setPosts((current) => current.filter((item) => item.id !== postId));
-  }
+  }, []);
 
   async function handleCreatePost() {
     const trimmed = postContent.trim();
