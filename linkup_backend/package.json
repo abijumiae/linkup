@@ -24,6 +24,8 @@
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "db:check": "node scripts/check-database.mjs",
+    "verify:live-talk": "bash scripts/verify-live-talk.sh http://localhost:3000",
+    "verify:live-talk:prod": "bash scripts/verify-live-talk.sh https://api.thelinkupzone.com",
     "postinstall": "prisma generate"
   },
   "dependencies": {
