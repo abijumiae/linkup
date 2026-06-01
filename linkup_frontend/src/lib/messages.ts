@@ -109,11 +109,22 @@ export async function fetchConversations(): Promise<Conversation[]> {
 export async function fetchConversation(
   userId: string,
 ): Promise<ConversationDetail> {
-  return withAuth(() =>
+  const started =
+    process.env.NODE_ENV === "development" ? performance.now() : 0;
+
+  const result = await withAuth(() =>
     apiRequest<ConversationDetail>(`/messages/${userId}`, {
       headers: authHeaders(),
     }),
   );
+
+  if (process.env.NODE_ENV === "development") {
+    console.debug(
+      `[perf] conversation ${userId.slice(0, 8)}… ${Math.round(performance.now() - started)}ms`,
+    );
+  }
+
+  return result;
 }
 
 export async function sendMessage(

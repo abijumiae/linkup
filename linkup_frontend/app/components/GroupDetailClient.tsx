@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -18,7 +19,12 @@ import { FeedPost } from "@/src/lib/posts";
 import AuthLoadingScreen from "./AuthLoadingScreen";
 import FeedPostCard from "./FeedPostCard";
 import HubChallengeCard from "./linkup/HubChallengeCard";
-import GroupLiveTalkPanel from "./GroupLiveTalkPanel";
+const GroupLiveTalkPanel = dynamic(() => import("./GroupLiveTalkPanel"), {
+  ssr: false,
+  loading: () => (
+    <div className="linkup-card h-32 animate-pulse rounded-2xl bg-slate-100 dark:bg-white/5" />
+  ),
+});
 import OnlineStatusBadge from "./OnlineStatusBadge";
 import {
   fetchLiveTalkStatus,
