@@ -82,20 +82,27 @@
 
 html,
 body {
+  max-width: 100%;
   overflow-x: hidden;
 }
 
 img,
-video {
+video,
+canvas,
+svg {
   max-width: 100%;
+  height: auto;
 }
 
 body {
   min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   background: var(--app-bg);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 
 ::selection {
@@ -256,6 +263,32 @@ select {
 
   .linkup-topbar {
     @apply sticky top-0 z-40 border-b border-slate-200/90 bg-white/90 shadow-sm backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-950/90;
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .linkup-bottom-nav {
+    @apply fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/90 shadow-[0_-10px_60px_rgba(15,23,42,0.12)] backdrop-blur-xl md:hidden dark:border-white/10 dark:bg-brand-dark/95 dark:shadow-[0_-10px_60px_rgba(15,23,42,0.35)];
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .linkup-main-content {
+    @apply min-w-0 flex-1 overflow-x-hidden pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))] md:pb-16;
+  }
+
+  .linkup-touch-target {
+    @apply inline-flex min-h-[44px] min-w-[44px] items-center justify-center;
+  }
+
+  .linkup-focus-ring {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:focus-visible:ring-brand-secondary/40;
+  }
+
+  .linkup-modal-overlay {
+    @apply fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-brand-dark/80 p-3 backdrop-blur-sm sm:items-center sm:p-4;
+  }
+
+  .linkup-modal-panel {
+    @apply my-0 max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-slate-200 bg-white p-4 shadow-2xl dark:border-white/10 dark:bg-brand-dark sm:my-8 sm:rounded-[2rem] sm:p-6;
   }
 }
 
@@ -264,5 +297,13 @@ select {
   select,
   textarea {
     font-size: 16px;
+  }
+}
+
+@media (hover: none) {
+  .card-float:hover {
+    transform: none;
+    box-shadow: var(--float-shadow);
+    border-color: var(--panel-border);
   }
 }

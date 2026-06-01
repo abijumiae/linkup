@@ -192,7 +192,7 @@ export default function CommentsDrawer({
         className="absolute inset-0 bg-brand-dark/70 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative flex max-h-[92vh] w-full max-w-lg flex-col rounded-t-3xl border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-brand-dark sm:rounded-[2rem]">
+      <div className="relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-brand-dark sm:rounded-[2rem] pb-[env(safe-area-inset-bottom,0px)]">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-white/10">
           <div>
             <p className="linkup-eyebrow">{label}</p>

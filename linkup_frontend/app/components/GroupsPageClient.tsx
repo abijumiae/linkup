@@ -332,8 +332,8 @@ export default function GroupsPageClient() {
       </div>
 
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-dark/80 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-brand-dark">
+        <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-brand-dark/80 p-3 backdrop-blur-sm sm:items-center sm:p-4">
+          <div className="linkup-modal-panel max-w-md">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
                 Create Hub

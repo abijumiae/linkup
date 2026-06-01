@@ -56,7 +56,7 @@ export default function DeletePostDialog({
 
   const dialog = (
     <div
-      className="fixed inset-0 z-[9999] grid place-items-center bg-black/50 p-4 backdrop-blur-sm"
+      className="linkup-modal-overlay z-[9999] !items-end sm:!items-center"
       role="presentation"
       onClick={() => {
         if (!isDeleting) {
@@ -68,7 +68,7 @@ export default function DeletePostDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="delete-post-title"
-        className="w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:p-6"
+        className="linkup-modal-panel max-w-sm rounded-t-3xl sm:rounded-2xl"
         onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => event.stopPropagation()}
       >

@@ -1657,7 +1657,7 @@ export default function MessagesPage() {
             }`}
           >
             {showChatPanel ? (
-              <div className="flex h-[min(72vh,760px)] flex-col">
+              <div className="flex min-h-[min(100dvh-12rem,760px)] flex-col md:h-[min(72vh,760px)]">
                 {/* Chat header */}
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 px-4 py-4 dark:border-white/10 sm:px-5">
                   <div className="flex min-w-0 items-center gap-3">
@@ -1820,7 +1820,7 @@ export default function MessagesPage() {
                 </div>
 
                 {/* Input */}
-                <div className="sticky bottom-0 border-t border-slate-200/80 bg-slate-50/95 px-3 py-3 backdrop-blur-sm dark:border-white/10 dark:bg-brand-dark/95 sm:px-4 sm:py-4">
+                <div className="sticky bottom-0 z-10 border-t border-slate-200/80 bg-slate-50/95 px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur-sm dark:border-white/10 dark:bg-brand-dark/95 sm:px-4 sm:py-4 md:pb-4">
                   {chatBlocked ? (
                     <p className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 dark:border-white/10 dark:bg-brand-dark dark:text-slate-300">
                       {blockedByMe
@@ -1900,7 +1900,7 @@ export default function MessagesPage() {
                 </div>
               </div>
             ) : chatTab === "live" ? (
-              <div className="flex h-[min(72vh,760px)] flex-col items-center justify-center px-6 py-10">
+              <div className="flex min-h-[min(100dvh-12rem,760px)] flex-col items-center justify-center px-6 py-10 md:h-[min(72vh,760px)]">
                 <ChatsEmptyState
                   icon={Radio}
                   title="No live rooms active right now"
@@ -1910,7 +1910,7 @@ export default function MessagesPage() {
                 />
               </div>
             ) : (
-              <div className="flex h-[min(72vh,760px)] items-center justify-center px-6 py-10">
+              <div className="flex min-h-[min(100dvh-12rem,760px)] items-center justify-center px-6 py-10 md:h-[min(72vh,760px)]">
                 <div className="max-w-sm rounded-3xl border border-dashed border-slate-300/80 bg-white/80 p-10 text-center dark:border-white/15 dark:bg-brand-dark/60">
                   <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary dark:text-brand-secondary">
                     <MessageCircle className="h-5 w-5" />

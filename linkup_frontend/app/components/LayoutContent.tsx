@@ -66,7 +66,7 @@ export default function LayoutContent({
             </div>
           </aside>
         )}
-        <main className="linkup-main min-w-0 flex-1 overflow-x-hidden pb-28 lg:pb-16">
+        <main className="linkup-main linkup-main-content min-w-0 flex-1">
           {showNavigation ? <RealtimeStatusBanner /> : null}
           {children}
         </main>

@@ -88,16 +88,20 @@ export default function LinkupNavigation() {
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            {isAuthenticated ? <ThemeToggle /> : null}
+            {isAuthenticated ? (
+              <ThemeToggle />
+            ) : null}
             <Link
               href="/messages"
-              className="hidden rounded-full border border-slate-300 bg-white p-2.5 text-slate-700 transition hover:bg-slate-50 sm:inline-flex sm:p-3 dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-300 dark:hover:bg-white/10"
+              className="linkup-focus-ring linkup-touch-target hidden rounded-full border border-slate-300 bg-white text-slate-700 transition duration-150 hover:scale-105 active:scale-95 hover:bg-slate-50 sm:inline-flex dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-300 dark:hover:bg-white/10"
+              aria-label="Open chats"
             >
               <MessageCircle className="h-5 w-5" />
             </Link>
             <Link
               href="/notifications"
-              className="relative inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition hover:bg-slate-50 dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-300 dark:hover:bg-white/10"
+              aria-label="Notifications"
+              className="linkup-focus-ring linkup-touch-target relative rounded-full border border-slate-300 bg-white text-slate-700 transition duration-150 hover:scale-105 active:scale-95 hover:bg-slate-50 dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-300 dark:hover:bg-white/10"
             >
               <Bell className="h-5 w-5" />
               {isAuthenticated && unreadCount > 0 ? (
@@ -113,7 +117,7 @@ export default function LinkupNavigation() {
                 onClick={handleLogout}
                 aria-label="Logout"
                 title="Logout"
-                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white/80 text-slate-700 shadow-sm transition hover:bg-slate-100 md:hidden dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-200 dark:hover:bg-slate-900"
+                className="linkup-focus-ring linkup-touch-target inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white/80 text-slate-700 shadow-sm transition duration-150 hover:scale-105 active:scale-95 hover:bg-slate-100 md:hidden dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-200 dark:hover:bg-slate-900"
               >
                 <LogOut className="h-5 w-5" />
               </button>
@@ -171,7 +175,7 @@ export default function LinkupNavigation() {
         </div>
       </header>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/90 px-2 py-1.5 shadow-[0_-10px_60px_rgba(15,23,42,0.12)] backdrop-blur-xl md:hidden dark:border-white/10 dark:bg-brand-dark/95 dark:shadow-[0_-10px_60px_rgba(15,23,42,0.35)]">
+      <nav className="linkup-bottom-nav px-2 py-1.5">
         <div className="mx-auto flex max-w-md items-center justify-between gap-0.5">
           {mobileNavItems.map((item) => {
             const isActive =
@@ -181,7 +185,8 @@ export default function LinkupNavigation() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`inline-flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 py-1.5 text-[10px] font-semibold transition sm:text-[11px] ${
+                aria-label={item.label}
+                className={`linkup-focus-ring inline-flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 py-1.5 text-[10px] font-semibold transition duration-150 active:scale-95 sm:text-[11px] ${
                   isActive
                     ? "bg-brand-primary text-white"
                     : "text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
