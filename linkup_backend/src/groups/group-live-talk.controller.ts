@@ -76,6 +76,24 @@ export class GroupLiveTalkController {
     return this.groupLiveTalkService.joinRoom(groupId, roomId, req.user.id);
   }
 
+  @Post('groups/:groupId/live-talk/:roomId/reconnect')
+  reconnect(
+    @Param('groupId') groupId: string,
+    @Param('roomId') roomId: string,
+    @Req() req: { user: SafeUser },
+  ) {
+    return this.groupLiveTalkService.reconnectRoom(groupId, roomId, req.user.id);
+  }
+
+  @Post('groups/:groupId/live-talk/:roomId/heartbeat')
+  heartbeat(
+    @Param('groupId') groupId: string,
+    @Param('roomId') roomId: string,
+    @Req() req: { user: SafeUser },
+  ) {
+    return this.groupLiveTalkService.heartbeat(groupId, roomId, req.user.id);
+  }
+
   @Post('groups/:groupId/live-talk/:roomId/leave')
   leave(
     @Param('groupId') groupId: string,

@@ -11,8 +11,10 @@ import {
   fetchLiveTalkStatus,
   forceReleaseLiveTalkMic,
   grantLiveTalkTempAdmin,
+  heartbeatLiveTalk,
   joinLiveTalk,
   leaveLiveTalk,
+  reconnectLiveTalk,
   LiveTalkAuthError,
   LiveTalkMessage,
   LiveTalkRoom,
@@ -36,6 +38,11 @@ import {
 import { ltDebug } from "@/src/lib/webrtcConfig";
 import { useSocket } from "@/src/components/SocketProvider";
 import { useOnlinePresence } from "@/src/lib/OnlinePresenceProvider";
+import {
+  clearLiveTalkSession,
+  readLiveTalkSession,
+  saveLiveTalkSession,
+} from "@/src/lib/liveTalkSessionStorage";
 
 export type LiveTalkParticipantView = LiveTalkSocketParticipant & {
   speaking?: boolean;
@@ -43,6 +50,7 @@ export type LiveTalkParticipantView = LiveTalkSocketParticipant & {
   groupRole?: string;
   liveRole?: string;
   isTempAdmin?: boolean;
+  away?: boolean;
 };
 
 export type LiveTalkAudioStatus =
@@ -92,9 +100,12 @@ export function useGroupLiveTalk({
   const [messageDraft, setMessageDraft] = useState("");
   const [micPassedPrompt, setMicPassedPrompt] = useState(false);
   const [hostPanelOpen, setHostPanelOpen] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
 
   const sessionRef = useRef<GroupLiveTalkSession | null>(null);
   const audioElementsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
+  const autoReconnectAttemptedRef = useRef(false);
+  const wasSocketConnectedRef = useRef(false);
 
   const room = activeRoom?.status === "ACTIVE" ? activeRoom : null;
   const isHost = room?.hostId === localUserId;
@@ -260,6 +271,14 @@ export function useGroupLiveTalk({
     );
   }, []);
 
+  const applySelfFromRoom = useCallback((joined: LiveTalkRoom) => {
+    const self = joined.participants.find((p) => p.userId === localUserId);
+    if (self) {
+      setMuted(self.isMuted);
+      setHandRaised(self.handRaised);
+    }
+  }, [localUserId]);
+
   const loadMessages = useCallback(
     async (roomId: string) => {
       try {
@@ -289,6 +308,8 @@ export function useGroupLiveTalk({
       if (payload.groupId === groupId) {
         setInfo("Live Talk ended.");
         onRoomChange(null);
+        clearLiveTalkSession();
+        autoReconnectAttemptedRef.current = false;
         teardownSession();
       }
     };
@@ -301,8 +322,55 @@ export function useGroupLiveTalk({
 
     const onLeft = (payload: { groupId: string; userId: string }) => {
       if (payload.groupId === groupId) {
+        setParticipants((prev) => prev.filter((p) => p.userId !== payload.userId));
         void refreshActiveRoom();
       }
+    };
+
+    const onUserAway = (payload: {
+      groupId: string;
+      userId: string;
+      roomId?: string;
+    }) => {
+      if (payload.groupId !== groupId) {
+        return;
+      }
+      setParticipants((prev) =>
+        prev.map((p) =>
+          p.userId === payload.userId ? { ...p, away: true } : p,
+        ),
+      );
+    };
+
+    const onUserRejoined = (payload: {
+      groupId: string;
+      userId: string;
+      room?: LiveTalkRoom;
+    }) => {
+      if (payload.groupId !== groupId) {
+        return;
+      }
+      if (payload.room) {
+        applyRoomUpdate(payload.room);
+      } else {
+        void refreshActiveRoom();
+      }
+      setParticipants((prev) =>
+        prev.map((p) =>
+          p.userId === payload.userId ? { ...p, away: false } : p,
+        ),
+      );
+    };
+
+    const onRestoreRoles = (payload: {
+      groupId: string;
+      room?: LiveTalkRoom;
+    }) => {
+      if (payload.groupId !== groupId || !payload.room) {
+        return;
+      }
+      applyRoomUpdate(payload.room);
+      applySelfFromRoom(payload.room);
     };
 
     const onSpeaking = (payload: {
@@ -465,6 +533,9 @@ export function useGroupLiveTalk({
     socket.on("live_talk_ended", onEnded);
     socket.on("user_joined_liveTalk", onJoined);
     socket.on("user_left_liveTalk", onLeft);
+    socket.on("live_talk_user_away", onUserAway);
+    socket.on("live_talk_user_rejoined", onUserRejoined);
+    socket.on("live_talk_restore_roles", onRestoreRoles);
     socket.on("user_speaking", onSpeaking);
     socket.on("live_talk_mic_opened", onMicOpened);
     socket.on("live_talk_mic_released", onMicReleased);
@@ -497,6 +568,9 @@ export function useGroupLiveTalk({
       socket.off("live_talk_ended", onEnded);
       socket.off("user_joined_liveTalk", onJoined);
       socket.off("user_left_liveTalk", onLeft);
+      socket.off("live_talk_user_away", onUserAway);
+      socket.off("live_talk_user_rejoined", onUserRejoined);
+      socket.off("live_talk_restore_roles", onRestoreRoles);
       socket.off("user_speaking", onSpeaking);
       socket.off("live_talk_mic_opened", onMicOpened);
       socket.off("live_talk_mic_released", onMicReleased);
@@ -518,6 +592,7 @@ export function useGroupLiveTalk({
     refreshActiveRoom,
     applySpeaking,
     applyRoomUpdate,
+    applySelfFromRoom,
   ]);
 
   useEffect(() => {
@@ -549,20 +624,35 @@ export function useGroupLiveTalk({
   }, [socket, room, groupId]);
 
   const enterAudioSession = useCallback(
-    async (r: LiveTalkRoom) => {
+    async (r: LiveTalkRoom, options?: { reconnect?: boolean }) => {
       if (!socket || !isConnected || !localUserId) {
         setError("Connection lost. Reconnecting...");
         return;
       }
 
+      const isReconnect = options?.reconnect ?? false;
       setLoading(true);
+      if (isReconnect) {
+        setReconnecting(true);
+      }
       setError(null);
+      setInfo(isReconnect ? "Reconnecting to Live Talk…" : null);
 
       try {
-        const joined = await joinLiveTalk(groupId, r.id);
+        const joined = isReconnect
+          ? (await reconnectLiveTalk(groupId, r.id)).room
+          : await joinLiveTalk(groupId, r.id);
         onRoomChange(joined);
         syncParticipantsFromRoom(joined);
+        applySelfFromRoom(joined);
         await loadMessages(r.id);
+
+        saveLiveTalkSession({
+          groupId,
+          roomId: r.id,
+          userId: localUserId,
+          savedAt: Date.now(),
+        });
 
         const session = new GroupLiveTalkSession({
           socket,
@@ -602,7 +692,11 @@ export function useGroupLiveTalk({
             });
           },
           onParticipantLeft: (userId) => {
-            setParticipants((prev) => prev.filter((p) => p.userId !== userId));
+            setParticipants((prev) =>
+              prev.map((p) =>
+                p.userId === userId ? { ...p, away: true } : p,
+              ),
+            );
           },
           onMuteChanged: (userId, isMuted) => {
             setParticipants((prev) =>
@@ -669,14 +763,42 @@ export function useGroupLiveTalk({
         });
 
         sessionRef.current = session;
-        await session.join();
+
+        const onReconnected = (payload: {
+          groupId: string;
+          roomId: string;
+          room?: LiveTalkRoom;
+        }) => {
+          if (payload.groupId !== groupId || payload.roomId !== r.id) {
+            return;
+          }
+          if (payload.room) {
+            applyRoomUpdate(payload.room);
+            applySelfFromRoom(payload.room);
+          }
+          setReconnecting(false);
+          setInfo("Reconnected to Live Talk");
+        };
+
+        socket.once("live_talk_reconnected", onReconnected);
+
+        if (isReconnect) {
+          await session.reconnect();
+        } else {
+          await session.join();
+        }
         setInRoom(true);
-        setMuted(true);
       } catch (err) {
-        handleLiveTalkError(err, "Could not join Live Talk. Please try again.");
+        handleLiveTalkError(
+          err,
+          isReconnect
+            ? "Could not reconnect to Live Talk."
+            : "Could not join Live Talk. Please try again.",
+        );
         teardownSession();
       } finally {
         setLoading(false);
+        setReconnecting(false);
       }
     },
     [
@@ -686,13 +808,73 @@ export function useGroupLiveTalk({
       groupId,
       onRoomChange,
       syncParticipantsFromRoom,
+      applySelfFromRoom,
       loadMessages,
       attachRemoteStream,
       teardownSession,
       refreshActiveRoom,
       handleLiveTalkError,
+      applyRoomUpdate,
     ],
   );
+
+  const shouldAutoReconnect = useCallback(
+    (r: LiveTalkRoom) => {
+      if (!localUserId) {
+        return false;
+      }
+      const stored = readLiveTalkSession(groupId, localUserId);
+      const openParticipant = r.participants.find(
+        (p) => p.userId === localUserId && !p.leftAt,
+      );
+      return Boolean(
+        openParticipant ||
+          (stored?.roomId === r.id && stored.groupId === groupId),
+      );
+    },
+    [groupId, localUserId],
+  );
+
+  useEffect(() => {
+    if (!room || !isConnected || !socket || inRoom || loading) {
+      return;
+    }
+    if (!shouldAutoReconnect(room)) {
+      return;
+    }
+    if (autoReconnectAttemptedRef.current) {
+      return;
+    }
+    autoReconnectAttemptedRef.current = true;
+    void enterAudioSession(room, { reconnect: true });
+  }, [
+    room,
+    isConnected,
+    socket,
+    inRoom,
+    loading,
+    shouldAutoReconnect,
+    enterAudioSession,
+  ]);
+
+  useEffect(() => {
+    if (isConnected && !wasSocketConnectedRef.current && room && !inRoom) {
+      if (shouldAutoReconnect(room)) {
+        void enterAudioSession(room, { reconnect: true });
+      }
+    }
+    wasSocketConnectedRef.current = isConnected;
+  }, [isConnected, room, inRoom, shouldAutoReconnect, enterAudioSession]);
+
+  useEffect(() => {
+    if (!room || !inRoom) {
+      return;
+    }
+    const interval = window.setInterval(() => {
+      void heartbeatLiveTalk(groupId, room.id).catch(() => undefined);
+    }, 25_000);
+    return () => window.clearInterval(interval);
+  }, [room, inRoom, groupId]);
 
   const start = async () => {
     if (!canStart) {
@@ -795,6 +977,8 @@ export function useGroupLiveTalk({
       const updated = await leaveLiveTalk(groupId, room.id);
       sessionRef.current?.leave(true);
       teardownSession();
+      clearLiveTalkSession();
+      autoReconnectAttemptedRef.current = false;
       if (updated) {
         onRoomChange(updated);
       } else {
@@ -816,6 +1000,8 @@ export function useGroupLiveTalk({
     setLoading(true);
     try {
       teardownSession();
+      clearLiveTalkSession();
+      autoReconnectAttemptedRef.current = false;
       if (socket) {
         socket.emit("live_talk_end", { groupId, roomId: room.id });
       }
@@ -1125,6 +1311,7 @@ export function useGroupLiveTalk({
     canHostControls: canUseHostControls,
     canGrantRoomAdmin: canGrantTempAdmin,
     isRoomAdmin,
+    reconnecting,
     raisedHands: room?.raisedHands ?? [],
     micPassedPrompt,
     setMicPassedPrompt,

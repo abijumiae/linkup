@@ -114,7 +114,9 @@ export class ChatGateway
   handleDisconnect(client: AuthedSocket) {
     this.leaveActiveGroupCall(client);
     this.leaveActiveLiveRoom(client);
-    void this.leaveActiveGroupLiveTalk(client);
+    void this.leaveActiveGroupLiveTalk(client, undefined, undefined, {
+      skipDisconnectNotify: true,
+    });
 
     const userId = client.data?.userId;
     if (!userId) {
@@ -826,6 +828,71 @@ export class ChatGateway
     );
   }
 
+  @SubscribeMessage('live_talk_reconnect')
+  async handleLiveTalkReconnect(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: { groupId: string; roomId: string },
+  ) {
+    const userId = client.data?.userId;
+    if (!userId || !payload?.groupId || !payload?.roomId) {
+      client.emit('live_talk_error', {
+        message: 'Invalid Live Talk reconnect payload',
+      });
+      return;
+    }
+
+    try {
+      const restored = await this.groupLiveTalkService.reconnectRoom(
+        payload.groupId,
+        payload.roomId,
+        userId,
+      );
+
+      await this.attachClientToLiveTalkRoom(client, {
+        groupId: payload.groupId,
+        roomId: payload.roomId,
+        isMuted: restored.self.isMuted,
+        handRaised: restored.self.handRaised,
+        announceSocketJoin: restored.restored,
+      });
+
+      client.emit('live_talk_reconnected', {
+        groupId: payload.groupId,
+        roomId: payload.roomId,
+        room: restored.room,
+        self: restored.self,
+        restored: restored.restored,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Could not reconnect Live Talk';
+      client.emit('live_talk_error', { message });
+    }
+  }
+
+  @SubscribeMessage('live_talk_heartbeat')
+  async handleLiveTalkHeartbeat(
+    @ConnectedSocket() client: AuthedSocket,
+    @MessageBody()
+    payload: { groupId: string; roomId: string },
+  ) {
+    const userId = client.data?.userId;
+    if (!userId || !payload?.groupId || !payload?.roomId) {
+      return;
+    }
+
+    try {
+      await this.groupLiveTalkService.heartbeat(
+        payload.groupId,
+        payload.roomId,
+        userId,
+      );
+    } catch {
+      // ignore stale heartbeat
+    }
+  }
+
   @SubscribeMessage('live_talk_join')
   async handleLiveTalkJoin(
     @ConnectedSocket() client: AuthedSocket,
@@ -849,46 +916,23 @@ export class ChatGateway
           userId,
         );
 
-      await this.leaveActiveGroupLiveTalk(client);
+      await this.leaveActiveGroupLiveTalk(client, undefined, undefined, {
+        skipDisconnectNotify: true,
+      });
 
-      const roomKey = getGroupLiveTalkRoom(payload.groupId, payload.roomId);
-      const participant = {
-        userId,
-        name: client.data.userName ?? 'LinkUp user',
-        avatarUrl: client.data.userAvatarUrl ?? null,
+      const participants = await this.attachClientToLiveTalkRoom(client, {
+        groupId: payload.groupId,
+        roomId: payload.roomId,
         isMuted: dbParticipant.isMuted,
         handRaised: dbParticipant.handRaised,
-      };
-
-      client.join(roomKey);
-      client.data.liveTalkRoomKey = roomKey;
-      client.data.liveTalkGroupId = payload.groupId;
-      client.data.liveTalkRoomId = payload.roomId;
-
-      const participants = this.groupLiveTalkManager.join(
-        roomKey,
-        participant,
-      );
+        announceSocketJoin: true,
+      });
 
       client.emit('live_talk_participants', {
         groupId: payload.groupId,
         roomId: payload.roomId,
         participants,
       });
-
-      client.to(roomKey).emit('live_talk_participant_joined', {
-        groupId: payload.groupId,
-        roomId: payload.roomId,
-        participant,
-      });
-
-      const joinedPayload = { userId, groupId: payload.groupId };
-      this.server.to(roomKey).emit('user_joined_liveTalk', joinedPayload);
-      this.realtimeEmitter.emitToRoom(
-        getGroupRoom(payload.groupId),
-        'user_joined_liveTalk',
-        joinedPayload,
-      );
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Could not join Live Talk';
@@ -906,7 +950,12 @@ export class ChatGateway
     }
     const roomKey = getGroupLiveTalkRoom(payload.groupId, payload.roomId);
     if (client.data.liveTalkRoomKey === roomKey) {
-      void this.leaveActiveGroupLiveTalk(client, payload.groupId, payload.roomId);
+      void this.leaveActiveGroupLiveTalk(
+        client,
+        payload.groupId,
+        payload.roomId,
+        { explicitLeave: true },
+      );
     }
   }
 
@@ -1554,10 +1603,61 @@ export class ChatGateway
     });
   }
 
+  private async attachClientToLiveTalkRoom(
+    client: AuthedSocket,
+    payload: {
+      groupId: string;
+      roomId: string;
+      isMuted: boolean;
+      handRaised: boolean;
+      announceSocketJoin: boolean;
+    },
+  ) {
+    const userId = client.data?.userId;
+    if (!userId) {
+      return [];
+    }
+
+    const roomKey = getGroupLiveTalkRoom(payload.groupId, payload.roomId);
+    const participant = {
+      userId,
+      name: client.data.userName ?? 'LinkUp user',
+      avatarUrl: client.data.userAvatarUrl ?? null,
+      isMuted: payload.isMuted,
+      handRaised: payload.handRaised,
+    };
+
+    client.join(roomKey);
+    client.data.liveTalkRoomKey = roomKey;
+    client.data.liveTalkGroupId = payload.groupId;
+    client.data.liveTalkRoomId = payload.roomId;
+
+    const participants = this.groupLiveTalkManager.join(roomKey, participant);
+
+    if (payload.announceSocketJoin) {
+      client.to(roomKey).emit('live_talk_participant_joined', {
+        groupId: payload.groupId,
+        roomId: payload.roomId,
+        participant,
+      });
+
+      const joinedPayload = { userId, groupId: payload.groupId };
+      this.server.to(roomKey).emit('user_joined_liveTalk', joinedPayload);
+      this.realtimeEmitter.emitToRoom(
+        getGroupRoom(payload.groupId),
+        'user_joined_liveTalk',
+        joinedPayload,
+      );
+    }
+
+    return participants;
+  }
+
   private async leaveActiveGroupLiveTalk(
     client: AuthedSocket,
     groupId?: string,
     roomId?: string,
+    options?: { skipDisconnectNotify?: boolean; explicitLeave?: boolean },
   ) {
     const roomKey =
       client.data.liveTalkRoomKey ??
@@ -1590,11 +1690,19 @@ export class ChatGateway
       return;
     }
 
-    this.groupLiveTalkService.scheduleParticipantLeave(
-      resolvedGroupId,
-      resolvedRoomId,
-      userId,
-    );
+    if (options?.explicitLeave) {
+      await this.groupLiveTalkService.leaveRoom(
+        resolvedGroupId,
+        resolvedRoomId,
+        userId,
+      );
+    } else if (!options?.skipDisconnectNotify) {
+      this.groupLiveTalkService.notifyParticipantDisconnected(
+        resolvedGroupId,
+        resolvedRoomId,
+        userId,
+      );
+    }
 
     if (this.groupLiveTalkManager.isRoomActive(roomKey)) {
       this.server.to(roomKey).emit('live_talk_participant_left', {
@@ -1602,13 +1710,6 @@ export class ChatGateway
         roomId: resolvedRoomId,
         userId,
       });
-      const leftPayload = { userId, groupId: resolvedGroupId };
-      this.server.to(roomKey).emit('user_left_liveTalk', leftPayload);
-      this.realtimeEmitter.emitToRoom(
-        getGroupRoom(resolvedGroupId),
-        'user_left_liveTalk',
-        leftPayload,
-      );
       return;
     }
 

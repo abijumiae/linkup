@@ -279,6 +279,7 @@ model GroupLiveParticipant {
   handRaisedAt        DateTime?
   joinedAt            DateTime       @default(now())
   leftAt              DateTime?
+  lastSeenAt          DateTime       @default(now())
 
   room GroupLiveRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user User          @relation(fields: [userId], references: [id], onDelete: Cascade)

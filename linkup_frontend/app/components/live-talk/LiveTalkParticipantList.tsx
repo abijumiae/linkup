@@ -196,6 +196,11 @@ export default function LiveTalkParticipantList({
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
                   <OnlineStatusBadge userId={p.userId} showLabel size="sm" />
+                  {p.away ? (
+                    <span className="text-xs text-amber-600 dark:text-amber-400">
+                      Reconnecting…
+                    </span>
+                  ) : null}
                   <p className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                     {holdsMic && !p.isMuted ? (
                       <span className="font-medium text-brand-secondary">

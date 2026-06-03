@@ -79,6 +79,22 @@ export type LiveTalkStatusParticipantDto = LiveTalkParticipantDto & {
   inCall: boolean;
 };
 
+export type LiveTalkViewerSessionDto = {
+  isParticipant: boolean;
+  shouldAutoReconnect: boolean;
+  isHost: boolean;
+  isTempAdmin: boolean;
+  liveRole: GroupLiveRole;
+  isMuted: boolean;
+  handRaised: boolean;
+};
+
+export type LiveTalkReconnectDto = {
+  room: LiveTalkRoomDto;
+  self: LiveTalkParticipantDto;
+  restored: boolean;
+};
+
 export type LiveTalkStatusDto = {
   active: boolean;
   roomId: string | null;
@@ -86,12 +102,13 @@ export type LiveTalkStatusDto = {
   participants: LiveTalkStatusParticipantDto[];
   raisedHands: RaisedHandQueueDto[];
   speakingUserIds: string[];
+  mySession: LiveTalkViewerSessionDto | null;
 };
 
 @Injectable()
 export class GroupLiveTalkService {
-  /** Grace period before marking a disconnected user as left (rejoin protection). */
-  private static readonly DISCONNECT_LEAVE_MS = 30_000;
+  /** Grace period before marking a disconnected user as left (refresh/rejoin protection). */
+  private static readonly DISCONNECT_LEAVE_MS = 90_000;
 
   private readonly pendingLeaveTimers = new Map<string, NodeJS.Timeout>();
 
@@ -155,6 +172,41 @@ export class GroupLiveTalkService {
     this.realtimeEmitter.emitToRoom(
       getGroupRoom(groupId),
       'user_left_liveTalk',
+      payload,
+    );
+  }
+
+  private emitLiveTalkUserAway(
+    groupId: string,
+    roomId: string,
+    userId: string,
+  ) {
+    const payload = {
+      userId,
+      groupId,
+      roomId,
+      reconnectGraceMs: GroupLiveTalkService.DISCONNECT_LEAVE_MS,
+    };
+    this.realtimeEmitter.emitToRoom(getGroupRoom(groupId), 'live_talk_user_away', payload);
+    this.emitLiveTalkRoomEvent(groupId, roomId, 'live_talk_user_away', payload);
+  }
+
+  private emitLiveTalkUserRejoined(
+    groupId: string,
+    roomId: string,
+    userId: string,
+    room: LiveTalkRoomDto,
+  ) {
+    const payload = { userId, groupId, roomId, room };
+    this.realtimeEmitter.emitToRoom(
+      getGroupRoom(groupId),
+      'live_talk_user_rejoined',
+      payload,
+    );
+    this.emitLiveTalkRoomEvent(
+      groupId,
+      roomId,
+      'live_talk_user_rejoined',
       payload,
     );
   }
@@ -966,6 +1018,7 @@ export class GroupLiveTalkService {
         participants: [],
         raisedHands: [],
         speakingUserIds: [],
+        mySession: null,
       };
     }
 
@@ -985,6 +1038,8 @@ export class GroupLiveTalkService {
       }),
     );
 
+    const selfRow = mapped.participants.find((p) => p.userId === userId);
+
     return {
       active: true,
       roomId: room.id,
@@ -992,6 +1047,17 @@ export class GroupLiveTalkService {
       participants,
       raisedHands: mapped.raisedHands,
       speakingUserIds,
+      mySession: selfRow
+        ? {
+            isParticipant: true,
+            shouldAutoReconnect: true,
+            isHost: room.hostId === userId,
+            isTempAdmin: selfRow.isTempAdmin,
+            liveRole: selfRow.liveRole,
+            isMuted: selfRow.isMuted,
+            handRaised: selfRow.handRaised,
+          }
+        : null,
     };
   }
 
@@ -1065,33 +1131,93 @@ export class GroupLiveTalkService {
     roomId: string,
     userId: string,
   ): Promise<LiveTalkRoomDto> {
+    const { room } = await this.reconnectRoom(groupId, roomId, userId, {
+      announceJoin: true,
+    });
+    return room;
+  }
+
+  async reconnectRoom(
+    groupId: string,
+    roomId: string,
+    userId: string,
+    options?: { announceJoin?: boolean },
+  ): Promise<LiveTalkReconnectDto> {
     await this.assertGroupMember(groupId, userId);
     this.cancelScheduledLeave(roomId, userId);
-    const room = await this.getActiveRoomRecord(groupId, roomId);
-    const wasInRoom = await this.prisma.groupLiveParticipant.findFirst({
-      where: { roomId: room.id, userId, leftAt: null },
-    });
-    await this.addParticipant(room.id, userId);
 
-    if (!wasInRoom) {
+    const roomRecord = await this.getActiveRoomRecord(groupId, roomId);
+    const wasInRoom = await this.prisma.groupLiveParticipant.findFirst({
+      where: { roomId: roomRecord.id, userId, leftAt: null },
+    });
+
+    await this.addParticipant(roomRecord.id, userId);
+    await this.touchParticipant(roomRecord.id, userId);
+
+    const refreshed = await this.prisma.groupLiveRoom.findUniqueOrThrow({
+      where: { id: roomRecord.id },
+      include: this.roomInclude(),
+    });
+
+    const mapped = await this.mapRoom(refreshed);
+    const self =
+      mapped.participants.find((p) => p.userId === userId) ??
+      (() => {
+        throw new NotFoundException('Could not restore Live Talk participant');
+      })();
+
+    const restored = Boolean(wasInRoom);
+
+    if (!wasInRoom && options?.announceJoin !== false) {
       const member = await this.prisma.user.findUnique({
         where: { id: userId },
         select: { name: true },
       });
       await this.postSystemMessage(
-        room.id,
+        roomRecord.id,
         groupId,
         `${member?.name ?? 'Someone'} joined Live Talk`,
       );
       this.emitLiveTalkUserJoined(groupId, userId);
+    } else if (wasInRoom) {
+      this.emitLiveTalkUserRejoined(groupId, roomId, userId, mapped);
     }
 
-    const refreshed = await this.prisma.groupLiveRoom.findUniqueOrThrow({
-      where: { id: room.id },
-      include: this.roomInclude(),
+    const rolesPayload = {
+      groupId,
+      roomId,
+      room: mapped,
+      self,
+      hostId: mapped.hostId,
+    };
+
+    this.emitLiveTalkRoomEvent(
+      groupId,
+      roomId,
+      'live_talk_restore_roles',
+      rolesPayload,
+    );
+
+    return { room: mapped, self, restored };
+  }
+
+  async heartbeat(
+    groupId: string,
+    roomId: string,
+    userId: string,
+  ): Promise<{ ok: true }> {
+    await this.assertGroupMember(groupId, userId);
+    const participant = await this.prisma.groupLiveParticipant.findFirst({
+      where: { roomId, userId, leftAt: null },
     });
 
-    return this.mapRoom(refreshed);
+    if (!participant) {
+      throw new ForbiddenException('Not an active Live Talk participant');
+    }
+
+    this.cancelScheduledLeave(roomId, userId);
+    await this.touchParticipant(roomId, userId);
+    return { ok: true };
   }
 
   async leaveActiveRoom(
@@ -1120,11 +1246,49 @@ export class GroupLiveTalkService {
     this.cancelScheduledLeave(roomId, userId);
     const timer = setTimeout(() => {
       this.pendingLeaveTimers.delete(key);
-      void this.leaveRoom(groupId, roomId, userId).catch(() => {
+      void this.finalizeParticipantLeave(groupId, roomId, userId).catch(() => {
         /* room may already be ended */
       });
     }, delayMs);
     this.pendingLeaveTimers.set(key, timer);
+  }
+
+  async finalizeParticipantLeave(
+    groupId: string,
+    roomId: string,
+    userId: string,
+  ) {
+    const roomKey = getGroupLiveTalkRoom(groupId, roomId);
+    if (this.liveTalkManager.hasUser(roomKey, userId)) {
+      return;
+    }
+
+    const open = await this.prisma.groupLiveParticipant.findFirst({
+      where: { roomId, userId, leftAt: null },
+      select: { lastSeenAt: true },
+    });
+
+    if (!open) {
+      return;
+    }
+
+    const staleMs = Date.now() - open.lastSeenAt.getTime();
+    if (staleMs < GroupLiveTalkService.DISCONNECT_LEAVE_MS - 2000) {
+      this.scheduleParticipantLeave(groupId, roomId, userId);
+      return;
+    }
+
+    await this.leaveRoom(groupId, roomId, userId);
+  }
+
+  notifyParticipantDisconnected(
+    groupId: string,
+    roomId: string,
+    userId: string,
+  ) {
+    void this.touchParticipant(roomId, userId).catch(() => undefined);
+    this.emitLiveTalkUserAway(groupId, roomId, userId);
+    this.scheduleParticipantLeave(groupId, roomId, userId);
   }
 
   cancelScheduledLeave(roomId: string, userId: string) {
@@ -1483,11 +1647,10 @@ export class GroupLiveTalkService {
     });
 
     for (const row of active) {
-      this.scheduleParticipantLeave(
+      this.notifyParticipantDisconnected(
         row.room.groupId,
         row.room.id,
         userId,
-        GroupLiveTalkService.DISCONNECT_LEAVE_MS,
       );
     }
   }
@@ -1508,13 +1671,23 @@ export class GroupLiveTalkService {
     return room;
   }
 
+  private async touchParticipant(roomId: string, userId: string) {
+    await this.prisma.groupLiveParticipant.updateMany({
+      where: { roomId, userId, leftAt: null },
+      data: { lastSeenAt: new Date() },
+    });
+  }
+
   private async addParticipant(roomId: string, userId: string) {
     const open = await this.prisma.groupLiveParticipant.findFirst({
       where: { roomId, userId, leftAt: null },
     });
 
     if (open) {
-      return open;
+      return this.prisma.groupLiveParticipant.update({
+        where: { id: open.id },
+        data: { lastSeenAt: new Date() },
+      });
     }
 
     const previous = await this.prisma.groupLiveParticipant.findFirst({
@@ -1533,16 +1706,19 @@ export class GroupLiveTalkService {
         ? GroupLiveRole.TEMP_ADMIN
         : room?.activeMicUserId === userId
           ? GroupLiveRole.SPEAKER
-          : GroupLiveRole.LISTENER;
+          : previous.liveRole === GroupLiveRole.SPEAKER &&
+              room?.activeMicUserId === userId
+            ? GroupLiveRole.SPEAKER
+            : GroupLiveRole.LISTENER;
 
       return this.prisma.groupLiveParticipant.update({
         where: { id: previous.id },
         data: {
           leftAt: null,
-          joinedAt: new Date(),
-          isMuted: true,
-          handRaised: false,
-          handRaisedAt: null,
+          lastSeenAt: new Date(),
+          isMuted: previous.isMuted,
+          handRaised: previous.handRaised,
+          handRaisedAt: previous.handRaisedAt,
           liveRole,
           isTempAdmin: keepTempAdmin,
           ...(keepTempAdmin

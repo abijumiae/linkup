@@ -114,6 +114,10 @@ export class GroupLiveTalkManager {
     return (this.rooms.get(roomKey)?.size ?? 0) > 0;
   }
 
+  hasUser(roomKey: string, userId: string): boolean {
+    return this.rooms.get(roomKey)?.has(userId) ?? false;
+  }
+
   clearRoom(roomKey: string): void {
     this.rooms.delete(roomKey);
     this.speakingByRoom.delete(roomKey);

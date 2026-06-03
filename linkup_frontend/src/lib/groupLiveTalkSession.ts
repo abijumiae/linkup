@@ -73,6 +73,24 @@ export class GroupLiveTalkSession {
     });
   }
 
+  async reconnect() {
+    if (!isWebRTCSupported()) {
+      this.options.onError("Live Talk is not supported in this browser.");
+      this.leave(false);
+      return;
+    }
+
+    this.bindSocketListeners();
+    this.options.socket.emit("live_talk_reconnect", {
+      groupId: this.options.groupId,
+      roomId: this.options.roomId,
+    });
+    ltDebug("live_talk_reconnect emitted", {
+      groupId: this.options.groupId,
+      roomId: this.options.roomId,
+    });
+  }
+
   /**
    * Request microphone only after user taps Open Mic (never on page load).
    */

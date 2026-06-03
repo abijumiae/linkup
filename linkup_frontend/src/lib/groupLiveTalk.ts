@@ -78,6 +78,22 @@ export type LiveTalkStatusParticipant = LiveTalkParticipant & {
   inCall: boolean;
 };
 
+export type LiveTalkViewerSession = {
+  isParticipant: boolean;
+  shouldAutoReconnect: boolean;
+  isHost: boolean;
+  isTempAdmin: boolean;
+  liveRole?: LiveTalkSessionRole;
+  isMuted: boolean;
+  handRaised: boolean;
+};
+
+export type LiveTalkReconnectResult = {
+  room: LiveTalkRoom;
+  self: LiveTalkParticipant;
+  restored: boolean;
+};
+
 export type LiveTalkStatus = {
   active: boolean;
   roomId: string | null;
@@ -85,6 +101,7 @@ export type LiveTalkStatus = {
   participants: LiveTalkStatusParticipant[];
   raisedHands: RaisedHandQueueItem[];
   speakingUserIds: string[];
+  mySession?: LiveTalkViewerSession | null;
 };
 
 export class LiveTalkAuthError extends Error {
@@ -299,6 +316,36 @@ export async function joinLiveTalk(
       method: "POST",
       headers: authHeaders(),
     }),
+  );
+}
+
+export async function reconnectLiveTalk(
+  groupId: string,
+  roomId: string,
+): Promise<LiveTalkReconnectResult> {
+  return withAuth(() =>
+    apiRequest<LiveTalkReconnectResult>(
+      `/groups/${groupId}/live-talk/${roomId}/reconnect`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+      },
+    ),
+  );
+}
+
+export async function heartbeatLiveTalk(
+  groupId: string,
+  roomId: string,
+): Promise<{ ok: true }> {
+  return withAuth(() =>
+    apiRequest<{ ok: true }>(
+      `/groups/${groupId}/live-talk/${roomId}/heartbeat`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+      },
+    ),
   );
 }
 

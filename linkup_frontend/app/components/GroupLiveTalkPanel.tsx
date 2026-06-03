@@ -50,7 +50,7 @@ export default function GroupLiveTalkPanel({
   const canEnd = canEndRoom || talk.isHost;
   const showHostControls = talk.canHostControls;
   const [endConfirmOpen, setEndConfirmOpen] = useState(false);
-  const showRoom = talk.inRoom && talk.room;
+  const showRoom = Boolean(talk.room && (talk.inRoom || talk.reconnecting));
 
   function handleConfirmEnd() {
     setEndConfirmOpen(false);
@@ -117,20 +117,38 @@ export default function GroupLiveTalkPanel({
             ) : !talk.inRoom ? (
               <>
                 <p className="text-sm text-slate-700 dark:text-slate-300">
-                  Live in {groupName} ·{" "}
-                  <span className="font-medium">{talk.participantCount}</span>{" "}
-                  in room
+                  {talk.reconnecting
+                    ? "Reconnecting to your Live Talk session…"
+                    : (
+                        <>
+                          Live in {groupName} ·{" "}
+                          <span className="font-medium">
+                            {talk.participantCount}
+                          </span>{" "}
+                          in room
+                        </>
+                      )}
                 </p>
-                <button
-                  type="button"
-                  disabled={talk.loading || !talk.isConnected}
-                  onClick={() => void talk.join()}
-                  aria-label="Join Live Talk"
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg disabled:opacity-50"
-                >
-                  <Radio className="h-5 w-5" />
-                  {talk.loading ? "Joining…" : "Join"}
-                </button>
+                {!talk.reconnecting ? (
+                  <button
+                    type="button"
+                    disabled={talk.loading || !talk.isConnected}
+                    onClick={() => void talk.join()}
+                    aria-label="Join Live Talk"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-white shadow-lg disabled:opacity-50"
+                  >
+                    <Radio className="h-5 w-5" />
+                    {talk.loading ? "Joining…" : "Join"}
+                  </button>
+                ) : (
+                  <div
+                    className="inline-flex min-h-11 items-center gap-2 rounded-full border border-brand-primary/30 px-4 py-2 text-sm text-brand-primary dark:text-brand-secondary"
+                    role="status"
+                  >
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    Reconnecting…
+                  </div>
+                )}
               </>
             ) : (
               <button
@@ -157,6 +175,20 @@ export default function GroupLiveTalkPanel({
           role="dialog"
           aria-label="Live Talk room"
         >
+          {talk.reconnecting ? (
+            <div
+              className="absolute inset-0 z-[80] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm"
+              role="status"
+              aria-live="polite"
+            >
+              <div className="flex flex-col items-center gap-3 rounded-2xl bg-white px-6 py-5 shadow-xl dark:bg-slate-900">
+                <div className="h-10 w-10 animate-spin rounded-full border-2 border-brand-primary border-t-transparent" />
+                <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                  Reconnecting to Live Talk…
+                </p>
+              </div>
+            </div>
+          ) : null}
           <header
             className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200/70 bg-white/90 px-3 py-2 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/90 sm:gap-3 sm:px-4 sm:py-2.5"
             style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top, 0px))" }}
