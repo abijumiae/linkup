@@ -1,6 +1,7 @@
 "use client";
 
 import { Socket } from "socket.io-client";
+import { buildIceServers } from "./webrtcConfig";
 
 export type CallType = "audio" | "video";
 
@@ -18,10 +19,7 @@ export interface CallSessionOptions {
   onError: (message: string) => void;
 }
 
-const ICE_SERVERS: RTCIceServer[] = [
-  { urls: "stun:stun.l.google.com:19302" },
-  { urls: "stun:stun1.l.google.com:19302" },
-];
+const ICE_SERVERS: RTCIceServer[] = buildIceServers();
 
 export function isWebRTCSupported(): boolean {
   if (typeof window === "undefined") {

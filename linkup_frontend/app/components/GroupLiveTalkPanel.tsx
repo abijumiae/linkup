@@ -201,6 +201,19 @@ export default function GroupLiveTalkPanel({
 
           {talk.needsAudioUnlock ? (
             <LiveTalkAudioUnlockBanner onUnlock={() => void talk.unlockAudio()} />
+          ) : talk.inRoom &&
+            talk.audioStatus === "connecting" &&
+            !talk.holdingMic ? (
+            <p
+              className="mx-3 mt-1.5 text-center text-xs font-medium text-brand-primary dark:text-brand-secondary"
+              aria-live="polite"
+            >
+              Connecting audio…
+            </p>
+          ) : talk.inRoom && talk.audioStatus === "connected" && !talk.holdingMic ? (
+            <p className="mx-3 mt-1 text-center text-[11px] text-emerald-700 dark:text-emerald-300">
+              Listening
+            </p>
           ) : null}
 
           {talk.micPassedPrompt ? (

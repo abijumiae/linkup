@@ -30,6 +30,7 @@ import {
   GroupLiveTalkSession,
   LiveTalkSocketParticipant,
 } from "@/src/lib/groupLiveTalkSession";
+import { ltDebug } from "@/src/lib/webrtcConfig";
 import { useSocket } from "@/src/components/SocketProvider";
 import { useOnlinePresence } from "@/src/lib/OnlinePresenceProvider";
 
@@ -38,6 +39,13 @@ export type LiveTalkParticipantView = LiveTalkSocketParticipant & {
   isHost?: boolean;
   groupRole?: string;
 };
+
+export type LiveTalkAudioStatus =
+  | "idle"
+  | "connecting"
+  | "connected"
+  | "needs_unlock"
+  | "failed";
 
 export type UseGroupLiveTalkOptions = {
   groupId: string;
@@ -73,6 +81,7 @@ export function useGroupLiveTalk({
   );
   const [messages, setMessages] = useState<LiveTalkMessage[]>([]);
   const [needsAudioUnlock, setNeedsAudioUnlock] = useState(false);
+  const [audioStatus, setAudioStatus] = useState<LiveTalkAudioStatus>("idle");
   const [messageDraft, setMessageDraft] = useState("");
   const [micPassedPrompt, setMicPassedPrompt] = useState(false);
   const [hostPanelOpen, setHostPanelOpen] = useState(false);
@@ -145,10 +154,13 @@ export function useGroupLiveTalk({
     setMuted(false);
     setHandRaised(false);
     setMuted(true);
+    setAudioStatus("idle");
+    setNeedsAudioUnlock(false);
   }, []);
 
   const attachRemoteStream = useCallback(
     async (userId: string, stream: MediaStream) => {
+      setAudioStatus("connecting");
       let audio = audioElementsRef.current.get(userId);
       if (!audio) {
         audio = document.createElement("audio");
@@ -157,11 +169,23 @@ export function useGroupLiveTalk({
         audioElementsRef.current.set(userId, audio);
       }
       audio.srcObject = stream;
+      const tracks = stream.getAudioTracks();
+      ltDebug("remote stream attached", {
+        userId,
+        tracks: tracks.length,
+        enabled: tracks[0]?.enabled ?? false,
+      });
       try {
         await audio.play();
         setNeedsAudioUnlock(false);
+        setAudioStatus("connected");
+        setInfo((prev) =>
+          prev?.includes("Tap to enable audio") ? "Listening to room" : prev,
+        );
       } catch {
         setNeedsAudioUnlock(true);
+        setAudioStatus("needs_unlock");
+        setInfo("Tap to enable audio");
       }
     },
     [],
@@ -263,6 +287,7 @@ export function useGroupLiveTalk({
     const onMicOpened = (payload: {
       groupId: string;
       roomId: string;
+      userId?: string;
       room?: LiveTalkRoom;
     }) => {
       if (payload.groupId !== groupId) {
@@ -270,14 +295,22 @@ export function useGroupLiveTalk({
       }
       if (payload.room) {
         onRoomChange(payload.room);
+        sessionRef.current?.setActiveMicHolder(
+          payload.room.activeMicUserId ?? payload.userId ?? null,
+        );
       } else {
         void refreshActiveRoom();
       }
-      if (payload.room?.activeMicUserId === localUserId) {
+      const speakerId =
+        payload.room?.activeMicUserId ?? payload.userId ?? null;
+      if (speakerId === localUserId) {
         setInfo("You are speaking");
-      } else if (payload.room?.activeMicUser) {
+      } else if (speakerId) {
+        setAudioStatus("connecting");
         setInfo(
-          `Mic in use by ${payload.room.activeMicUser.name}`,
+          payload.room?.activeMicUser
+            ? `Connecting audio — ${payload.room.activeMicUser.name} is speaking`
+            : "Connecting audio…",
         );
       }
     };
@@ -459,7 +492,12 @@ export function useGroupLiveTalk({
           onRemoteRemoved: (userId) => {
             audioElementsRef.current.get(userId)?.pause();
             audioElementsRef.current.delete(userId);
-            setParticipants((prev) => prev.filter((p) => p.userId !== userId));
+            if (audioElementsRef.current.size === 0) {
+              setAudioStatus("idle");
+            }
+          },
+          onAudioConnecting: () => {
+            setAudioStatus("connecting");
           },
           onParticipants: (list) => {
             setParticipants(
@@ -605,17 +643,33 @@ export function useGroupLiveTalk({
     setLoading(true);
     setError(null);
     try {
+      await sessionRef.current?.openMicAudio();
       const updated = await openLiveTalkMic(groupId, room.id);
       onRoomChange(updated);
-      await sessionRef.current?.openMicAudio();
+      sessionRef.current?.setActiveMicHolder(
+        updated.activeMicUserId ?? localUserId,
+      );
       setMuted(false);
       setHandRaised(false);
       setInfo("You are speaking");
+      ltDebug("open mic complete", {
+        tracks: sessionRef.current?.getLocalStream()?.getAudioTracks().length,
+      });
     } catch (err) {
+      sessionRef.current?.releaseMicAudio();
+      const message =
+        err instanceof Error ? err.message : "Could not open mic.";
       if (err instanceof ApiError && err.status === 409) {
         setError(err.message || "Mic is already in use.");
+      } else if (
+        message.includes("permission") ||
+        message.includes("microphone") ||
+        message.includes("browser") ||
+        message.includes("HTTPS")
+      ) {
+        setError(message);
       } else {
-        handleLiveTalkError(err, "Could not open mic.");
+        handleLiveTalkError(err, message);
       }
     } finally {
       setLoading(false);
@@ -868,14 +922,23 @@ export function useGroupLiveTalk({
   };
 
   const unlockAudio = async () => {
+    let played = false;
     for (const audio of audioElementsRef.current.values()) {
       try {
         await audio.play();
+        played = true;
       } catch {
         // continue
       }
     }
-    setNeedsAudioUnlock(false);
+    if (played) {
+      setNeedsAudioUnlock(false);
+      setAudioStatus("connected");
+      setInfo("Listening to room");
+    } else {
+      setAudioStatus("failed");
+      setError("Could not start audio playback. Check device volume.");
+    }
   };
 
   const participantCount =
@@ -899,6 +962,7 @@ export function useGroupLiveTalk({
     participants,
     messages,
     needsAudioUnlock,
+    audioStatus,
     messageDraft,
     setMessageDraft,
     isHost,
