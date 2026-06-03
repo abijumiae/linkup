@@ -1,12 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
+import UserAvatar from "@/app/components/UserAvatar";
 import { User } from "@/src/lib/auth";
 import { formatAccountType, formatLanguageLabel } from "@/src/lib/profileOptions";
-import {
-  getProfileInitials,
-  resolveProfileImageUrl,
-} from "@/src/lib/profileMedia";
+import { resolveProfileImageUrl } from "@/src/lib/profileMedia";
 
 type LinkUpCardPreviewProps = {
   user: Pick<
@@ -28,9 +27,12 @@ export default function LinkUpCardPreview({
   compact = false,
   showBadge = true,
 }: LinkUpCardPreviewProps) {
-  const avatarSrc = resolveProfileImageUrl(user.avatarUrl);
   const coverSrc = resolveProfileImageUrl(user.coverUrl);
-  const initials = getProfileInitials(user);
+  const [coverFailed, setCoverFailed] = useState(false);
+
+  useEffect(() => {
+    setCoverFailed(false);
+  }, [coverSrc]);
 
   return (
     <div
@@ -43,12 +45,14 @@ export default function LinkUpCardPreview({
           compact ? "h-24" : "h-32 sm:h-36"
         } overflow-hidden bg-gradient-to-br from-brand-primary via-violet-600 to-brand-secondary`}
       >
-        {coverSrc ? (
+        {coverSrc && !coverFailed ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={coverSrc}
             alt={`${user.name} Pulse Cover`}
             loading="lazy"
+            decoding="async"
+            onError={() => setCoverFailed(true)}
             className="absolute inset-0 h-full w-full object-cover"
           />
         ) : (
@@ -78,25 +82,19 @@ export default function LinkUpCardPreview({
       <div className={`relative px-4 ${compact ? "pb-4 pt-0" : "pb-5 pt-0"}`}>
         <div className="-mt-8 flex items-end gap-3">
           <div className="relative shrink-0 rounded-2xl bg-gradient-to-tr from-brand-primary via-violet-500 to-brand-secondary p-[3px] shadow-lg shadow-brand-primary/25">
-            {avatarSrc ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={avatarSrc}
-                alt={`${user.name} LinkUp Avatar`}
-                loading="lazy"
-                className={`${
-                  compact ? "h-14 w-14" : "h-16 w-16 sm:h-[4.5rem] sm:w-[4.5rem]"
-                } rounded-[14px] border-2 border-white object-cover dark:border-brand-dark`}
-              />
-            ) : (
-              <div
-                className={`flex ${
-                  compact ? "h-14 w-14" : "h-16 w-16 sm:h-[4.5rem] sm:w-[4.5rem]"
-                } items-center justify-center rounded-[14px] border-2 border-white bg-gradient-to-br from-brand-primary to-brand-secondary text-lg font-semibold text-white dark:border-brand-dark`}
-              >
-                {initials}
-              </div>
-            )}
+            <UserAvatar
+              src={user.avatarUrl}
+              name={user.name}
+              username={user.username}
+              size={compact ? "xl" : "2xl"}
+              shape="squircle"
+              className={
+                compact
+                  ? "h-14 w-14 border-2 border-white dark:border-brand-dark"
+                  : "h-16 w-16 border-2 border-white dark:border-brand-dark sm:h-[4.5rem] sm:w-[4.5rem]"
+              }
+              alt={`${user.name} LinkUp Avatar`}
+            />
             <span
               className="absolute bottom-0.5 right-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-400 dark:border-brand-dark"
               aria-hidden

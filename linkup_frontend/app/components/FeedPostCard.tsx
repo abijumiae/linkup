@@ -16,7 +16,8 @@ import {
 } from "lucide-react";
 import { ApiError, resolveMediaUrl } from "@/src/lib/api";
 import { Role } from "@/src/lib/auth";
-import { resolveProfileImageUrl } from "@/src/lib/profileMedia";
+import UserAvatar from "./UserAvatar";
+import { PostMediaImage, PostMediaVideo } from "./PostMedia";
 import {
   blockUser,
   fetchBlockStatus,
@@ -43,14 +44,6 @@ import OnlineStatusDot from "./OnlineStatusDot";
 
 function isModeratorRole(role: Role | null | undefined): boolean {
   return role === "ADMIN" || role === "MODERATOR";
-}
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  }
-  return (name[0] ?? "U").toUpperCase();
 }
 
 type FeedPostCardProps = {
@@ -127,7 +120,6 @@ function FeedPostCard({
 
   const imageSrc = resolveMediaUrl(localPost.imageUrl);
   const videoSrc = resolveMediaUrl(localPost.videoUrl);
-  const avatarSrc = resolveProfileImageUrl(localPost.author.avatarUrl);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -285,20 +277,13 @@ function FeedPostCard({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
             <div className="relative shrink-0">
-              {avatarSrc ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={avatarSrc}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  className="h-12 w-12 shrink-0 rounded-full object-cover ring-2 ring-brand-primary/20"
-                />
-              ) : (
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white shadow-md shadow-brand-primary/20">
-                  {getInitials(localPost.author.name)}
-                </div>
-              )}
+              <UserAvatar
+                src={localPost.author.avatarUrl}
+                name={localPost.author.name}
+                username={localPost.author.username}
+                size="lg"
+                ringClassName="ring-2 ring-brand-primary/20"
+              />
               {localPost.authorId !== currentUserId ? (
                 <OnlineStatusDot userId={localPost.authorId} />
               ) : null}
@@ -414,27 +399,20 @@ function FeedPostCard({
         ) : null}
 
         {imageSrc ? (
-          <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+          <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-black/5 dark:border-slate-800 dark:bg-black/30">
+            <PostMediaImage
               src={imageSrc}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              className="max-h-[28rem] w-full object-contain bg-slate-100 dark:bg-brand-dark/60"
+              className="bg-slate-100 dark:bg-brand-dark/60"
             />
           </div>
         ) : null}
 
         {videoSrc ? (
-          <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10">
-            <video
-              ref={videoRef}
+          <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-black/5 dark:border-slate-800 dark:bg-black/30">
+            <PostMediaVideo
+              videoRef={videoRef}
               src={videoSrc}
-              controls
-              preload="metadata"
-              playsInline
-              className="max-h-[28rem] w-full bg-slate-100 dark:bg-brand-dark/60"
+              className="bg-slate-100 dark:bg-brand-dark/60"
             />
           </div>
         ) : null}

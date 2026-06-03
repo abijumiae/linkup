@@ -199,6 +199,7 @@ export default function HomeDashboardPage() {
       id: string;
       name: string;
       username: string;
+      avatarUrl?: string | null;
       subtitle?: string;
       isFollowingAuthor?: boolean;
     }>
@@ -292,6 +293,7 @@ export default function HomeDashboardPage() {
             id: person.id,
             name: person.name,
             username: person.username,
+            avatarUrl: person.avatarUrl,
             subtitle: person.bio?.slice(0, 60) || person.country || "Suggested for you",
             isFollowingAuthor: person.isFollowingAuthor,
           })),

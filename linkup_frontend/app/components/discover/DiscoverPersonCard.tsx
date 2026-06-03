@@ -8,19 +8,12 @@ import { DiscoverPerson } from "@/src/lib/discovery";
 import { formatAccountType, toggleFollow } from "@/src/lib/posts";
 import OnlineStatusDot from "../OnlineStatusDot";
 import OnlineStatusBadge from "../OnlineStatusBadge";
+import UserAvatar from "../UserAvatar";
 
 type DiscoverPersonCardProps = {
   user: DiscoverPerson;
   currentUserId: string | null;
 };
-
-function getInitials(name: string, username: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  }
-  return (name[0] ?? username[0] ?? "U").toUpperCase();
-}
 
 export default function DiscoverPersonCard({
   user,
@@ -50,18 +43,13 @@ export default function DiscoverPersonCard({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="relative shrink-0">
-            {user.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={user.avatarUrl}
-                alt=""
-                className="h-12 w-12 rounded-full object-cover ring-2 ring-brand-primary/20"
-              />
-            ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white shadow-md shadow-brand-primary/20">
-                {getInitials(user.name, user.username)}
-              </div>
-            )}
+            <UserAvatar
+              src={user.avatarUrl}
+              name={user.name}
+              username={user.username}
+              size="lg"
+              ringClassName="ring-2 ring-brand-primary/20"
+            />
             {!isSelf ? <OnlineStatusDot userId={user.id} /> : null}
           </div>
           <div className="min-w-0">

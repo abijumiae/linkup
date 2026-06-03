@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   Briefcase,
   ImageIcon,
@@ -14,12 +15,10 @@ import {
 } from "lucide-react";
 import { ProfileUser } from "@/src/lib/users";
 import { formatAccountType, formatLanguageLabel } from "@/src/lib/profileOptions";
-import {
-  getProfileInitials,
-  resolveProfileImageUrl,
-} from "@/src/lib/profileMedia";
+import { resolveProfileImageUrl } from "@/src/lib/profileMedia";
 import OnlineStatusDot from "../OnlineStatusDot";
 import OnlineStatusBadge from "../OnlineStatusBadge";
+import UserAvatar from "../UserAvatar";
 
 type ProfileHeaderProps = {
   user: ProfileUser;
@@ -40,9 +39,12 @@ export default function ProfileHeader({
   isEditing = false,
   hasActiveMoment = false,
 }: ProfileHeaderProps) {
-  const avatarSrc = resolveProfileImageUrl(user.avatarUrl);
   const coverSrc = resolveProfileImageUrl(user.coverUrl);
-  const initials = getProfileInitials(user);
+  const [coverFailed, setCoverFailed] = useState(false);
+
+  useEffect(() => {
+    setCoverFailed(false);
+  }, [coverSrc]);
 
   const stats = [
     { label: "Sparks", value: user.postsCount ?? 0, icon: Sparkles },
@@ -53,13 +55,15 @@ export default function ProfileHeader({
 
   return (
     <section className="linkup-panel overflow-hidden p-0">
-      <div className="relative h-36 overflow-hidden sm:h-44 md:h-48">
-        {coverSrc ? (
+      <div className="relative h-40 w-full overflow-hidden rounded-t-[inherit] sm:h-52 md:h-64">
+        {coverSrc && !coverFailed ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={coverSrc}
             alt={`${user.name} Pulse Cover`}
             loading="lazy"
+            decoding="async"
+            onError={() => setCoverFailed(true)}
             className="absolute inset-0 h-full w-full object-cover"
           />
         ) : (
@@ -94,19 +98,15 @@ export default function ProfileHeader({
                   hasActiveMoment ? "ring-2 ring-brand-secondary/40 ring-offset-2 ring-offset-white dark:ring-offset-brand-dark" : ""
                 }`}
               >
-                {avatarSrc ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={avatarSrc}
-                    alt={`${user.name} LinkUp Avatar`}
-                    loading="lazy"
-                    className="h-24 w-24 rounded-[14px] border-2 border-white object-cover dark:border-brand-dark sm:h-28 sm:w-28"
-                  />
-                ) : (
-                  <div className="flex h-24 w-24 items-center justify-center rounded-[14px] border-2 border-white bg-gradient-to-br from-brand-primary to-brand-secondary text-2xl font-semibold text-white dark:border-brand-dark sm:h-28 sm:w-28">
-                    {initials}
-                  </div>
-                )}
+                <UserAvatar
+                  src={user.avatarUrl}
+                  name={user.name}
+                  username={user.username}
+                  size="2xl"
+                  shape="squircle"
+                  className="h-24 w-24 border-2 border-white dark:border-brand-dark sm:h-28 sm:w-28"
+                  alt={`${user.name} LinkUp Avatar`}
+                />
               </div>
               <OnlineStatusDot userId={user.id} className="bottom-1 right-1" />
               {!isEditing && onEditAvatar ? (

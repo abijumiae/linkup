@@ -1,4 +1,4 @@
-import { getApiBaseUrl } from "./api";
+import { toAbsoluteMediaUrl } from "./api";
 import { User } from "./auth";
 
 export const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
@@ -6,22 +6,11 @@ export const MAX_COVER_BYTES = 8 * 1024 * 1024;
 
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
+/** Resolve avatar/cover paths to absolute API URLs (no double-prefix). */
 export function resolveProfileImageUrl(
   url: string | null | undefined,
 ): string | undefined {
-  if (!url?.trim()) {
-    return undefined;
-  }
-
-  if (url.startsWith("http://") || url.startsWith("https://")) {
-    return url;
-  }
-
-  if (url.startsWith("/")) {
-    return `${getApiBaseUrl()}${url}`;
-  }
-
-  return url;
+  return toAbsoluteMediaUrl(url);
 }
 
 export function getProfileInitials(user: Pick<User, "name" | "username">): string {
@@ -30,6 +19,14 @@ export function getProfileInitials(user: Pick<User, "name" | "username">): strin
     return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
   }
   return (user.name?.[0] ?? user.username?.[0] ?? "U").toUpperCase();
+}
+
+export function getDisplayInitials(name: string, username?: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+  return (name[0] ?? username?.[0] ?? "U").toUpperCase();
 }
 
 export function validateAvatarImageFile(file: File): string | null {

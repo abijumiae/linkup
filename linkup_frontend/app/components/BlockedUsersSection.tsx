@@ -2,20 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@/src/lib/api";
-import { resolveProfileImageUrl } from "@/src/lib/profileMedia";
+import UserAvatar from "./UserAvatar";
 import {
   BlockedUser,
   fetchBlockedUsers,
   unblockUser,
 } from "@/src/lib/safety";
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  }
-  return (name[0] ?? "U").toUpperCase();
-}
 
 export default function BlockedUsersSection() {
   const [items, setItems] = useState<BlockedUser[]>([]);
@@ -85,26 +77,18 @@ export default function BlockedUsersSection() {
           You have not blocked anyone yet.
         </p>
       ) : (
-        items.map((item) => {
-          const avatarSrc = resolveProfileImageUrl(item.user.avatarUrl);
-          return (
+        items.map((item) => (
             <div
               key={item.id}
               className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between dark:border-white/10 dark:bg-brand-dark/70"
             >
               <div className="flex min-w-0 items-center gap-3">
-                {avatarSrc ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={avatarSrc}
-                    alt=""
-                    className="h-11 w-11 shrink-0 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white">
-                    {getInitials(item.user.name)}
-                  </div>
-                )}
+                <UserAvatar
+                  src={item.user.avatarUrl}
+                  name={item.user.name}
+                  username={item.user.username}
+                  size="md"
+                />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
                     {item.user.name}
@@ -123,8 +107,7 @@ export default function BlockedUsersSection() {
                 {workingId === item.user.id ? "Unblocking..." : "Unblock"}
               </button>
             </div>
-          );
-        })
+          ))
       )}
     </div>
   );

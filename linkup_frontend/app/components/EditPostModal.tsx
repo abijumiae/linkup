@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ImagePlus, Loader2, Trash2, Video, X } from "lucide-react";
-import { ApiError, resolveMediaUrl } from "@/src/lib/api";
+import { ApiError, resolvePreviewMediaUrl } from "@/src/lib/api";
 import { FeedPost, updatePost } from "@/src/lib/posts";
 import { uploadFile, UploadMediaType, validateMediaFile } from "@/src/lib/uploads";
 
@@ -81,9 +81,7 @@ export default function EditPostModal({
   }
 
   const previewSrc = mediaPreview
-    ? mediaPreview.isNew
-      ? mediaPreview.url
-      : resolveMediaUrl(mediaPreview.url)
+    ? resolvePreviewMediaUrl(mediaPreview.url) ?? undefined
     : undefined;
 
   async function handleFileSelect(file: File) {
@@ -230,19 +228,21 @@ export default function EditPostModal({
           </label>
 
           {previewSrc ? (
-            <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10">
+            <div className="relative mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-900">
               {mediaPreview?.type === "video" ? (
                 <video
                   src={previewSrc}
                   controls
-                  className="max-h-64 w-full bg-slate-100 object-contain dark:bg-brand-dark/60"
+                  preload="metadata"
+                  playsInline
+                  className="max-h-72 w-full object-contain"
                 />
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={previewSrc}
                   alt="Post media preview"
-                  className="max-h-64 w-full object-contain bg-slate-100 dark:bg-brand-dark/60"
+                  className="max-h-72 w-full object-contain"
                 />
               )}
             </div>

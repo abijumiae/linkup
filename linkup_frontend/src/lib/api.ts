@@ -26,23 +26,40 @@ export function getBackendUnreachableMessage(): string {
 }
 
 export function toAbsoluteMediaUrl(url?: string | null): string | undefined {
-  if (!url) {
+  if (!url?.trim()) {
     return undefined;
   }
 
-  if (url.startsWith("http://") || url.startsWith("https://")) {
-    return url;
+  const trimmed = url.trim();
+
+  if (
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("https://") ||
+    trimmed.startsWith("blob:") ||
+    trimmed.startsWith("data:")
+  ) {
+    return trimmed;
   }
 
-  if (url.startsWith("/uploads") || url.startsWith("/")) {
-    return `${getApiBaseUrl()}${url}`;
-  }
-
-  return url;
+  const path = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  return `${getApiBaseUrl()}${path}`;
 }
 
 export function resolveMediaUrl(url?: string | null): string | undefined {
   return toAbsoluteMediaUrl(url);
+}
+
+/** Blob/data URLs pass through; relative API paths become absolute. */
+export function resolvePreviewMediaUrl(
+  url: string | null | undefined,
+): string | null {
+  if (!url) {
+    return null;
+  }
+  if (url.startsWith("blob:") || url.startsWith("data:")) {
+    return url;
+  }
+  return resolveMediaUrl(url) ?? url;
 }
 
 function getStoredToken(): string | null {

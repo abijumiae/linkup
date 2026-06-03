@@ -62,6 +62,7 @@ import {
   GroupCallSession,
 } from "@/src/lib/groupWebrtc";
 import ChatListItem from "../../components/ChatListItem";
+import UserAvatar from "../../components/UserAvatar";
 import OnlineStatusBadge from "../../components/OnlineStatusBadge";
 import EmojiPicker from "../../components/EmojiPicker";
 import LiveRoomCard from "../../components/LiveRoomCard";
@@ -1672,20 +1673,15 @@ export default function MessagesPage() {
 
                     {chatTab === "direct" && activeUser ? (
                       <>
-                        {activeUser.avatarUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={activeUser.avatarUrl}
-                            alt=""
-                            className={`h-11 w-11 shrink-0 rounded-2xl object-cover ring-2 ${getChatRingClass(activeUser.id)}`}
-                          />
-                        ) : (
-                          <div
-                            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-semibold text-white shadow-md ${getChatInitialsClass(activeUser.id)}`}
-                          >
-                            {getInitials(activeUser.name)}
-                          </div>
-                        )}
+                        <UserAvatar
+                          src={activeUser.avatarUrl}
+                          name={activeUser.name}
+                          username={activeUser.username}
+                          size="md"
+                          shape="rounded"
+                          className="h-11 w-11"
+                          ringClassName={`ring-2 ${getChatRingClass(activeUser.id)}`}
+                        />
                         <div className="min-w-0">
                           <h2 className="truncate text-lg font-semibold text-slate-900 dark:text-white">
                             {activeUser.name}

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { resolveMediaUrl } from "@/src/lib/api";
 import type { Group } from "@/src/lib/groups";
 
 type GroupCardProps = {
@@ -23,6 +24,8 @@ export default function GroupCard({
     .map((part) => part[0])
     .join("")
     .toUpperCase();
+  const coverSrc = resolveMediaUrl(group.coverImage);
+
   const postCount =
     (group as Group & { postsCount?: number; postCount?: number }).postsCount ??
     (group as Group & { postsCount?: number; postCount?: number }).postCount;
@@ -41,11 +44,13 @@ export default function GroupCard({
   return (
     <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-lg shadow-slate-950/10 transition duration-300 hover:-translate-y-1 hover:border-brand-primary/30 hover:shadow-brand-primary/20 backdrop-blur-xl dark:border-white/10 dark:bg-brand-dark/85">
       <div className="bg-gradient-to-r from-brand-primary/20 via-brand-secondary/10 to-brand-secondary/10 p-4 text-sm font-semibold uppercase tracking-[0.25em] text-brand-text dark:text-brand-light">
-        {group.coverImage ? (
+        {coverSrc ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={group.coverImage}
+            src={coverSrc}
             alt=""
+            loading="lazy"
+            decoding="async"
             className="h-16 w-full rounded-xl object-cover"
           />
         ) : (

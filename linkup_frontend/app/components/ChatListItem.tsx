@@ -1,6 +1,7 @@
 import { memo } from "react";
 import OnlineStatusBadge from "./OnlineStatusBadge";
-import { getChatInitialsClass, getChatRingClass } from "@/src/lib/chatColors";
+import UserAvatar from "./UserAvatar";
+import { getChatRingClass } from "@/src/lib/chatColors";
 
 type ChatListItemProps = {
   name: string;
@@ -16,14 +17,6 @@ type ChatListItemProps = {
   memberCount?: number;
   live?: boolean;
 };
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  }
-  return (name[0] ?? "U").toUpperCase();
-}
 
 const badgeLabels: Record<NonNullable<ChatListItemProps["variant"]>, string> = {
   direct: "Individual",
@@ -57,20 +50,13 @@ function ChatListItemComponent({
     >
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <div className="relative shrink-0">
-          {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={avatarUrl}
-              alt=""
-              className={`h-12 w-12 rounded-2xl object-cover ring-2 ${getChatRingClass(userId)}`}
-            />
-          ) : (
-            <div
-              className={`flex h-12 w-12 items-center justify-center rounded-2xl text-sm font-semibold text-white shadow-md ${getChatInitialsClass(userId)}`}
-            >
-              {getInitials(name)}
-            </div>
-          )}
+          <UserAvatar
+            src={avatarUrl}
+            name={name}
+            size="lg"
+            shape="rounded"
+            ringClassName={`ring-2 ${getChatRingClass(userId)}`}
+          />
           {(online !== undefined || live || variant === "direct") && (
             <span
               className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-brand-dark ${

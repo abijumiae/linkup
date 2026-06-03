@@ -2,6 +2,7 @@
 
 import { Plus } from "lucide-react";
 import type { MomentGroup } from "@/src/lib/moments";
+import UserAvatar from "@/app/components/UserAvatar";
 
 type MomentsStripProps = {
   groups: MomentGroup[];
@@ -10,14 +11,6 @@ type MomentsStripProps = {
   onOpenGroup: (groupIndex: number) => void;
   isLoading?: boolean;
 };
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  }
-  return (name[0] ?? "U").toUpperCase();
-}
 
 function MomentAvatar({
   user,
@@ -44,18 +37,14 @@ function MomentAvatar({
         className={`rounded-full ${ringClass} transition group-hover:scale-105 group-hover:shadow-brand-primary/30`}
       >
         <div className="rounded-full bg-white p-0.5 dark:bg-brand-dark">
-          {user.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={user.avatarUrl}
-              alt={user.name}
-              className="h-14 w-14 rounded-full object-cover sm:h-16 sm:w-16"
-            />
-          ) : (
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary/90 to-brand-secondary/90 text-sm font-semibold text-white sm:h-16 sm:w-16 sm:text-base">
-              {getInitials(user.name)}
-            </div>
-          )}
+          <UserAvatar
+            src={user.avatarUrl}
+            name={user.name}
+            username={user.username}
+            size="xl"
+            className="h-14 w-14 sm:h-16 sm:w-16"
+            alt={user.name}
+          />
         </div>
       </div>
       <span className="line-clamp-2 w-full text-[11px] font-medium leading-tight text-slate-700 group-hover:text-brand-primary dark:text-slate-300 dark:group-hover:text-brand-secondary">

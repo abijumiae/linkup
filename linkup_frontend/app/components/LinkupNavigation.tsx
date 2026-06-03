@@ -17,6 +17,7 @@ import {
 import { useAuth } from "@/src/lib/AuthProvider";
 import { useNotifications } from "@/src/lib/NotificationsContext";
 import { ThemeToggle } from "./ThemeToggle";
+import UserAvatar from "./UserAvatar";
 
 const mobileNavItems = [
   { label: "Pulse", href: "/home", icon: Home },
@@ -52,9 +53,6 @@ export default function LinkupNavigation() {
   }
 
   const displayName = user ? (user.username || user.name) : "Guest";
-  const avatarLabel = user?.avatarUrl
-    ? undefined
-    : (user?.name?.[0] ?? user?.username?.[0] ?? "G").toUpperCase();
 
   const isAuthPage = pathname === "/login" || pathname === "/signup";
   const showAuthActions = !isAuthPage;
@@ -125,19 +123,15 @@ export default function LinkupNavigation() {
 
             {showAuthActions && isAuthenticated && user ? (
               <>
-                <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 md:flex dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-300">
-                  {user.avatarUrl ? (
-                    <img
-                      src={user.avatarUrl}
-                      alt={displayName}
-                      className="h-8 w-8 rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-primary/15 text-sm font-semibold text-brand-secondary">
-                      {avatarLabel}
-                    </span>
-                  )}
-                  <span className="max-w-[140px] truncate">{displayName}</span>
+                <div className="hidden min-w-0 max-w-[200px] items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 md:flex dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-300">
+                  <UserAvatar
+                    src={user.avatarUrl}
+                    name={user.name}
+                    username={user.username}
+                    size="sm"
+                    alt={displayName}
+                  />
+                  <span className="min-w-0 truncate">{displayName}</span>
                 </div>
                 <button
                   type="button"

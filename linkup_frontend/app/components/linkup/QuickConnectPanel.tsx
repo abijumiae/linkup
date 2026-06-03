@@ -7,11 +7,13 @@ import { ApiError } from "@/src/lib/api";
 import { connectUser } from "@/src/lib/connections";
 import OnlineStatusDot from "../OnlineStatusDot";
 import OnlineStatusBadge from "../OnlineStatusBadge";
+import UserAvatar from "../UserAvatar";
 
 type QuickConnectSuggestion = {
   id: string;
   name: string;
   username: string;
+  avatarUrl?: string | null;
   subtitle?: string;
   isFollowingAuthor?: boolean;
 };
@@ -21,14 +23,6 @@ type QuickConnectPanelProps = {
   emptyMessage?: string;
   onConnectionChange?: () => void;
 };
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  }
-  return (name[0] ?? "U").toUpperCase();
-}
 
 export default function QuickConnectPanel({
   suggestions = [],
@@ -106,9 +100,12 @@ export default function QuickConnectPanel({
               >
                 <div className="flex items-center gap-3">
                   <div className="relative shrink-0">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary text-sm font-semibold text-white shadow-md shadow-brand-primary/20">
-                      {getInitials(person.name)}
-                    </div>
+                    <UserAvatar
+                      src={person.avatarUrl}
+                      name={person.name}
+                      username={person.username}
+                      size="md"
+                    />
                     <OnlineStatusDot userId={person.id} />
                   </div>
                   <div className="min-w-0 flex-1">

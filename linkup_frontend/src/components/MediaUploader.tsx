@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import { ImagePlus, Loader2, Trash2, Video } from "lucide-react";
-import { ApiError } from "@/src/lib/api";
+import { ApiError, resolvePreviewMediaUrl } from "@/src/lib/api";
 import {
   UploadMediaType,
   UploadResult,
@@ -209,7 +209,7 @@ const MediaUploader = forwardRef<MediaUploaderHandle, MediaUploaderProps>(
         ) : null}
 
         {previewUrl ? (
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-brand-dark/60">
+          <div className="relative mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-900">
             {compact ? (
               <div className="flex items-center justify-between gap-3 px-3 py-2">
                 <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
@@ -227,16 +227,18 @@ const MediaUploader = forwardRef<MediaUploaderHandle, MediaUploaderProps>(
             ) : null}
             {previewType === "video" ? (
               <video
-                src={previewUrl}
+                src={resolvePreviewMediaUrl(previewUrl) ?? previewUrl}
                 controls
-                className="max-h-80 w-full object-contain"
+                preload="metadata"
+                playsInline
+                className="max-h-72 w-full rounded-2xl object-contain"
               />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={previewUrl}
+                src={resolvePreviewMediaUrl(previewUrl) ?? previewUrl}
                 alt="Selected media preview"
-                className="max-h-80 w-full object-contain"
+                className="max-h-72 w-full object-contain"
               />
             )}
           </div>
