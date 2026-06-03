@@ -352,6 +352,7 @@ export default function GroupLiveTalkPanel({
             onLeave={() => void talk.leave()}
             onEnd={() => void talk.end()}
             onSendMessage={() => void talk.sendMessage()}
+            onSendQuickReaction={(emoji) => void talk.sendQuickReaction(emoji)}
           />
         </div>
       ) : null}

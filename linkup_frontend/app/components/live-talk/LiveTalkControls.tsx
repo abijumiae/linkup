@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import {
   Hand,
   Mic,
@@ -10,6 +11,7 @@ import {
   Square,
   Volume2,
 } from "lucide-react";
+import ChatInputActions from "./chat-input/ChatInputActions";
 
 type LiveTalkControlsProps = {
   muted: boolean;
@@ -29,6 +31,7 @@ type LiveTalkControlsProps = {
   onLeave: () => void;
   onEnd: () => void;
   onSendMessage: () => void;
+  onSendQuickReaction: (emoji: string) => void;
 };
 
 const actionBtnBase =
@@ -83,7 +86,9 @@ export default function LiveTalkControls({
   onLeave,
   onEnd,
   onSendMessage,
+  onSendQuickReaction,
 }: LiveTalkControlsProps) {
+  const messageInputRef = useRef<HTMLInputElement>(null);
   const status = statusLine(
     holdingMic,
     micBusy,
@@ -110,21 +115,31 @@ export default function LiveTalkControls({
       ) : null}
 
       <div className="flex items-center gap-2 px-3 py-2">
-        <input
-          type="text"
-          value={messageDraft}
-          onChange={(e) => onMessageDraftChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              onSendMessage();
-            }
-          }}
-          placeholder="Message the room…"
-          aria-label="Room message"
-          className="min-h-11 min-w-0 flex-1 rounded-full border border-slate-200/80 bg-slate-50 px-4 text-base text-slate-900 outline-none placeholder:text-slate-400 focus:border-brand-primary/40 focus:ring-2 focus:ring-brand-primary/15 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500 sm:text-sm"
-          maxLength={2000}
-        />
+        <div className="flex min-h-11 min-w-0 flex-1 items-center gap-1 rounded-full border border-slate-200/80 bg-slate-50 pl-1 pr-2 focus-within:border-brand-primary/40 focus-within:ring-2 focus-within:ring-brand-primary/15 dark:border-white/10 dark:bg-white/5 dark:focus-within:ring-brand-primary/20">
+          <ChatInputActions
+            draft={messageDraft}
+            onDraftChange={onMessageDraftChange}
+            inputRef={messageInputRef}
+            onSendQuickReaction={onSendQuickReaction}
+            disabled={loading}
+          />
+          <input
+            ref={messageInputRef}
+            type="text"
+            value={messageDraft}
+            onChange={(e) => onMessageDraftChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                onSendMessage();
+              }
+            }}
+            placeholder="Message the room…"
+            aria-label="Room message"
+            className="min-h-11 min-w-0 flex-1 border-0 bg-transparent px-1 text-base text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500 sm:text-sm"
+            maxLength={2000}
+          />
+        </div>
         <button
           type="button"
           onClick={onSendMessage}

@@ -719,12 +719,14 @@ export function useGroupLiveTalk({
     }
   };
 
-  const sendMessage = async () => {
-    if (!room || !messageDraft.trim()) {
+  const sendRoomMessage = async (raw: string) => {
+    if (!room) {
       return;
     }
-    const text = messageDraft.trim();
-    setMessageDraft("");
+    const text = raw.trim();
+    if (!text) {
+      return;
+    }
     try {
       if (socket && inRoom) {
         socket.emit("live_talk_message", {
@@ -738,7 +740,28 @@ export function useGroupLiveTalk({
       }
     } catch {
       setError("Could not send message.");
+      throw new Error("send failed");
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!messageDraft.trim()) {
+      return;
+    }
+    const text = messageDraft.trim();
+    setMessageDraft("");
+    try {
+      await sendRoomMessage(text);
+    } catch {
       setMessageDraft(text);
+    }
+  };
+
+  const sendQuickReaction = async (emoji: string) => {
+    try {
+      await sendRoomMessage(emoji);
+    } catch {
+      /* error already set */
     }
   };
 
@@ -902,6 +925,7 @@ export function useGroupLiveTalk({
     toggleMute,
     toggleHand,
     sendMessage,
+    sendQuickReaction,
     unlockAudio,
     hostId: hostId ?? room?.hostId,
   };
