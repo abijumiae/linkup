@@ -1,7 +1,6 @@
 "use client";
 
 import { Mic, Radio, Shield, Users, X } from "lucide-react";
-import { IconButton } from "@/app/components/buttons/LinkupButtons";
 import LiveTalkHostPanel from "./live-talk/LiveTalkHostPanel";
 import { LiveTalkRoom } from "@/src/lib/groupLiveTalk";
 import { useGroupLiveTalk } from "@/app/hooks/useGroupLiveTalk";
@@ -174,14 +173,15 @@ export default function GroupLiveTalkPanel({
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
               {canHostControls ? (
-                <IconButton
-                  icon={Shield}
-                  variant="handIdle"
+                <button
+                  type="button"
                   onClick={() => talk.setHostPanelOpen(true)}
                   aria-label="Open host controls"
-                  title="Host"
-                  className="lg:hidden"
-                />
+                  title="Host controls"
+                  className="inline-flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary lg:hidden dark:text-brand-secondary"
+                >
+                  <Shield className="h-5 w-5" />
+                </button>
               ) : null}
               <span className="hidden items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600 dark:bg-white/10 dark:text-slate-300 sm:inline-flex">
                 <Users className="h-3.5 w-3.5" />

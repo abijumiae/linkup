@@ -19,7 +19,6 @@ import { validate } from 'class-validator';
 import { memoryStorage } from 'multer';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SafeUser } from '../users/users.service';
-import { ToggleReactionDto } from '../posts/dto/toggle-reaction.dto';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { MessagesService } from './messages.service';
 
@@ -45,7 +44,6 @@ export class MessagesController {
   private static readonly RESERVED_PATHS = new Set([
     'upload-audio',
     'conversations',
-    'reactions',
   ]);
 
   constructor(private readonly messagesService: MessagesService) {}
@@ -94,27 +92,6 @@ export class MessagesController {
     }
 
     return this.messagesService.uploadAudio(file, req.user.id);
-  }
-
-  @Get('reactions/:messageId')
-  getMessageReactions(
-    @Param('messageId') messageId: string,
-    @Req() req: { user: SafeUser },
-  ) {
-    return this.messagesService.getMessageReactions(messageId, req.user.id);
-  }
-
-  @Post('reactions/:messageId')
-  toggleMessageReaction(
-    @Param('messageId') messageId: string,
-    @Req() req: { user: SafeUser },
-    @Body() dto: ToggleReactionDto,
-  ) {
-    return this.messagesService.toggleMessageReaction(
-      messageId,
-      req.user.id,
-      dto.emoji,
-    );
   }
 
   @Get(':userId')

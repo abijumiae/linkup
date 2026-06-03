@@ -33,21 +33,13 @@ const CommentsDrawer = dynamic(() => import("./CommentsDrawer"), {
 import {
   FeedPost,
   deletePost,
-  fetchPostReactions,
   formatAccountType,
   formatTimeAgo,
   toggleFollow,
   toggleLike,
-  togglePostReaction,
   toggleSave,
 } from "@/src/lib/posts";
-import {
-  emptyReactionSummaries,
-  type LinkupReactionEmoji,
-  type ReactionSummary,
-} from "@/src/lib/reactions";
-import { ChipActionButton } from "@/app/components/buttons/LinkupButtons";
-import ReactionBar from "./ReactionBar";
+import BoostReactionHints from "./linkup/BoostReactionHints";
 import OnlineStatusDot from "./OnlineStatusDot";
 
 function isModeratorRole(role: Role | null | undefined): boolean {
@@ -93,10 +85,6 @@ function FeedPostCard({
   const [blockedByMe, setBlockedByMe] = useState(false);
   const [interactionError, setInteractionError] = useState<string | null>(null);
   const [shareNotice, setShareNotice] = useState<string | null>(null);
-  const [reactions, setReactions] = useState<ReactionSummary[]>(
-    emptyReactionSummaries(),
-  );
-  const [reactionsLoading, setReactionsLoading] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const isOwner = Boolean(currentUserId && localPost.authorId === currentUserId);
@@ -107,36 +95,6 @@ function FeedPostCard({
   useEffect(() => {
     setLocalPost(post);
   }, [post]);
-
-  useEffect(() => {
-    if (!localPost.id || localPost.id.startsWith("static-")) {
-      return;
-    }
-
-    let cancelled = false;
-    setReactionsLoading(true);
-
-    void fetchPostReactions(localPost.id)
-      .then((data) => {
-        if (!cancelled) {
-          setReactions(data);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setReactions(emptyReactionSummaries());
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setReactionsLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [localPost.id]);
 
   useEffect(() => {
     if (
@@ -459,91 +417,77 @@ function FeedPostCard({
           </div>
         ) : null}
 
-        <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-200/80 pt-4 text-sm dark:border-white/10 sm:gap-3">
-          <ChipActionButton
-            icon={Heart}
-            pink
-            active={liked}
+        <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-200/80 pt-4 text-sm text-slate-600 dark:border-white/10 dark:text-slate-400 sm:gap-3">
+          <button
+            type="button"
             onClick={() => void handleLike()}
-            aria-label={useSparkWording ? "Boost spark" : "Like post"}
-            title="Boost"
+            className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-3.5 py-2.5 transition active:scale-[0.97] ${
+              liked
+                ? "bg-pink-500/10 text-pink-600 dark:bg-pink-500/15 dark:text-pink-300"
+                : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300"
+            }`}
           >
+            <Heart className={`h-4 w-4 ${liked ? "fill-pink-400 text-pink-400" : "text-pink-400"}`} />
             {useSparkWording ? (
               <>
-                Boost <span className="tabular-nums">{likeCount}</span>
+                Boost
+                <span className="tabular-nums">{likeCount}</span>
               </>
             ) : (
               likeCount
             )}
-          </ChipActionButton>
+          </button>
 
-          <ChipActionButton
-            icon={MessageCircle}
+          <button
+            type="button"
             onClick={() => setCommentsOpen(true)}
-            aria-label="Open comments"
-            title="Reply"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-slate-100 px-3.5 py-2.5 text-slate-700 transition hover:bg-slate-200 active:scale-[0.97] dark:bg-white/5 dark:text-slate-300"
           >
+            <MessageCircle className="h-4 w-4 text-brand-secondary" />
             {useSparkWording ? (
               <>
-                Reply <span className="tabular-nums">{commentCount}</span>
+                Reply
+                <span className="tabular-nums">{commentCount}</span>
               </>
             ) : (
               commentCount
             )}
-          </ChipActionButton>
+          </button>
 
-          <ChipActionButton
-            icon={Share2}
+          <button
+            type="button"
             onClick={() => void handleShare()}
-            aria-label="Share post"
-            title="Share"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-slate-100 px-3.5 py-2.5 text-slate-700 transition hover:bg-slate-200 active:scale-[0.97] dark:bg-white/5 dark:text-slate-300"
           >
+            <Share2 className="h-4 w-4 text-brand-secondary" />
             Share
-          </ChipActionButton>
+          </button>
 
-          <ChipActionButton
-            icon={Repeat2}
+          <button
+            type="button"
             disabled
             title="Reshare coming soon"
-            aria-label="Reshare (coming soon)"
-            className="cursor-not-allowed opacity-70"
+            className="inline-flex min-h-[44px] cursor-not-allowed items-center gap-2 rounded-full bg-slate-100/70 px-3.5 py-2.5 text-slate-500 opacity-70 dark:bg-white/5 dark:text-slate-500"
           >
+            <Repeat2 className="h-4 w-4" />
             Reshare
-          </ChipActionButton>
+          </button>
 
-          <ChipActionButton
-            icon={Bookmark}
-            active={saved}
+          <button
+            type="button"
             onClick={() => void handleSave()}
-            aria-label={saved ? "Unsave post" : "Save post"}
-            title="Save"
-            className={
+            className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-3.5 py-2.5 transition active:scale-[0.97] ${
               saved
-                ? "[&_svg]:fill-brand-primary dark:[&_svg]:fill-brand-secondary"
-                : ""
-            }
+                ? "bg-brand-primary/10 text-brand-primary dark:bg-brand-secondary/15 dark:text-brand-secondary"
+                : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300"
+            }`}
           >
+            <Bookmark className={`h-4 w-4 ${saved ? "fill-brand-primary dark:fill-brand-secondary" : ""}`} />
             {useSparkWording ? "Save" : saved ? "Saved" : "Save"}
-          </ChipActionButton>
+          </button>
         </div>
 
-        {currentUserId ? (
-          <div className="mt-3 border-t border-slate-200/60 pt-3 dark:border-white/10">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              {useSparkWording ? "React to Spark" : "Reactions"}
-            </p>
-            <ReactionBar
-              reactions={reactions}
-              loading={reactionsLoading}
-              compact
-              onToggle={async (emoji: LinkupReactionEmoji) => {
-                const result = await togglePostReaction(localPost.id, emoji);
-                setReactions(result.reactions);
-                return result.reactions;
-              }}
-            />
-          </div>
-        ) : null}
+        {useSparkWording ? <BoostReactionHints /> : null}
 
         {interactionError ? (
           <p className="mt-3 text-sm text-red-500 dark:text-red-400">{interactionError}</p>

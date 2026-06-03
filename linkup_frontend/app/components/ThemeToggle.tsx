@@ -15,24 +15,24 @@ export function ThemeToggle() {
     );
   }
 
-  const isDark = theme === "dark";
-
   return (
     <button
       type="button"
       onClick={toggleTheme}
-      className="linkup-icon-btn min-h-[44px] min-w-[44px] gap-1.5 rounded-2xl border border-slate-200 bg-white px-2.5 text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 sm:min-w-0 sm:px-3"
-      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      title={isDark ? "Light mode" : "Dark mode"}
+      className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900"
+      aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
     >
-      {isDark ? (
-        <Sun className="h-5 w-5 text-brand-secondary" aria-hidden />
+      {theme === "dark" ? (
+        <>
+          <Sun className="h-4 w-4 text-brand-secondary" />
+          <span>Light</span>
+        </>
       ) : (
-        <Moon className="h-5 w-5 text-brand-primary" aria-hidden />
+        <>
+          <Moon className="h-4 w-4 text-brand-primary" />
+          <span>Dark</span>
+        </>
       )}
-      <span className="hidden text-xs font-semibold sm:inline">
-        {isDark ? "Light" : "Dark"}
-      </span>
     </button>
   );
 }

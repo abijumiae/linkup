@@ -16,10 +16,6 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { SafetyService } from '../safety/safety.service';
-import {
-  ALLOWED_REACTION_EMOJIS,
-  isAllowedReactionEmoji,
-} from '../common/reaction-emojis';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
@@ -621,76 +617,5 @@ export class PostsService {
     this.realtimeEmitter.emitPostDeleted(postId);
 
     return { success: true, id: postId };
-  }
-
-  async getPostReactions(postId: string, userId: string) {
-    const post = await this.prisma.post.findUnique({
-      where: { id: postId },
-    });
-
-    if (!post) {
-      throw new NotFoundException('Post not found');
-    }
-
-    const grouped = await this.prisma.postReaction.groupBy({
-      by: ['emoji'],
-      where: { postId },
-      _count: { _all: true },
-    });
-
-    const mine = await this.prisma.postReaction.findMany({
-      where: { postId, userId },
-      select: { emoji: true },
-    });
-    const mineSet = new Set(mine.map((row) => row.emoji));
-
-    return ALLOWED_REACTION_EMOJIS.map((emoji) => {
-      const row = grouped.find((g) => g.emoji === emoji);
-      return {
-        emoji,
-        count: row?._count._all ?? 0,
-        reactedByMe: mineSet.has(emoji),
-      };
-    });
-  }
-
-  async togglePostReaction(postId: string, userId: string, emoji: string) {
-    if (!isAllowedReactionEmoji(emoji)) {
-      throw new BadRequestException('Invalid reaction emoji');
-    }
-
-    const post = await this.prisma.post.findUnique({
-      where: { id: postId },
-    });
-
-    if (!post) {
-      throw new NotFoundException('Post not found');
-    }
-
-    const existing = await this.prisma.postReaction.findUnique({
-      where: {
-        userId_postId_emoji: { userId, postId, emoji },
-      },
-    });
-
-    if (existing) {
-      await this.prisma.postReaction.delete({
-        where: { id: existing.id },
-      });
-    } else {
-      await this.prisma.postReaction.create({
-        data: { userId, postId, emoji },
-      });
-    }
-
-    const reactions = await this.getPostReactions(postId, userId);
-    const current = reactions.find((r) => r.emoji === emoji);
-
-    return {
-      emoji,
-      count: current?.count ?? 0,
-      reactedByMe: current?.reactedByMe ?? false,
-      reactions,
-    };
   }
 }
