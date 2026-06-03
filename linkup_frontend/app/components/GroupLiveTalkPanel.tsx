@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Mic, Radio, Shield, Users, X } from "lucide-react";
 import LiveTalkHostPanel from "./live-talk/LiveTalkHostPanel";
 import { LiveTalkRoom } from "@/src/lib/groupLiveTalk";
@@ -44,7 +45,14 @@ export default function GroupLiveTalkPanel({
   }
 
   const canEnd = canEndRoom || talk.isHost;
+  const showHostControls = talk.canHostControls;
+  const [endConfirmOpen, setEndConfirmOpen] = useState(false);
   const showRoom = talk.inRoom && talk.room;
+
+  function handleConfirmEnd() {
+    setEndConfirmOpen(false);
+    void talk.end();
+  }
 
   return (
     <>
@@ -172,7 +180,7 @@ export default function GroupLiveTalkPanel({
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
-              {canHostControls ? (
+              {showHostControls ? (
                 <button
                   type="button"
                   onClick={() => talk.setHostPanelOpen(true)}
@@ -268,13 +276,13 @@ export default function GroupLiveTalkPanel({
               />
             </div>
             <div className="hidden min-h-0 w-full max-w-xs flex-col overflow-hidden lg:flex xl:max-w-sm">
-              {canHostControls ? (
+              {showHostControls ? (
                 <LiveTalkHostPanel
                   room={talk.room}
                   loading={talk.loading}
                   micHolderName={talk.micHolderName}
                   onForceRelease={() => void talk.forceReleaseMic()}
-                  onEndRoom={() => void talk.end()}
+                  onEndRoom={() => setEndConfirmOpen(true)}
                   onPassMic={(userId) => void talk.passMicTo(userId)}
                   onClearHand={(userId) => void talk.clearParticipantHand(userId)}
                   onMuteParticipant={(userId, isMuted) =>
@@ -291,7 +299,8 @@ export default function GroupLiveTalkPanel({
                 activeMicUserId={talk.activeMicUserId}
                 localUserId={talk.localUserId}
                 isUserOnline={talk.isUserOnline}
-                canHostControls={canHostControls}
+                canHostControls={showHostControls}
+                onMakeHost={(userId) => void talk.transferHostTo(userId)}
                 onPassMic={(userId) => void talk.passMicTo(userId)}
                 onMuteParticipant={(userId, isMuted) =>
                   void talk.muteParticipant(userId, isMuted)
@@ -304,7 +313,7 @@ export default function GroupLiveTalkPanel({
             </div>
           </div>
 
-          {canHostControls && talk.hostPanelOpen ? (
+          {showHostControls && talk.hostPanelOpen ? (
             <div className="fixed inset-0 z-[60] lg:hidden">
               <button
                 type="button"
@@ -333,7 +342,7 @@ export default function GroupLiveTalkPanel({
                   micHolderName={talk.micHolderName}
                   compact
                   onForceRelease={() => void talk.forceReleaseMic()}
-                  onEndRoom={() => void talk.end()}
+                  onEndRoom={() => setEndConfirmOpen(true)}
                   onPassMic={(userId) => void talk.passMicTo(userId)}
                   onClearHand={(userId) => void talk.clearParticipantHand(userId)}
                   onMuteParticipant={(userId, isMuted) =>
@@ -363,10 +372,44 @@ export default function GroupLiveTalkPanel({
             onToggleMute={() => void talk.toggleMute()}
             onToggleHand={() => void talk.toggleHand()}
             onLeave={() => void talk.leave()}
-            onEnd={() => void talk.end()}
+            onEnd={() => setEndConfirmOpen(true)}
             onSendMessage={() => void talk.sendMessage()}
             onSendQuickReaction={(emoji) => void talk.sendQuickReaction(emoji)}
           />
+        </div>
+      ) : null}
+
+      {endConfirmOpen && showRoom ? (
+        <div
+          className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 p-4 sm:items-center"
+          role="dialog"
+          aria-label="Confirm end Live Talk"
+        >
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-white/10 dark:bg-slate-900">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+              End Live Talk
+            </h3>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+              End Live Talk for everyone? This cannot be undone.
+            </p>
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row-reverse">
+              <button
+                type="button"
+                disabled={talk.loading}
+                onClick={handleConfirmEnd}
+                className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-full bg-red-600 px-4 text-sm font-semibold text-white"
+              >
+                End Live Talk
+              </button>
+              <button
+                type="button"
+                onClick={() => setEndConfirmOpen(false)}
+                className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-full border border-slate-200 px-4 text-sm font-semibold text-slate-700 dark:border-white/10 dark:text-slate-200"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
     </>

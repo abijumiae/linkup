@@ -25,6 +25,7 @@ import {
   removeLiveTalkParticipant,
   setLiveTalkMuted,
   startLiveTalk,
+  transferLiveTalkHost,
 } from "@/src/lib/groupLiveTalk";
 import {
   GroupLiveTalkSession,
@@ -91,6 +92,7 @@ export function useGroupLiveTalk({
 
   const room = activeRoom?.status === "ACTIVE" ? activeRoom : null;
   const isHost = room?.hostId === localUserId;
+  const canUseHostControls = canHostControls || isHost;
   const activeMicUserId = room?.activeMicUserId ?? null;
   const holdingMic = Boolean(activeMicUserId && activeMicUserId === localUserId);
   const micBusy = Boolean(activeMicUserId && !holdingMic);
@@ -141,6 +143,22 @@ export function useGroupLiveTalk({
       setHandRaised(false);
     }
   }, [room, syncParticipantsFromRoom, localUserId]);
+
+  useEffect(() => {
+    if (!holdingMic || !room?.activeMicStartedAt) {
+      return;
+    }
+    const started = new Date(room.activeMicStartedAt).getTime();
+    if (Number.isNaN(started)) {
+      return;
+    }
+    const warnMs = 5 * 60 * 1000;
+    const delay = Math.max(0, warnMs - (Date.now() - started));
+    const timer = window.setTimeout(() => {
+      setInfo("You have held the mic for 5 minutes.");
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [holdingMic, room?.activeMicStartedAt]);
 
   const teardownSession = useCallback(() => {
     sessionRef.current?.leave(false);
@@ -379,6 +397,36 @@ export function useGroupLiveTalk({
       }
     };
 
+    const onHostChanged = (payload: {
+      groupId: string;
+      roomId: string;
+      oldHostId: string;
+      newHostId: string;
+      room?: LiveTalkRoom;
+    }) => {
+      if (payload.groupId !== groupId) {
+        return;
+      }
+      if (payload.room) {
+        applyRoomUpdate(payload.room);
+      } else {
+        void refreshActiveRoom();
+      }
+      const newName =
+        payload.room?.host?.name ??
+        payload.room?.participants.find((p) => p.userId === payload.newHostId)
+          ?.user.name;
+      if (payload.newHostId === localUserId) {
+        setInfo("You are now hosting Live Talk.");
+      } else {
+        setInfo(
+          newName
+            ? `Host changed — ${newName} is now hosting.`
+            : "Host changed.",
+        );
+      }
+    };
+
     const onParticipantRemoved = (payload: {
       groupId: string;
       userId: string;
@@ -410,6 +458,7 @@ export function useGroupLiveTalk({
     socket.on("live_talk_mic_busy", onMicBusy);
     socket.on("live_talk_mic_passed", onMicPassed);
     socket.on("live_talk_room_updated", onRoomUpdated);
+    socket.on("live_talk_host_changed", onHostChanged);
     socket.on("live_talk_participant_removed", onParticipantRemoved);
 
     return () => {
@@ -423,6 +472,7 @@ export function useGroupLiveTalk({
       socket.off("live_talk_mic_busy", onMicBusy);
       socket.off("live_talk_mic_passed", onMicPassed);
       socket.off("live_talk_room_updated", onRoomUpdated);
+      socket.off("live_talk_host_changed", onHostChanged);
       socket.off("live_talk_participant_removed", onParticipantRemoved);
     };
   }, [
@@ -709,9 +759,14 @@ export function useGroupLiveTalk({
           // Best-effort before leaving.
         }
       }
+      const updated = await leaveLiveTalk(groupId, room.id);
       sessionRef.current?.leave(true);
       teardownSession();
-      await leaveLiveTalk(groupId, room.id);
+      if (updated) {
+        onRoomChange(updated);
+      } else {
+        onRoomChange(null);
+      }
       await refreshActiveRoom();
       setInfo("You left Live Talk.");
     } catch (err) {
@@ -829,7 +884,7 @@ export function useGroupLiveTalk({
   };
 
   const forceReleaseMic = async () => {
-    if (!room || !canHostControls) {
+    if (!room || !canUseHostControls) {
       return;
     }
     setLoading(true);
@@ -846,7 +901,7 @@ export function useGroupLiveTalk({
   };
 
   const passMicTo = async (targetUserId: string) => {
-    if (!room || !canHostControls) {
+    if (!room || !canUseHostControls) {
       return;
     }
     setLoading(true);
@@ -863,7 +918,7 @@ export function useGroupLiveTalk({
   };
 
   const muteParticipant = async (targetUserId: string, nextMuted: boolean) => {
-    if (!room || !canHostControls) {
+    if (!room || !canUseHostControls) {
       return;
     }
     setLoading(true);
@@ -883,7 +938,7 @@ export function useGroupLiveTalk({
   };
 
   const removeParticipant = async (targetUserId: string) => {
-    if (!room || !canHostControls) {
+    if (!room || !canUseHostControls) {
       return;
     }
     setLoading(true);
@@ -906,8 +961,28 @@ export function useGroupLiveTalk({
     }
   };
 
+  const transferHostTo = async (targetUserId: string) => {
+    if (!room || !canUseHostControls) {
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const updated = await transferLiveTalkHost(
+        groupId,
+        room.id,
+        targetUserId,
+      );
+      applyRoomUpdate(updated);
+    } catch (err) {
+      handleLiveTalkError(err, "Could not transfer host.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const clearParticipantHand = async (targetUserId: string) => {
-    if (!room || !canHostControls) {
+    if (!room || !canUseHostControls) {
       return;
     }
     setLoading(true);
@@ -972,7 +1047,7 @@ export function useGroupLiveTalk({
     participantCount,
     isConnected,
     canStart,
-    canHostControls,
+    canHostControls: canUseHostControls,
     raisedHands: room?.raisedHands ?? [],
     micPassedPrompt,
     setMicPassedPrompt,
@@ -988,6 +1063,7 @@ export function useGroupLiveTalk({
     muteParticipant,
     removeParticipant,
     clearParticipantHand,
+    transferHostTo,
     leave,
     end,
     toggleMute,

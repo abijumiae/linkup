@@ -93,6 +93,21 @@ export class GroupLiveTalkController {
     return this.groupLiveTalkService.endRoom(groupId, roomId, req.user.id);
   }
 
+  @Post('groups/:groupId/live-talk/:roomId/transfer-host')
+  transferHost(
+    @Param('groupId') groupId: string,
+    @Param('roomId') roomId: string,
+    @Req() req: { user: SafeUser },
+    @Body() dto: LiveTalkTargetUserDto,
+  ) {
+    return this.groupLiveTalkService.transferHost(
+      groupId,
+      roomId,
+      req.user.id,
+      dto.targetUserId,
+    );
+  }
+
   @Post('groups/:groupId/live-talk/:roomId/open-mic')
   openMic(
     @Param('groupId') groupId: string,

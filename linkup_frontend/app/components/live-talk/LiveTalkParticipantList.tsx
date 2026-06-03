@@ -16,6 +16,7 @@ type LiveTalkParticipantListProps = {
   onMuteParticipant?: (userId: string, isMuted: boolean) => void;
   onRemoveParticipant?: (userId: string) => void;
   onClearHand?: (userId: string) => void;
+  onMakeHost?: (userId: string) => void;
   compact?: boolean;
 };
 
@@ -55,6 +56,7 @@ export default function LiveTalkParticipantList({
   onMuteParticipant,
   onRemoveParticipant,
   onClearHand,
+  onMakeHost,
   compact = false,
 }: LiveTalkParticipantListProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -220,6 +222,18 @@ export default function LiveTalkParticipantList({
                   </button>
                   {openMenuId === p.userId ? (
                     <div className="absolute right-0 top-full z-20 mt-1 w-44 rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-white/10 dark:bg-slate-900">
+                      {onMakeHost ? (
+                        <button
+                          type="button"
+                          className="block min-h-[44px] w-full px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-white/5"
+                          onClick={() => {
+                            onMakeHost(p.userId);
+                            setOpenMenuId(null);
+                          }}
+                        >
+                          Make host
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         className="block min-h-[44px] w-full px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-white/5"

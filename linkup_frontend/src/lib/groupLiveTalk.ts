@@ -313,6 +313,23 @@ export async function endLiveTalk(
   );
 }
 
+export async function transferLiveTalkHost(
+  groupId: string,
+  roomId: string,
+  targetUserId: string,
+): Promise<LiveTalkRoom> {
+  return withAuth(() =>
+    apiRequest<LiveTalkRoom>(
+      `/groups/${groupId}/live-talk/${roomId}/transfer-host`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ targetUserId }),
+      },
+    ),
+  );
+}
+
 export async function openLiveTalkMic(
   groupId: string,
   roomId: string,

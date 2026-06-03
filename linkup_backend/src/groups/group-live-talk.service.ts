@@ -86,6 +86,11 @@ export type LiveTalkStatusDto = {
 
 @Injectable()
 export class GroupLiveTalkService {
+  /** Grace period before marking a disconnected user as left (rejoin protection). */
+  private static readonly DISCONNECT_LEAVE_MS = 30_000;
+
+  private readonly pendingLeaveTimers = new Map<string, NodeJS.Timeout>();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly realtimeEmitter: RealtimeEmitter,
@@ -1029,6 +1034,7 @@ export class GroupLiveTalkService {
     userId: string,
   ): Promise<LiveTalkRoomDto> {
     await this.assertGroupMember(groupId, userId);
+    this.cancelScheduledLeave(roomId, userId);
     const room = await this.getActiveRoomRecord(groupId, roomId);
     const wasInRoom = await this.prisma.groupLiveParticipant.findFirst({
       where: { roomId: room.id, userId, leftAt: null },
@@ -1072,13 +1078,87 @@ export class GroupLiveTalkService {
     return this.leaveRoom(groupId, active.id, userId);
   }
 
+  scheduleParticipantLeave(
+    groupId: string,
+    roomId: string,
+    userId: string,
+    delayMs = GroupLiveTalkService.DISCONNECT_LEAVE_MS,
+  ) {
+    const key = this.leaveTimerKey(roomId, userId);
+    this.cancelScheduledLeave(roomId, userId);
+    const timer = setTimeout(() => {
+      this.pendingLeaveTimers.delete(key);
+      void this.leaveRoom(groupId, roomId, userId).catch(() => {
+        /* room may already be ended */
+      });
+    }, delayMs);
+    this.pendingLeaveTimers.set(key, timer);
+  }
+
+  cancelScheduledLeave(roomId: string, userId: string) {
+    const key = this.leaveTimerKey(roomId, userId);
+    const existing = this.pendingLeaveTimers.get(key);
+    if (existing) {
+      clearTimeout(existing);
+      this.pendingLeaveTimers.delete(key);
+    }
+  }
+
+  async transferHost(
+    groupId: string,
+    roomId: string,
+    actorId: string,
+    targetUserId: string,
+  ): Promise<LiveTalkRoomDto> {
+    const room = await this.getActiveRoomRecord(groupId, roomId);
+    await this.assertHostModerator(groupId, actorId, room.hostId);
+
+    if (targetUserId === room.hostId) {
+      return this.publishRoomUpdate(groupId, roomId);
+    }
+
+    const target = await this.prisma.groupLiveParticipant.findFirst({
+      where: { roomId, userId: targetUserId, leftAt: null },
+    });
+
+    if (!target) {
+      throw new BadRequestException('Target user is not in this Live Talk');
+    }
+
+    return this.applyHostTransfer(
+      groupId,
+      roomId,
+      room.hostId,
+      targetUserId,
+      'manual',
+    );
+  }
+
   async leaveRoom(
     groupId: string,
     roomId: string,
     userId: string,
   ): Promise<LiveTalkRoomDto | null> {
     await this.assertGroupMember(groupId, userId);
+    this.cancelScheduledLeave(roomId, userId);
+
     const room = await this.getActiveRoomRecord(groupId, roomId);
+
+    const openParticipant = await this.prisma.groupLiveParticipant.findFirst({
+      where: { roomId: room.id, userId, leftAt: null },
+    });
+
+    if (!openParticipant) {
+      const activeCount = await this.countActiveParticipants(room.id);
+      if (activeCount === 0) {
+        return this.endRoomInternal(room.id, groupId);
+      }
+      const refreshed = await this.prisma.groupLiveRoom.findUnique({
+        where: { id: room.id },
+        include: this.roomInclude(),
+      });
+      return refreshed ? this.mapRoom(refreshed) : null;
+    }
 
     const member = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -1087,6 +1167,8 @@ export class GroupLiveTalkService {
     if (room.activeMicUserId === userId) {
       await this.releaseMic(groupId, room.id, userId, true);
     }
+
+    const wasHost = room.hostId === userId;
 
     await this.markParticipantLeft(room.id, userId);
     await this.postSystemMessage(
@@ -1107,13 +1189,23 @@ export class GroupLiveTalkService {
       return null;
     }
 
-    if (room.hostId === userId) {
-      return this.endRoomInternal(room.id, groupId);
-    }
-
     const activeCount = await this.countActiveParticipants(room.id);
     if (activeCount === 0) {
       return this.endRoomInternal(room.id, groupId);
+    }
+
+    if (wasHost) {
+      const newHostId = await this.pickNewHostId(room.id, groupId, userId);
+      if (!newHostId) {
+        return this.endRoomInternal(room.id, groupId);
+      }
+      return this.applyHostTransfer(
+        groupId,
+        room.id,
+        userId,
+        newHostId,
+        'host_left',
+      );
     }
 
     const refreshed = await this.prisma.groupLiveRoom.findUnique({
@@ -1222,7 +1314,12 @@ export class GroupLiveTalkService {
     });
 
     for (const row of active) {
-      await this.leaveRoom(row.room.groupId, row.room.id, userId);
+      this.scheduleParticipantLeave(
+        row.room.groupId,
+        row.room.id,
+        userId,
+        GroupLiveTalkService.DISCONNECT_LEAVE_MS,
+      );
     }
   }
 
@@ -1289,6 +1386,75 @@ export class GroupLiveTalkService {
     return this.prisma.groupLiveParticipant.count({
       where: { roomId, leftAt: null },
     });
+  }
+
+  private leaveTimerKey(roomId: string, userId: string) {
+    return `${roomId}:${userId}`;
+  }
+
+  /** Pick next Live Talk host: hub admin/mod in room, then earliest join, then any. */
+  private async pickNewHostId(
+    roomId: string,
+    groupId: string,
+    excludingUserId: string,
+  ): Promise<string | null> {
+    const participants = await this.prisma.groupLiveParticipant.findMany({
+      where: { roomId, leftAt: null, userId: { not: excludingUserId } },
+      orderBy: { joinedAt: 'asc' },
+    });
+
+    if (participants.length === 0) {
+      return null;
+    }
+
+    const roles = await this.getParticipantRoles(
+      groupId,
+      participants.map((p) => p.userId),
+    );
+
+    const moderator = participants.find((p) => {
+      const role = roles.get(p.userId);
+      return role === GroupRole.ADMIN || role === GroupRole.OWNER;
+    });
+
+    return moderator?.userId ?? participants[0]!.userId;
+  }
+
+  private async applyHostTransfer(
+    groupId: string,
+    roomId: string,
+    oldHostId: string,
+    newHostId: string,
+    reason: 'host_left' | 'manual',
+  ): Promise<LiveTalkRoomDto> {
+    const newHost = await this.prisma.user.findUnique({
+      where: { id: newHostId },
+      select: { name: true },
+    });
+
+    await this.prisma.groupLiveRoom.update({
+      where: { id: roomId },
+      data: { hostId: newHostId },
+    });
+
+    const message =
+      reason === 'host_left'
+        ? `Host left. ${newHost?.name ?? 'Someone'} is now hosting.`
+        : `${newHost?.name ?? 'Someone'} is now hosting Live Talk.`;
+
+    await this.postSystemMessage(roomId, groupId, message);
+
+    const mapped = await this.publishRoomUpdate(groupId, roomId);
+
+    this.emitLiveTalkRoomEvent(groupId, roomId, 'live_talk_host_changed', {
+      groupId,
+      roomId,
+      oldHostId,
+      newHostId,
+      room: mapped,
+    });
+
+    return mapped;
   }
 
   private async endRoomInternal(

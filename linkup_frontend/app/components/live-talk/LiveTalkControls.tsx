@@ -206,8 +206,8 @@ export default function LiveTalkControls({
                 type="button"
                 disabled={loading}
                 onClick={onEnd}
-                aria-label="End Live Talk"
-                title="End room"
+                aria-label="End Live Talk for everyone"
+                title="End Live Talk"
                 className={`${actionBtnBase} ${actionBtnGhost} sm:order-4`}
               >
                 <Square className="h-4 w-4" />
@@ -243,8 +243,8 @@ export default function LiveTalkControls({
                 type="button"
                 disabled={loading}
                 onClick={onEnd}
-                aria-label="End Live Talk"
-                title="End room"
+                aria-label="End Live Talk for everyone"
+                title="End Live Talk"
                 className={`${actionBtnBase} ${actionBtnGhost}`}
               >
                 <Square className="h-4 w-4" />
@@ -289,8 +289,8 @@ export default function LiveTalkControls({
                 type="button"
                 disabled={loading}
                 onClick={onEnd}
-                aria-label="End Live Talk"
-                title="End room"
+                aria-label="End Live Talk for everyone"
+                title="End Live Talk"
                 className={`${actionBtnBase} ${actionBtnGhost}`}
               >
                 <Square className="h-4 w-4" />

@@ -1590,15 +1590,11 @@ export class ChatGateway
       return;
     }
 
-    try {
-      await this.groupLiveTalkService.leaveRoom(
-        resolvedGroupId,
-        resolvedRoomId,
-        userId,
-      );
-    } catch {
-      // Room may already be ended.
-    }
+    this.groupLiveTalkService.scheduleParticipantLeave(
+      resolvedGroupId,
+      resolvedRoomId,
+      userId,
+    );
 
     if (this.groupLiveTalkManager.isRoomActive(roomKey)) {
       this.server.to(roomKey).emit('live_talk_participant_left', {
