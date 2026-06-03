@@ -110,6 +110,22 @@ export default function LinkupNavigation() {
             </Link>
 
             {showAuthActions && isAuthenticated && user ? (
+              <Link
+                href="/profile"
+                title={displayName}
+                aria-label={`Profile: ${displayName}`}
+                className="linkup-focus-ring linkup-touch-target md:hidden"
+              >
+                <UserAvatar
+                  src={user.avatarUrl}
+                  name={user.name}
+                  username={user.username}
+                  size="sm"
+                />
+              </Link>
+            ) : null}
+
+            {showAuthActions && isAuthenticated && user ? (
               <button
                 type="button"
                 onClick={handleLogout}
