@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -91,6 +92,49 @@ export class GroupLiveTalkController {
     @Req() req: { user: SafeUser },
   ) {
     return this.groupLiveTalkService.endRoom(groupId, roomId, req.user.id);
+  }
+
+  @Get('groups/:groupId/live-talk/:roomId/temp-admins')
+  listTempAdmins(
+    @Param('groupId') groupId: string,
+    @Param('roomId') roomId: string,
+    @Req() req: { user: SafeUser },
+  ) {
+    return this.groupLiveTalkService.listTempAdmins(
+      groupId,
+      roomId,
+      req.user.id,
+    );
+  }
+
+  @Post('groups/:groupId/live-talk/:roomId/temp-admins')
+  grantTempAdmin(
+    @Param('groupId') groupId: string,
+    @Param('roomId') roomId: string,
+    @Req() req: { user: SafeUser },
+    @Body() dto: LiveTalkTargetUserDto,
+  ) {
+    return this.groupLiveTalkService.grantTempAdmin(
+      groupId,
+      roomId,
+      req.user.id,
+      dto.targetUserId,
+    );
+  }
+
+  @Delete('groups/:groupId/live-talk/:roomId/temp-admins/:targetUserId')
+  removeTempAdmin(
+    @Param('groupId') groupId: string,
+    @Param('roomId') roomId: string,
+    @Param('targetUserId') targetUserId: string,
+    @Req() req: { user: SafeUser },
+  ) {
+    return this.groupLiveTalkService.removeTempAdmin(
+      groupId,
+      roomId,
+      req.user.id,
+      targetUserId,
+    );
   }
 
   @Post('groups/:groupId/live-talk/:roomId/transfer-host')

@@ -25,7 +25,7 @@ export interface Group {
 
 export interface GroupDetail extends Group {
   owner: GroupOwner;
-  role: "OWNER" | "ADMIN" | "MEMBER" | null;
+  role: "OWNER" | "ADMIN" | "MODERATOR" | "MEMBER" | null;
 }
 
 export interface CreateGroupPayload {

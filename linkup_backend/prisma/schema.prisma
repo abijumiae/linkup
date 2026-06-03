@@ -53,7 +53,14 @@ enum ReportStatus {
 enum GroupRole {
   OWNER
   ADMIN
+  MODERATOR
   MEMBER
+}
+
+enum GroupLiveRole {
+  LISTENER
+  SPEAKER
+  TEMP_ADMIN
 }
 
 enum GroupLiveRoomStatus {
@@ -260,14 +267,18 @@ model GroupLiveRoom {
 }
 
 model GroupLiveParticipant {
-  id         String    @id @default(cuid())
-  roomId     String
-  userId     String
-  isMuted    Boolean   @default(true)
-  handRaised   Boolean   @default(false)
-  handRaisedAt DateTime?
-  joinedAt     DateTime  @default(now())
-  leftAt       DateTime?
+  id                  String         @id @default(cuid())
+  roomId              String
+  userId              String
+  liveRole            GroupLiveRole  @default(LISTENER)
+  isTempAdmin         Boolean        @default(false)
+  tempAdminGrantedBy  String?
+  tempAdminGrantedAt  DateTime?
+  isMuted             Boolean        @default(true)
+  handRaised          Boolean        @default(false)
+  handRaisedAt        DateTime?
+  joinedAt            DateTime       @default(now())
+  leftAt              DateTime?
 
   room GroupLiveRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user User          @relation(fields: [userId], references: [id], onDelete: Cascade)

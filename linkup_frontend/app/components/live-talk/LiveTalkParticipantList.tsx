@@ -17,6 +17,9 @@ type LiveTalkParticipantListProps = {
   onRemoveParticipant?: (userId: string) => void;
   onClearHand?: (userId: string) => void;
   onMakeHost?: (userId: string) => void;
+  onGrantRoomAdmin?: (userId: string) => void;
+  onRemoveRoomAdmin?: (userId: string) => void;
+  canGrantRoomAdmin?: boolean;
   compact?: boolean;
 };
 
@@ -36,11 +39,17 @@ function roleBadge(
   if (p.userId === liveTalkHostId) {
     return "Host";
   }
-  if (p.groupRole === "ADMIN") {
-    return "Moderator";
+  if (p.isTempAdmin) {
+    return "Room Admin";
   }
   if (p.groupRole === "OWNER") {
-    return "Admin";
+    return "Hub Admin";
+  }
+  if (p.groupRole === "ADMIN") {
+    return "Hub Admin";
+  }
+  if (p.groupRole === "MODERATOR") {
+    return "Moderator";
   }
   return null;
 }
@@ -57,6 +66,9 @@ export default function LiveTalkParticipantList({
   onRemoveParticipant,
   onClearHand,
   onMakeHost,
+  onGrantRoomAdmin,
+  onRemoveRoomAdmin,
+  canGrantRoomAdmin = false,
   compact = false,
 }: LiveTalkParticipantListProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -222,6 +234,30 @@ export default function LiveTalkParticipantList({
                   </button>
                   {openMenuId === p.userId ? (
                     <div className="absolute right-0 top-full z-20 mt-1 w-44 rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-white/10 dark:bg-slate-900">
+                      {canGrantRoomAdmin && !p.isTempAdmin && onGrantRoomAdmin ? (
+                        <button
+                          type="button"
+                          className="block min-h-[44px] w-full px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-white/5"
+                          onClick={() => {
+                            onGrantRoomAdmin(p.userId);
+                            setOpenMenuId(null);
+                          }}
+                        >
+                          Make Room Admin
+                        </button>
+                      ) : null}
+                      {canGrantRoomAdmin && p.isTempAdmin && onRemoveRoomAdmin ? (
+                        <button
+                          type="button"
+                          className="block min-h-[44px] w-full px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-white/5"
+                          onClick={() => {
+                            onRemoveRoomAdmin(p.userId);
+                            setOpenMenuId(null);
+                          }}
+                        >
+                          Remove Room Admin
+                        </button>
+                      ) : null}
                       {onMakeHost ? (
                         <button
                           type="button"

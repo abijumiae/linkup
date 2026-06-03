@@ -10,6 +10,7 @@ import {
   fetchLiveTalkMessages,
   fetchLiveTalkStatus,
   forceReleaseLiveTalkMic,
+  grantLiveTalkTempAdmin,
   joinLiveTalk,
   leaveLiveTalk,
   LiveTalkAuthError,
@@ -23,6 +24,7 @@ import {
   raiseLiveTalkHand,
   releaseLiveTalkMic,
   removeLiveTalkParticipant,
+  removeLiveTalkTempAdmin,
   setLiveTalkMuted,
   startLiveTalk,
   transferLiveTalkHost,
@@ -39,6 +41,8 @@ export type LiveTalkParticipantView = LiveTalkSocketParticipant & {
   speaking?: boolean;
   isHost?: boolean;
   groupRole?: string;
+  liveRole?: string;
+  isTempAdmin?: boolean;
 };
 
 export type LiveTalkAudioStatus =
@@ -54,6 +58,7 @@ export type UseGroupLiveTalkOptions = {
   hostId?: string;
   canStart?: boolean;
   canHostControls?: boolean;
+  canGrantRoomAdmin?: boolean;
   onRoomChange: (room: LiveTalkRoom | null) => void;
 };
 
@@ -63,6 +68,7 @@ export function useGroupLiveTalk({
   hostId,
   canStart = true,
   canHostControls = false,
+  canGrantRoomAdmin = false,
   onRoomChange,
 }: UseGroupLiveTalkOptions) {
   const router = useRouter();
@@ -92,7 +98,12 @@ export function useGroupLiveTalk({
 
   const room = activeRoom?.status === "ACTIVE" ? activeRoom : null;
   const isHost = room?.hostId === localUserId;
-  const canUseHostControls = canHostControls || isHost;
+  const selfInRoom = room?.participants.find(
+    (p) => p.userId === localUserId && !p.leftAt,
+  );
+  const isRoomAdmin = Boolean(selfInRoom?.isTempAdmin);
+  const canUseHostControls = canHostControls || isHost || isRoomAdmin;
+  const canGrantTempAdmin = canGrantRoomAdmin || isHost;
   const activeMicUserId = room?.activeMicUserId ?? null;
   const holdingMic = Boolean(activeMicUserId && activeMicUserId === localUserId);
   const micBusy = Boolean(activeMicUserId && !holdingMic);
@@ -112,6 +123,8 @@ export function useGroupLiveTalk({
         handRaised: p.handRaised ?? false,
         isHost: p.userId === r.hostId,
         groupRole: p.groupRole,
+        liveRole: p.liveRole,
+        isTempAdmin: p.isTempAdmin ?? false,
       })),
     );
   }, []);
@@ -461,6 +474,24 @@ export function useGroupLiveTalk({
     socket.on("live_talk_host_changed", onHostChanged);
     socket.on("live_talk_participant_removed", onParticipantRemoved);
 
+    const onTempAdminChanged = (payload: {
+      groupId: string;
+      roomId?: string;
+      room?: LiveTalkRoom;
+    }) => {
+      if (payload.groupId !== groupId) {
+        return;
+      }
+      if (payload.room) {
+        applyRoomUpdate(payload.room);
+      } else {
+        void refreshActiveRoom();
+      }
+    };
+
+    socket.on("live_talk_temp_admin_added", onTempAdminChanged);
+    socket.on("live_talk_temp_admin_removed", onTempAdminChanged);
+
     return () => {
       socket.off("live_talk_started", onStarted);
       socket.off("live_talk_ended", onEnded);
@@ -474,6 +505,8 @@ export function useGroupLiveTalk({
       socket.off("live_talk_room_updated", onRoomUpdated);
       socket.off("live_talk_host_changed", onHostChanged);
       socket.off("live_talk_participant_removed", onParticipantRemoved);
+      socket.off("live_talk_temp_admin_added", onTempAdminChanged);
+      socket.off("live_talk_temp_admin_removed", onTempAdminChanged);
     };
   }, [
     socket,
@@ -996,6 +1029,48 @@ export function useGroupLiveTalk({
     }
   };
 
+  const grantRoomAdmin = async (targetUserId: string) => {
+    if (!room || !canGrantTempAdmin) {
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const updated = await grantLiveTalkTempAdmin(
+        groupId,
+        room.id,
+        targetUserId,
+      );
+      applyRoomUpdate(updated);
+      setInfo("Room admin added");
+    } catch (err) {
+      handleLiveTalkError(err, "Could not add room admin.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const removeRoomAdmin = async (targetUserId: string) => {
+    if (!room || !canGrantTempAdmin) {
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const updated = await removeLiveTalkTempAdmin(
+        groupId,
+        room.id,
+        targetUserId,
+      );
+      applyRoomUpdate(updated);
+      setInfo("Room admin removed");
+    } catch (err) {
+      handleLiveTalkError(err, "Could not remove room admin.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const unlockAudio = async () => {
     let played = false;
     for (const audio of audioElementsRef.current.values()) {
@@ -1048,6 +1123,8 @@ export function useGroupLiveTalk({
     isConnected,
     canStart,
     canHostControls: canUseHostControls,
+    canGrantRoomAdmin: canGrantTempAdmin,
+    isRoomAdmin,
     raisedHands: room?.raisedHands ?? [],
     micPassedPrompt,
     setMicPassedPrompt,
@@ -1064,6 +1141,8 @@ export function useGroupLiveTalk({
     removeParticipant,
     clearParticipantHand,
     transferHostTo,
+    grantRoomAdmin,
+    removeRoomAdmin,
     leave,
     end,
     toggleMute,

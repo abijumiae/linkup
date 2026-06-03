@@ -8,7 +8,17 @@ export type LiveTalkUser = {
   avatarUrl: string | null;
 };
 
-export type LiveTalkGroupRole = "OWNER" | "ADMIN" | "MEMBER";
+export type LiveTalkGroupRole =
+  | "OWNER"
+  | "ADMIN"
+  | "MODERATOR"
+  | "MEMBER";
+
+export type LiveTalkSessionRole =
+  | "HOST"
+  | "TEMP_ADMIN"
+  | "SPEAKER"
+  | "LISTENER";
 
 export type LiveTalkParticipant = {
   id: string;
@@ -19,7 +29,16 @@ export type LiveTalkParticipant = {
   joinedAt: string;
   leftAt: string | null;
   groupRole: LiveTalkGroupRole;
+  liveRole?: LiveTalkSessionRole;
+  isTempAdmin?: boolean;
   user: LiveTalkUser;
+};
+
+export type LiveTalkTempAdmin = {
+  userId: string;
+  user: LiveTalkUser;
+  grantedByUserId: string | null;
+  grantedAt: string | null;
 };
 
 export type RaisedHandQueueItem = {
@@ -532,6 +551,51 @@ export async function postLiveTalkMessage(
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify({ content }),
+      },
+    ),
+  );
+}
+
+export async function fetchLiveTalkTempAdmins(
+  groupId: string,
+  roomId: string,
+): Promise<LiveTalkTempAdmin[]> {
+  return withAuth(() =>
+    apiRequest<LiveTalkTempAdmin[]>(
+      `/groups/${groupId}/live-talk/${roomId}/temp-admins`,
+      { headers: authHeaders() },
+    ),
+  );
+}
+
+export async function grantLiveTalkTempAdmin(
+  groupId: string,
+  roomId: string,
+  targetUserId: string,
+): Promise<LiveTalkRoom> {
+  return withAuth(() =>
+    apiRequest<LiveTalkRoom>(
+      `/groups/${groupId}/live-talk/${roomId}/temp-admins`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ targetUserId }),
+      },
+    ),
+  );
+}
+
+export async function removeLiveTalkTempAdmin(
+  groupId: string,
+  roomId: string,
+  targetUserId: string,
+): Promise<LiveTalkRoom> {
+  return withAuth(() =>
+    apiRequest<LiveTalkRoom>(
+      `/groups/${groupId}/live-talk/${roomId}/temp-admins/${targetUserId}`,
+      {
+        method: "DELETE",
+        headers: authHeaders(),
       },
     ),
   );

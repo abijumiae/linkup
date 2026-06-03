@@ -25,6 +25,11 @@ import {
   LiveTalkRoom,
 } from "@/src/lib/groupLiveTalk";
 
+const GroupHubAdminsSection = dynamic(
+  () => import("./GroupHubAdminsSection"),
+  { ssr: false },
+);
+
 const GroupLiveTalkPanel = dynamic(() => import("./GroupLiveTalkPanel"), {
   ssr: false,
   loading: () => (
@@ -242,28 +247,44 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
         </div>
 
         {group.isMember ? (
-          <GroupLiveTalkPanel
-            groupId={groupId}
-            groupName={group.name}
-            activeRoom={safeLiveTalkRoom}
-            isMember={Boolean(group.isMember)}
-            canStart={
-              group.isOwner ||
-              group.role === "ADMIN" ||
-              group.role === "OWNER"
-            }
-            canEndRoom={
-              group.isOwner ||
-              group.role === "ADMIN" ||
-              group.role === "OWNER"
-            }
-            canHostControls={
-              group.isOwner ||
-              group.role === "ADMIN" ||
-              group.role === "OWNER"
-            }
-            onRoomChange={handleLiveTalkRoomChange}
-          />
+          <>
+            <GroupHubAdminsSection
+              groupId={groupId}
+              isOwner={group.isOwner}
+              hubRole={group.role}
+              onHubRoleChange={(role) =>
+                setGroup((g) => (g ? { ...g, role } : g))
+              }
+            />
+            <GroupLiveTalkPanel
+              groupId={groupId}
+              groupName={group.name}
+              activeRoom={safeLiveTalkRoom}
+              isMember={Boolean(group.isMember)}
+              canStart={
+                group.isOwner ||
+                group.role === "ADMIN" ||
+                group.role === "OWNER"
+              }
+              canEndRoom={
+                group.isOwner ||
+                group.role === "ADMIN" ||
+                group.role === "OWNER"
+              }
+              canHostControls={
+                group.isOwner ||
+                group.role === "ADMIN" ||
+                group.role === "OWNER" ||
+                group.role === "MODERATOR"
+              }
+              canGrantRoomAdmin={
+                group.isOwner ||
+                group.role === "ADMIN" ||
+                group.role === "OWNER"
+              }
+              onRoomChange={handleLiveTalkRoomChange}
+            />
+          </>
         ) : null}
 
         {error ? (

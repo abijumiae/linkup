@@ -19,6 +19,7 @@ type GroupLiveTalkPanelProps = {
   canStart?: boolean;
   canEndRoom: boolean;
   canHostControls?: boolean;
+  canGrantRoomAdmin?: boolean;
   onRoomChange: (room: LiveTalkRoom | null) => void;
 };
 
@@ -30,6 +31,7 @@ export default function GroupLiveTalkPanel({
   canStart = true,
   canEndRoom,
   canHostControls = false,
+  canGrantRoomAdmin = false,
   onRoomChange,
 }: GroupLiveTalkPanelProps) {
   const talk = useGroupLiveTalk({
@@ -37,6 +39,7 @@ export default function GroupLiveTalkPanel({
     activeRoom,
     canStart,
     canHostControls,
+    canGrantRoomAdmin,
     onRoomChange,
   });
 
@@ -309,6 +312,11 @@ export default function GroupLiveTalkPanel({
                   void talk.removeParticipant(userId)
                 }
                 onClearHand={(userId) => void talk.clearParticipantHand(userId)}
+                canGrantRoomAdmin={talk.canGrantRoomAdmin}
+                onGrantRoomAdmin={(userId) => void talk.grantRoomAdmin(userId)}
+                onRemoveRoomAdmin={(userId) =>
+                  void talk.removeRoomAdmin(userId)
+                }
               />
             </div>
           </div>
