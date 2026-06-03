@@ -91,15 +91,17 @@ export default function LinkupNavigation() {
             ) : null}
             <Link
               href="/messages"
-              className="linkup-focus-ring linkup-touch-target hidden rounded-full border border-slate-300 bg-white text-slate-700 transition duration-150 hover:scale-105 active:scale-95 hover:bg-slate-50 sm:inline-flex dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-300 dark:hover:bg-white/10"
+              className="linkup-icon-btn linkup-focus-ring hidden border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 sm:inline-flex dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-300 dark:hover:bg-white/10"
               aria-label="Open chats"
+              title="Chats"
             >
-              <MessageCircle className="h-5 w-5" />
+              <MessageCircle className="h-5 w-5" aria-hidden />
             </Link>
             <Link
               href="/notifications"
               aria-label="Notifications"
-              className="linkup-focus-ring linkup-touch-target relative rounded-full border border-slate-300 bg-white text-slate-700 transition duration-150 hover:scale-105 active:scale-95 hover:bg-slate-50 dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-300 dark:hover:bg-white/10"
+              title="Notifications"
+              className="linkup-icon-btn linkup-focus-ring relative border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-brand-dark/80 dark:text-slate-300 dark:hover:bg-white/10"
             >
               <Bell className="h-5 w-5" />
               {isAuthenticated && unreadCount > 0 ? (
@@ -131,9 +133,9 @@ export default function LinkupNavigation() {
                 onClick={handleLogout}
                 aria-label="Logout"
                 title="Logout"
-                className="linkup-focus-ring linkup-touch-target inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white/80 text-slate-700 shadow-sm transition duration-150 hover:scale-105 active:scale-95 hover:bg-slate-100 md:hidden dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-200 dark:hover:bg-slate-900"
+                className="linkup-icon-btn linkup-focus-ring border border-slate-200 bg-white/80 text-slate-700 shadow-sm hover:bg-slate-100 md:hidden dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-200 dark:hover:bg-slate-900"
               >
-                <LogOut className="h-5 w-5" />
+                <LogOut className="h-5 w-5" aria-hidden />
               </button>
             ) : null}
 
@@ -196,9 +198,9 @@ export default function LinkupNavigation() {
                 key={item.href}
                 href={item.href}
                 aria-label={item.label}
-                className={`linkup-focus-ring inline-flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 py-1.5 text-[10px] font-semibold transition duration-150 active:scale-95 sm:text-[11px] ${
+                className={`linkup-focus-ring inline-flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 py-1.5 text-[10px] font-semibold transition duration-150 hover:scale-105 active:scale-95 sm:text-[11px] ${
                   isActive
-                    ? "bg-brand-primary text-white"
+                    ? "bg-brand-primary text-white shadow-md shadow-brand-primary/25"
                     : "text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
                 }`}
               >

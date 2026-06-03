@@ -15,6 +15,10 @@ import { PrivacyService } from '../privacy/privacy.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SafetyService } from '../safety/safety.service';
 import { UploadsService } from '../uploads/uploads.service';
+import {
+  ALLOWED_REACTION_EMOJIS,
+  isAllowedReactionEmoji,
+} from '../common/reaction-emojis';
 import { CreateMessageDto } from './dto/create-message.dto';
 
 const userSelect = {
@@ -409,6 +413,85 @@ export class MessagesService {
         (a, b) =>
           b.lastMessage.createdAt.getTime() - a.lastMessage.createdAt.getTime(),
       );
+  }
+
+  private async assertMessageAccess(messageId: string, userId: string) {
+    const message = await this.prisma.message.findUnique({
+      where: { id: messageId },
+    });
+
+    if (!message) {
+      throw new NotFoundException('Message not found');
+    }
+
+    if (message.senderId !== userId && message.receiverId !== userId) {
+      throw new ForbiddenException('You cannot react to this message');
+    }
+
+    return message;
+  }
+
+  async getMessageReactions(messageId: string, userId: string) {
+    await this.assertMessageAccess(messageId, userId);
+
+    const grouped = await this.prisma.messageReaction.groupBy({
+      by: ['emoji'],
+      where: { messageId },
+      _count: { _all: true },
+    });
+
+    const mine = await this.prisma.messageReaction.findMany({
+      where: { messageId, userId },
+      select: { emoji: true },
+    });
+    const mineSet = new Set(mine.map((row) => row.emoji));
+
+    return ALLOWED_REACTION_EMOJIS.map((emoji) => {
+      const row = grouped.find((g) => g.emoji === emoji);
+      return {
+        emoji,
+        count: row?._count._all ?? 0,
+        reactedByMe: mineSet.has(emoji),
+      };
+    });
+  }
+
+  async toggleMessageReaction(
+    messageId: string,
+    userId: string,
+    emoji: string,
+  ) {
+    if (!isAllowedReactionEmoji(emoji)) {
+      throw new BadRequestException('Invalid reaction emoji');
+    }
+
+    await this.assertMessageAccess(messageId, userId);
+
+    const existing = await this.prisma.messageReaction.findUnique({
+      where: {
+        userId_messageId_emoji: { userId, messageId, emoji },
+      },
+    });
+
+    if (existing) {
+      await this.prisma.messageReaction.delete({
+        where: { id: existing.id },
+      });
+    } else {
+      await this.prisma.messageReaction.create({
+        data: { userId, messageId, emoji },
+      });
+    }
+
+    const reactions = await this.getMessageReactions(messageId, userId);
+    const current = reactions.find((r) => r.emoji === emoji);
+
+    return {
+      emoji,
+      count: current?.count ?? 0,
+      reactedByMe: current?.reactedByMe ?? false,
+      reactions,
+    };
   }
 
   private async ensureGroupMember(groupId: string, userId: string) {

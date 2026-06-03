@@ -61,6 +61,7 @@ import {
   GroupCallParticipant,
   GroupCallSession,
 } from "@/src/lib/groupWebrtc";
+import { ActionButton } from "@/app/components/buttons/LinkupButtons";
 import ChatListItem from "../../components/ChatListItem";
 import UserAvatar from "../../components/UserAvatar";
 import OnlineStatusBadge from "../../components/OnlineStatusBadge";
@@ -1763,6 +1764,8 @@ export default function MessagesPage() {
                       messages.map((message) => (
                         <MessageBubble
                           key={message.id}
+                          messageId={message.id}
+                          enableReactions
                           text={message.content}
                           type={message.type}
                           mediaUrl={message.mediaUrl}
@@ -1878,19 +1881,21 @@ export default function MessagesPage() {
                       className="max-h-32 min-h-[2.25rem] min-w-0 flex-1 resize-none bg-transparent py-1.5 text-base text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500 sm:text-sm"
                       placeholder="Type your message..."
                     />
-                    <button
-                      type="button"
+                    <ActionButton
+                      icon={Send}
+                      variant="primary"
+                      compact
+                      rounded="full"
                       onClick={() => void handleSendMessage()}
                       disabled={
                         !messageInput.trim() || isSending || isVoiceRecording
                       }
-                      className="linkup-btn-primary inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 sm:text-sm"
+                      aria-label="Send message"
+                      title="Send"
+                      className="shrink-0 px-3 text-xs sm:px-4 sm:text-sm"
                     >
-                      <Send className="h-4 w-4" />
-                      <span className="hidden sm:inline">
-                        {isSending ? "Sending…" : "Send"}
-                      </span>
-                    </button>
+                      {isSending ? "Sending…" : "Send"}
+                    </ActionButton>
                   </div>
                   )}
                 </div>

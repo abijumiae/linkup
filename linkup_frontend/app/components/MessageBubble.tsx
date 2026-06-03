@@ -2,7 +2,18 @@
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Copy, Heart, Pause, Play, Reply } from "lucide-react";
-import { resolveMediaUrl } from "@/src/lib/messages";
+import { IconButton } from "@/app/components/buttons/LinkupButtons";
+import ReactionBar from "./ReactionBar";
+import {
+  fetchMessageReactions,
+  resolveMediaUrl,
+  toggleMessageReaction,
+} from "@/src/lib/messages";
+import {
+  emptyReactionSummaries,
+  type LinkupReactionEmoji,
+  type ReactionSummary,
+} from "@/src/lib/reactions";
 import {
   getChatGradient,
   getChatSenderLabelClass,
@@ -21,6 +32,8 @@ type MessageBubbleProps = {
   duration?: number | null;
   onReply?: (quote: string) => void;
   onCopied?: () => void;
+  messageId?: string;
+  enableReactions?: boolean;
 };
 
 function formatDuration(totalSeconds: number) {
@@ -43,9 +56,6 @@ function isAudioMessage(
   );
 }
 
-const actionButtonClass =
-  "inline-flex h-9 w-9 min-h-[36px] min-w-[36px] items-center justify-center rounded-full text-slate-500 transition duration-150 hover:scale-105 hover:bg-slate-100 active:scale-95 dark:text-slate-400 dark:hover:bg-slate-800 sm:h-8 sm:w-8";
-
 function MessageBubbleComponent({
   text,
   time,
@@ -59,11 +69,17 @@ function MessageBubbleComponent({
   duration,
   onReply,
   onCopied,
+  messageId,
+  enableReactions = false,
 }: MessageBubbleProps) {
   const audioSrc = resolveMediaUrl(mediaUrl ?? audioUrl ?? undefined);
   const isVoice = isAudioMessage(type, mediaUrl, audioUrl);
   const [isPlaying, setIsPlaying] = useState(false);
   const [liked, setLiked] = useState(false);
+  const [reactions, setReactions] = useState<ReactionSummary[]>(
+    emptyReactionSummaries(),
+  );
+  const [reactionsLoaded, setReactionsLoaded] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const accentId = fromMe ? null : senderId;
   const accentGradient = getChatGradient(accentId);
@@ -75,6 +91,31 @@ function MessageBubbleComponent({
       audioRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    if (!enableReactions || !messageId || reactionsLoaded) {
+      return;
+    }
+
+    let cancelled = false;
+    void fetchMessageReactions(messageId)
+      .then((data) => {
+        if (!cancelled) {
+          setReactions(data);
+          setReactionsLoaded(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setReactions(emptyReactionSummaries());
+          setReactionsLoaded(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [enableReactions, messageId, reactionsLoaded]);
 
   const togglePlayback = useCallback(() => {
     if (!audioSrc) {
@@ -201,38 +242,54 @@ function MessageBubbleComponent({
         }`}
       >
         {onReply && copyText ? (
-          <button
-            type="button"
+          <IconButton
+            icon={Reply}
+            variant="ghost"
+            size="sm"
             onClick={handleReply}
-            className={actionButtonClass}
             aria-label="Reply"
-          >
-            <Reply className="h-4 w-4" />
-          </button>
+            title="Reply"
+            className="text-slate-500 dark:text-slate-400"
+          />
         ) : null}
-        <button
-          type="button"
+        <IconButton
+          icon={Heart}
+          variant="ghost"
+          size="sm"
           onClick={() => setLiked((current) => !current)}
-          className={`${actionButtonClass} ${
-            liked
-              ? "text-rose-500 hover:text-rose-600 dark:text-rose-400"
-              : ""
-          }`}
           aria-label={liked ? "Unlike message" : "Like message"}
-        >
-          <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
-        </button>
+          title={liked ? "Unlike" : "Like"}
+          className={
+            liked
+              ? "text-rose-500 hover:text-rose-600 dark:text-rose-400 [&_svg]:fill-current"
+              : "text-slate-500 dark:text-slate-400"
+          }
+        />
         {copyText ? (
-          <button
-            type="button"
+          <IconButton
+            icon={Copy}
+            variant="ghost"
+            size="sm"
             onClick={() => void handleCopy()}
-            className={actionButtonClass}
             aria-label="Copy message"
-          >
-            <Copy className="h-4 w-4" />
-          </button>
+            title="Copy"
+            className="text-slate-500 dark:text-slate-400"
+          />
         ) : null}
       </div>
+
+      {enableReactions && messageId ? (
+        <ReactionBar
+          reactions={reactions}
+          compact
+          className="max-w-full pl-1"
+          onToggle={async (emoji: LinkupReactionEmoji) => {
+            const result = await toggleMessageReaction(messageId, emoji);
+            setReactions(result.reactions);
+            return result.reactions;
+          }}
+        />
+      ) : null}
     </div>
   );
 }

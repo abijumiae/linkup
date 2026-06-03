@@ -226,15 +226,19 @@ select {
   }
 
   .linkup-btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-brand-light shadow-lg shadow-brand-primary/25 transition hover:from-brand-primary-hover hover:to-brand-secondary-hover disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-brand-primary to-brand-secondary px-5 py-2.5 text-sm font-semibold text-brand-light shadow-sm shadow-brand-primary/20 transition duration-150 hover:scale-105 hover:from-brand-primary-hover hover:to-brand-secondary-hover hover:shadow-md active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40 disabled:pointer-events-none disabled:opacity-50;
   }
 
   .linkup-btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-brand-text shadow-sm transition hover:border-brand-primary/40 hover:bg-slate-50 dark:border-white/10 dark:bg-brand-dark/80 dark:text-brand-light dark:hover:bg-white/10;
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-brand-text shadow-sm transition duration-150 hover:scale-105 hover:border-brand-primary/40 hover:bg-slate-50 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40 disabled:pointer-events-none disabled:opacity-50 dark:border-white/10 dark:bg-brand-dark/80 dark:text-brand-light dark:hover:bg-white/10;
   }
 
   .linkup-btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-full border border-slate-200/80 bg-slate-50 px-4 py-2 text-sm font-medium text-brand-text transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10;
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-slate-50 px-4 py-2 text-sm font-medium text-brand-text transition duration-150 hover:scale-105 hover:bg-slate-100 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40 disabled:pointer-events-none disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10;
+  }
+
+  .linkup-icon-btn {
+    @apply inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full transition duration-150 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 dark:focus-visible:ring-brand-secondary/40;
   }
 
   .linkup-input-shell {
@@ -306,4 +310,108 @@ select {
     box-shadow: var(--float-shadow);
     border-color: var(--panel-border);
   }
+}
+
+@keyframes linkup-reaction-pop-keyframes {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.28);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes linkup-reaction-bounce-keyframes {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  40% {
+    transform: translateY(-5px) scale(1.12);
+  }
+  70% {
+    transform: translateY(1px) scale(0.98);
+  }
+}
+
+@keyframes linkup-reaction-pulse-keyframes {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.18);
+  }
+}
+
+@keyframes linkup-reaction-wiggle-keyframes {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+  25% {
+    transform: rotate(-8deg) scale(1.08);
+  }
+  75% {
+    transform: rotate(8deg) scale(1.08);
+  }
+}
+
+@keyframes linkup-reaction-shake-keyframes {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-3px) rotate(-2deg);
+  }
+  40% {
+    transform: translateX(3px) rotate(2deg);
+  }
+  60% {
+    transform: translateX(-2px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+}
+
+@keyframes linkup-reaction-heart-keyframes {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.22);
+  }
+  55% {
+    transform: scale(0.94);
+  }
+}
+
+.linkup-reaction-pop {
+  animation: linkup-reaction-pop-keyframes 0.42s ease-out;
+}
+
+.linkup-reaction-bounce {
+  animation: linkup-reaction-bounce-keyframes 0.45s ease-out;
+}
+
+.linkup-reaction-pulse {
+  animation: linkup-reaction-pulse-keyframes 0.48s ease-in-out;
+}
+
+.linkup-reaction-wiggle {
+  animation: linkup-reaction-wiggle-keyframes 0.45s ease-in-out;
+}
+
+.linkup-reaction-shake {
+  animation: linkup-reaction-shake-keyframes 0.42s ease-in-out;
+}
+
+.linkup-reaction-heart {
+  animation: linkup-reaction-heart-keyframes 0.48s ease-in-out;
 }

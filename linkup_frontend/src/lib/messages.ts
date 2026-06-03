@@ -6,6 +6,10 @@ import {
   resolveMediaUrl,
 } from "./api";
 import { clearAuth, getToken } from "./auth";
+import type {
+  ReactionSummary,
+  ReactionToggleResponse,
+} from "./reactions";
 
 export interface MessageUser {
   id: string;
@@ -318,4 +322,42 @@ export async function sendVoiceMessage(
     mediaUrl: uploaded.url,
     duration: Math.floor(duration),
   });
+}
+
+export async function fetchMessageReactions(
+  messageId: string,
+): Promise<ReactionSummary[]> {
+  const token = getToken();
+  if (!token) {
+    throw new ApiError("Not authenticated", 401);
+  }
+
+  return apiRequest<ReactionSummary[]>(
+    `/messages/reactions/${messageId}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+}
+
+export async function toggleMessageReaction(
+  messageId: string,
+  emoji: string,
+): Promise<ReactionToggleResponse> {
+  const token = getToken();
+  if (!token) {
+    throw new ApiError("Not authenticated", 401);
+  }
+
+  return apiRequest<ReactionToggleResponse>(
+    `/messages/reactions/${messageId}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ emoji }),
+    },
+  );
 }

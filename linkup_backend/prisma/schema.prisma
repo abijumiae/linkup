@@ -124,6 +124,8 @@ model User {
   activeMicLiveRooms    GroupLiveRoom[] @relation("GroupLiveRoomActiveMic")
   groupLiveParticipations GroupLiveParticipant[]
   groupLiveTalkMessages   GroupLiveTalkMessage[]
+  postReactions         PostReaction[]
+  messageReactions      MessageReaction[]
 }
 
 model ModerationLog {
@@ -204,6 +206,7 @@ model Post {
   author   User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   group    Group?    @relation(fields: [groupId], references: [id], onDelete: Cascade)
   likes    Like[]
+  reactions PostReaction[]
   comments Comment[]
   savedBy  SavedPost[]
   notifications Notification[]
@@ -491,9 +494,38 @@ model Message {
 
   sender   User @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
   receiver User @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  reactions MessageReaction[]
 
   @@index([senderId, receiverId, createdAt])
   @@index([receiverId, read])
+}
+
+model PostReaction {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId, emoji])
+  @@index([postId])
+}
+
+model MessageReaction {
+  id        String   @id @default(cuid())
+  userId    String
+  messageId String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, messageId, emoji])
+  @@index([messageId])
 }
 
 model GroupMessage {

@@ -1,4 +1,8 @@
 import { apiRequest, ApiError, toAbsoluteMediaUrl } from "./api";
+import type {
+  ReactionSummary,
+  ReactionToggleResponse,
+} from "./reactions";
 import { PaginatedResponse, unwrapPaginated } from "./pagination";
 import { AccountType, clearAuth, getToken } from "./auth";
 
@@ -208,6 +212,29 @@ export async function toggleLike(postId: string): Promise<LikeResponse> {
     apiRequest<LikeResponse>(`/posts/${postId}/like`, {
       method: "POST",
       headers: authHeaders(),
+    }),
+  );
+}
+
+export async function fetchPostReactions(
+  postId: string,
+): Promise<ReactionSummary[]> {
+  return withAuth(() =>
+    apiRequest<ReactionSummary[]>(`/posts/${postId}/reactions`, {
+      headers: authHeaders(),
+    }),
+  );
+}
+
+export async function togglePostReaction(
+  postId: string,
+  emoji: string,
+): Promise<ReactionToggleResponse> {
+  return withAuth(() =>
+    apiRequest<ReactionToggleResponse>(`/posts/${postId}/reactions`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ emoji }),
     }),
   );
 }

@@ -10,6 +10,7 @@ import {
   Video,
   CircleDot,
 } from "lucide-react";
+import { ActionButton } from "@/app/components/buttons/LinkupButtons";
 import MediaUploader, {
   type MediaUploaderHandle,
 } from "@/src/components/MediaUploader";
@@ -71,9 +72,6 @@ export default function DailySparkCard({
     void onSubmit();
   }
 
-  const toolbarButtonClass =
-    "inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-slate-200/90 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition hover:border-brand-primary/35 hover:bg-brand-primary/5 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-brand-dark/70 dark:text-slate-200 dark:hover:border-brand-secondary/40 dark:hover:bg-brand-primary/10 sm:text-sm";
-
   return (
     <section className="linkup-panel overflow-hidden p-0">
       <div className="border-b border-slate-200/80 bg-gradient-to-r from-brand-primary/[0.06] via-transparent to-brand-secondary/[0.06] px-5 py-4 dark:border-white/10 sm:px-6">
@@ -119,45 +117,57 @@ export default function DailySparkCard({
         <div className="flex flex-wrap gap-2">
           {onMediaChange ? (
             <>
-              <button
-                type="button"
+              <ActionButton
+                icon={ImageIcon}
+                variant="secondary"
+                compact
+                rounded="full"
                 disabled={isSubmitting}
                 onClick={() => mediaUploaderRef.current?.openPicker("image")}
-                className={toolbarButtonClass}
+                aria-label="Add image"
+                title="Image"
               >
-                <ImageIcon className="h-4 w-4 text-brand-primary dark:text-brand-secondary" />
                 Image
-              </button>
-              <button
-                type="button"
+              </ActionButton>
+              <ActionButton
+                icon={Video}
+                variant="secondary"
+                compact
+                rounded="full"
                 disabled={isSubmitting}
                 onClick={() => mediaUploaderRef.current?.openPicker("video")}
-                className={toolbarButtonClass}
+                aria-label="Add video"
+                title="Video"
               >
-                <Video className="h-4 w-4 text-brand-primary dark:text-brand-secondary" />
                 Video
-              </button>
+              </ActionButton>
             </>
           ) : null}
-          <button
-            type="button"
+          <ActionButton
+            icon={BarChart3}
+            variant="secondary"
+            compact
+            rounded="full"
             disabled={isSubmitting}
             onClick={() => setPollNotice("Polls are coming soon — stay tuned.")}
-            className={toolbarButtonClass}
+            aria-label="Add poll"
+            title="Poll"
           >
-            <BarChart3 className="h-4 w-4 text-brand-primary dark:text-brand-secondary" />
             Poll
-          </button>
+          </ActionButton>
           {onDropMoment ? (
-            <button
-              type="button"
+            <ActionButton
+              icon={CircleDot}
+              variant="secondary"
+              compact
+              rounded="full"
               disabled={isSubmitting}
               onClick={onDropMoment}
-              className={toolbarButtonClass}
+              aria-label="Drop moment"
+              title="Moment"
             >
-              <CircleDot className="h-4 w-4 text-brand-primary dark:text-brand-secondary" />
               Moment
-            </button>
+            </ActionButton>
           ) : null}
         </div>
 
@@ -183,14 +193,17 @@ export default function DailySparkCard({
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Posts as a Spark in your feed — prompt stays here for inspiration.
           </p>
-          <button
+          <ActionButton
             type="submit"
+            icon={PlusCircle}
+            variant="primary"
+            rounded="full"
             disabled={(!value.trim() && !media) || isSubmitting}
-            className="linkup-btn-primary shrink-0 min-h-[44px] w-full px-6 py-3 sm:w-auto"
+            className="w-full shrink-0 px-6 sm:w-auto"
+            aria-label="Drop spark"
           >
-            <PlusCircle className="h-4 w-4" />
             {isSubmitting ? "Dropping…" : "Drop Spark"}
-          </button>
+          </ActionButton>
         </div>
       </form>
 

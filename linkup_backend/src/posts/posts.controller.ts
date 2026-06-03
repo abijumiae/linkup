@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SafeUser } from '../users/users.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { CreatePostDto } from './dto/create-post.dto';
+import { ToggleReactionDto } from './dto/toggle-reaction.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { PostsService } from './posts.service';
 
@@ -101,6 +102,27 @@ export class PostsController {
   @Get(':postId/comments')
   getComments(@Param('postId') postId: string) {
     return this.postsService.getComments(postId);
+  }
+
+  @Get(':postId/reactions')
+  getReactions(
+    @Param('postId') postId: string,
+    @Req() req: { user: SafeUser },
+  ) {
+    return this.postsService.getPostReactions(postId, req.user.id);
+  }
+
+  @Post(':postId/reactions')
+  toggleReaction(
+    @Param('postId') postId: string,
+    @Req() req: { user: SafeUser },
+    @Body() dto: ToggleReactionDto,
+  ) {
+    return this.postsService.togglePostReaction(
+      postId,
+      req.user.id,
+      dto.emoji,
+    );
   }
 
   @Delete(':postId/comments/:commentId')
