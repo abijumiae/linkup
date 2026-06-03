@@ -8,7 +8,7 @@ type ChatInputIconButtonProps = {
   active?: boolean;
   highlight?: boolean;
   disabled?: boolean;
-  onClick: () => void;
+  onClick?: () => void;
 };
 
 export default function ChatInputIconButton({
@@ -23,7 +23,7 @@ export default function ChatInputIconButton({
     <button
       type="button"
       disabled={disabled}
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
       aria-label={label}
       title={label}
       className={`linkup-focus-ring linkup-lt-chat-icon-btn flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition duration-150 hover:scale-105 active:scale-95 disabled:pointer-events-none disabled:opacity-40 sm:h-10 sm:w-10 ${

@@ -1,37 +1,38 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import { useCallback, useRef, useState } from "react";
 import { Paperclip, Smile, Sparkles, Sticker } from "lucide-react";
 import ChatInputIconButton from "./ChatInputIconButton";
-import EmojiPickerPopover from "./EmojiPickerPopover";
-import QuickReactionPopover from "./QuickReactionPopover";
-import StickerPickerPopover from "./StickerPickerPopover";
+import ChatPopoverShell from "./ChatPopoverShell";
+import type { QuickReactionMode } from "./chatInputData";
+import {
+  focusFieldAt,
+  insertAtCursor,
+  LIVE_TALK_SUPPORTS_ATTACHMENTS,
+} from "./chatInputUtils";
+import { useChatInputPopover } from "./useChatInputPopover";
 
-export type ChatInputPanel = "emoji" | "sticker" | "reaction" | "attach" | null;
+const EmojiPickerPopover = dynamic(() => import("./EmojiPickerPopover"), {
+  ssr: false,
+});
+const GifStickerPickerPopover = dynamic(
+  () => import("./GifStickerPickerPopover"),
+  { ssr: false },
+);
+const QuickReactionPopover = dynamic(() => import("./QuickReactionPopover"), {
+  ssr: false,
+});
+
+export type ChatInputPanel = "emoji" | "sticker" | "reaction" | null;
 
 type ChatInputActionsProps = {
   draft: string;
   onDraftChange: (value: string) => void;
-  inputRef: React.RefObject<HTMLInputElement | null>;
+  inputRef: React.RefObject<HTMLTextAreaElement | null>;
   onSendQuickReaction: (emoji: string) => void;
   disabled?: boolean;
 };
-
-function insertAtCursor(
-  current: string,
-  insert: string,
-  input: HTMLInputElement | null,
-): { value: string; cursor: number } {
-  if (!input || input.selectionStart == null) {
-    const next = `${current}${insert}`;
-    return { value: next, cursor: next.length };
-  }
-  const start = input.selectionStart;
-  const end = input.selectionEnd ?? start;
-  const value = current.slice(0, start) + insert + current.slice(end);
-  const cursor = start + insert.length;
-  return { value, cursor };
-}
 
 export default function ChatInputActions({
   draft,
@@ -41,84 +42,84 @@ export default function ChatInputActions({
   disabled = false,
 }: ChatInputActionsProps) {
   const [openPanel, setOpenPanel] = useState<ChatInputPanel>(null);
+  const [quickMode, setQuickMode] = useState<QuickReactionMode>("send");
   const rootRef = useRef<HTMLDivElement>(null);
 
   const closePanel = useCallback(() => setOpenPanel(null), []);
 
+  useChatInputPopover(openPanel !== null, closePanel, rootRef);
+
   const insertText = useCallback(
     (text: string) => {
-      const { value, cursor } = insertAtCursor(draft, text, inputRef.current);
+      if (!text) {
+        return;
+      }
+      const { value, cursor } = insertAtCursor(
+        draft ?? "",
+        text,
+        inputRef.current,
+      );
       onDraftChange(value);
       closePanel();
-      requestAnimationFrame(() => {
-        const el = inputRef.current;
-        if (el) {
-          el.focus();
-          el.setSelectionRange(cursor, cursor);
-        }
-      });
+      focusFieldAt(inputRef.current, cursor);
     },
     [closePanel, draft, inputRef, onDraftChange],
   );
 
-  const togglePanel = useCallback(
-    (panel: Exclude<ChatInputPanel, null>) => {
-      setOpenPanel((prev) => (prev === panel ? null : panel));
-    },
-    [],
-  );
+  const togglePanel = useCallback((panel: Exclude<ChatInputPanel, null>) => {
+    setOpenPanel((prev) => (prev === panel ? null : panel));
+  }, []);
 
-  useEffect(() => {
-    if (!openPanel) {
-      return;
-    }
-    function onPointerDown(event: MouseEvent | TouchEvent) {
-      const target = event.target as Node;
-      if (rootRef.current && !rootRef.current.contains(target)) {
-        closePanel();
+  const handleQuickSend = useCallback(
+    (emoji: string) => {
+      if (!emoji?.trim()) {
+        return;
       }
-    }
-    document.addEventListener("mousedown", onPointerDown);
-    document.addEventListener("touchstart", onPointerDown);
-    return () => {
-      document.removeEventListener("mousedown", onPointerDown);
-      document.removeEventListener("touchstart", onPointerDown);
-    };
-  }, [closePanel, openPanel]);
+      closePanel();
+      onSendQuickReaction(emoji);
+    },
+    [closePanel, onSendQuickReaction],
+  );
 
   return (
     <div
       ref={rootRef}
-      className="relative flex max-w-[46%] shrink-0 items-center gap-0.5 overflow-x-auto overscroll-x-contain sm:max-w-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="relative flex max-w-[48%] shrink-0 items-center gap-0.5 overflow-x-auto overscroll-x-contain sm:max-w-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      {openPanel === "emoji" ? (
+      <ChatPopoverShell
+        open={openPanel === "emoji"}
+        anchorRef={rootRef}
+        label="Emoji picker"
+        width={260}
+      >
         <EmojiPickerPopover onPick={insertText} />
-      ) : null}
-      {openPanel === "sticker" ? (
-        <StickerPickerPopover onPick={insertText} />
-      ) : null}
-      {openPanel === "reaction" ? (
-        <QuickReactionPopover
-          onReact={(emoji) => {
-            closePanel();
-            onSendQuickReaction(emoji);
-          }}
+      </ChatPopoverShell>
+
+      <ChatPopoverShell
+        open={openPanel === "sticker"}
+        anchorRef={rootRef}
+        label="GIF and stickers"
+        width={280}
+      >
+        <GifStickerPickerPopover
+          onPickSticker={insertText}
+          onPickGifUrl={(url) => insertText(url ? ` ${url} ` : "")}
         />
-      ) : null}
-      {openPanel === "attach" ? (
-        <div
-          role="dialog"
-          aria-label="Attachments"
-          className="linkup-lt-popover-enter absolute bottom-full left-0 z-50 mb-2 max-w-[14rem] rounded-2xl border border-slate-200/90 bg-white/95 px-3 py-2.5 text-xs text-slate-600 shadow-xl dark:border-white/10 dark:bg-slate-900/95 dark:text-slate-300"
-        >
-          <p className="font-medium text-slate-800 dark:text-slate-100">
-            Room chat
-          </p>
-          <p className="mt-1 leading-snug">
-            Text and emoji only for now — keeps the room fast and clear.
-          </p>
-        </div>
-      ) : null}
+      </ChatPopoverShell>
+
+      <ChatPopoverShell
+        open={openPanel === "reaction"}
+        anchorRef={rootRef}
+        label="Quick reactions"
+        width={260}
+      >
+        <QuickReactionPopover
+          mode={quickMode}
+          onModeChange={setQuickMode}
+          onSend={handleQuickSend}
+          onInsert={insertText}
+        />
+      </ChatPopoverShell>
 
       <ChatInputIconButton
         icon={Smile}
@@ -144,11 +145,12 @@ export default function ChatInputActions({
       />
       <ChatInputIconButton
         icon={Paperclip}
-        label="Attachment info"
-        active={openPanel === "attach"}
-        disabled={disabled}
-        onClick={() => togglePanel("attach")}
+        label="Attachments not supported in room chat"
+        disabled
       />
+      {!LIVE_TALK_SUPPORTS_ATTACHMENTS ? (
+        <span className="sr-only">Attachments disabled for room chat</span>
+      ) : null}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import {
   Hand,
   Mic,
@@ -12,6 +12,7 @@ import {
   Volume2,
 } from "lucide-react";
 import ChatInputActions from "./chat-input/ChatInputActions";
+import { resizeTextarea } from "./chat-input/chatInputUtils";
 
 type LiveTalkControlsProps = {
   muted: boolean;
@@ -88,13 +89,21 @@ export default function LiveTalkControls({
   onSendMessage,
   onSendQuickReaction,
 }: LiveTalkControlsProps) {
-  const messageInputRef = useRef<HTMLInputElement>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement>(null);
   const status = statusLine(
     holdingMic,
     micBusy,
     micAvailable,
     micHolderName,
   );
+
+  const syncTextareaHeight = useCallback(() => {
+    resizeTextarea(messageInputRef.current);
+  }, []);
+
+  useEffect(() => {
+    syncTextareaHeight();
+  }, [messageDraft, syncTextareaHeight]);
 
   return (
     <footer
@@ -114,8 +123,8 @@ export default function LiveTalkControls({
         </p>
       ) : null}
 
-      <div className="flex items-center gap-2 px-3 py-2">
-        <div className="flex min-h-11 min-w-0 flex-1 items-center gap-1 rounded-full border border-slate-200/80 bg-slate-50 pl-1 pr-2 focus-within:border-brand-primary/40 focus-within:ring-2 focus-within:ring-brand-primary/15 dark:border-white/10 dark:bg-white/5 dark:focus-within:ring-brand-primary/20">
+      <div className="flex items-end gap-2 px-3 py-2">
+        <div className="flex min-w-0 flex-1 items-end gap-1 rounded-2xl border border-slate-200/80 bg-slate-50 py-1 pl-1 pr-2 focus-within:border-brand-primary/40 focus-within:ring-2 focus-within:ring-brand-primary/15 dark:border-white/10 dark:bg-white/5 dark:focus-within:ring-brand-primary/20">
           <ChatInputActions
             draft={messageDraft}
             onDraftChange={onMessageDraftChange}
@@ -123,11 +132,14 @@ export default function LiveTalkControls({
             onSendQuickReaction={onSendQuickReaction}
             disabled={loading}
           />
-          <input
+          <textarea
             ref={messageInputRef}
-            type="text"
+            rows={1}
             value={messageDraft}
-            onChange={(e) => onMessageDraftChange(e.target.value)}
+            onChange={(e) => {
+              onMessageDraftChange(e.target.value);
+              resizeTextarea(e.currentTarget);
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -136,7 +148,7 @@ export default function LiveTalkControls({
             }}
             placeholder="Message the room…"
             aria-label="Room message"
-            className="min-h-11 min-w-0 flex-1 border-0 bg-transparent px-1 text-base text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500 sm:text-sm"
+            className="max-h-[7.5rem] min-h-11 min-w-0 flex-1 resize-none border-0 bg-transparent px-1 py-2 text-base leading-snug text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500 sm:text-sm"
             maxLength={2000}
           />
         </div>
@@ -145,7 +157,7 @@ export default function LiveTalkControls({
           onClick={onSendMessage}
           disabled={!messageDraft.trim() || loading}
           aria-label="Send message"
-          className={`${actionBtnBase} ${actionBtnPrimary} h-9 w-9 min-h-[36px] min-w-[36px]`}
+          className={`${actionBtnBase} ${actionBtnPrimary} mb-0.5 h-9 w-9 min-h-[36px] min-w-[36px] sm:mb-0`}
         >
           <Send className="h-4 w-4" />
         </button>

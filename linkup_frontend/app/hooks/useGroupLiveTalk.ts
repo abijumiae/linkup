@@ -758,8 +758,12 @@ export function useGroupLiveTalk({
   };
 
   const sendQuickReaction = async (emoji: string) => {
+    const safe = emoji?.trim();
+    if (!safe) {
+      return;
+    }
     try {
-      await sendRoomMessage(emoji);
+      await sendRoomMessage(safe);
     } catch {
       /* error already set */
     }
