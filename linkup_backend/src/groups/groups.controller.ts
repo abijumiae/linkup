@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   Param,
   Post,
@@ -15,8 +14,6 @@ import { MessagesService } from '../messages/messages.service';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { CreateGroupMessageDto } from './dto/create-group-message.dto';
 import { CreateGroupPostDto } from './dto/create-group-post.dto';
-import { SetHubAdminDto } from './dto/set-hub-admin.dto';
-import { GroupHubAdminsService } from './group-hub-admins.service';
 import { GroupsService } from './groups.service';
 
 @Controller('groups')
@@ -25,7 +22,6 @@ export class GroupsController {
   constructor(
     private readonly groupsService: GroupsService,
     private readonly messagesService: MessagesService,
-    private readonly hubAdminsService: GroupHubAdminsService,
   ) {}
 
   @Post()
@@ -45,34 +41,6 @@ export class GroupsController {
   @Get('chats/list')
   listGroupChats(@Req() req: { user: SafeUser }) {
     return this.messagesService.getGroupChatList(req.user.id);
-  }
-
-  @Get(':id/admins')
-  listHubAdmins(@Param('id') id: string, @Req() req: { user: SafeUser }) {
-    return this.hubAdminsService.listAdmins(id, req.user.id);
-  }
-
-  @Post(':id/admins')
-  addHubAdmin(
-    @Param('id') id: string,
-    @Req() req: { user: SafeUser },
-    @Body() dto: SetHubAdminDto,
-  ) {
-    return this.hubAdminsService.addAdmin(
-      id,
-      req.user.id,
-      dto.targetUserId,
-      dto.role,
-    );
-  }
-
-  @Delete(':id/admins/:targetUserId')
-  removeHubAdmin(
-    @Param('id') id: string,
-    @Param('targetUserId') targetUserId: string,
-    @Req() req: { user: SafeUser },
-  ) {
-    return this.hubAdminsService.removeAdmin(id, req.user.id, targetUserId);
   }
 
   @Get(':id')

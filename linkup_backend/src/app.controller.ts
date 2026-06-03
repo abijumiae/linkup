@@ -37,6 +37,7 @@ export class AppController {
         socketPath: '/socket.io',
         features: {
           liveTalk: true,
+          hubAdmins: true,
         },
         time: new Date().toISOString(),
       };

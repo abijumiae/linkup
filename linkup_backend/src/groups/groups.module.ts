@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { ChatModule } from '../chat/chat.module';
 import { MessagesModule } from '../messages/messages.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { GroupHubAdminsController } from './group-hub-admins.controller';
 import { GroupHubAdminsService } from './group-hub-admins.service';
 import { GroupHubPermissionsService } from './group-hub-permissions.service';
 import { GroupLiveTalkController } from './group-live-talk.controller';
@@ -16,7 +17,11 @@ import { GroupsService } from './groups.service';
     MessagesModule,
     forwardRef(() => ChatModule),
   ],
-  controllers: [GroupsController, GroupLiveTalkController],
+  controllers: [
+    GroupsController,
+    GroupHubAdminsController,
+    GroupLiveTalkController,
+  ],
   providers: [
     GroupsService,
     GroupLiveTalkService,

@@ -118,11 +118,17 @@ export default function GroupHubAdminsSection({
       setList(data);
       setError(null);
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : "Could not load hub admins.",
-      );
+      if (err instanceof ApiError && err.status === 404) {
+        setError(
+          "Hub admins API is not available. Restart linkup_backend (npm run start:dev) or redeploy the API.",
+        );
+      } else {
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : "Could not load hub admins.",
+        );
+      }
     } finally {
       setLoading(false);
     }
