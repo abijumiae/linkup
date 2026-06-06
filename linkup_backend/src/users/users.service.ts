@@ -52,6 +52,12 @@ export class UsersService {
     });
   }
 
+  findByEmailVerificationToken(token: string): Promise<User | null> {
+    return this.prisma.user.findFirst({
+      where: { emailVerificationToken: token },
+    });
+  }
+
   findByUsername(username: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: { username },

@@ -49,10 +49,7 @@ function LoginForm() {
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
-        if (
-          err.status === 403 &&
-          err.message.toLowerCase().includes("verify your email")
-        ) {
+        if (err.status === 403) {
           sessionStorage.setItem("linkup_pending_email", email.trim());
         }
       } else {
@@ -103,14 +100,17 @@ function LoginForm() {
           <div className="linkup-alert-error mb-6">
             {error}
             {error.toLowerCase().includes("verify your email") ? (
-              <p className="mt-2">
+              <div className="mt-3 space-y-2">
+                <p className="text-sm">
+                  Check your inbox for the verification link, or resend it below.
+                </p>
                 <Link
                   href={`/verify-email?email=${encodeURIComponent(email.trim())}`}
-                  className="font-semibold text-brand-primary underline dark:text-brand-secondary"
+                  className="inline-flex min-h-[40px] items-center rounded-full border border-rose-500/30 px-4 py-2 text-sm font-semibold text-rose-700 dark:text-rose-200"
                 >
-                  Go to email verification
+                  Resend verification email
                 </Link>
-              </p>
+              </div>
             ) : null}
           </div>
         )}

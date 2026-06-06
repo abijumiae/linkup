@@ -119,6 +119,15 @@ export async function verifyEmail(
   });
 }
 
+export async function verifyEmailByToken(
+  token: string,
+): Promise<{ message: string; email: string }> {
+  return apiRequest<{ message: string; email: string }>(
+    `/auth/verify-email?token=${encodeURIComponent(token)}`,
+    { method: "GET" },
+  );
+}
+
 export async function resendVerificationEmail(
   email: string,
 ): Promise<{ message: string; email?: string; emailDelivery?: string }> {

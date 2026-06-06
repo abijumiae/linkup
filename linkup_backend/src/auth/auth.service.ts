@@ -92,14 +92,15 @@ export class AuthService {
       const delivery = await this.emailService.sendVerificationEmail({
         to: email,
         name: dto.name,
+        token: verification.token,
         code: verification.plainCode,
       });
 
       return {
         message:
           delivery === 'sent'
-            ? 'Account created. Please check your email for the verification code.'
-            : 'Account created. Email delivery is pending — check server logs for the verification code in development.',
+            ? 'Account created. Please check your email to verify your account.'
+            : 'Account created. Email delivery is pending — check server logs for the verification link in development.',
         email,
         emailDelivery: delivery,
       };
@@ -113,6 +114,46 @@ export class AuthService {
         'Unable to create account. Please try again.',
       );
     }
+  }
+
+  async verifyEmailByToken(token: string) {
+    const normalizedToken = token?.trim();
+
+    if (!normalizedToken) {
+      throw new BadRequestException('Verification link is invalid.');
+    }
+
+    const user =
+      await this.usersService.findByEmailVerificationToken(normalizedToken);
+
+    if (!user) {
+      throw new BadRequestException(
+        'Verification link is invalid or has already been used.',
+      );
+    }
+
+    if (user.isEmailVerified) {
+      return {
+        message: 'Email is already verified. You can now log in.',
+        email: user.email,
+      };
+    }
+
+    if (
+      !user.emailVerificationExpires ||
+      user.emailVerificationExpires < new Date()
+    ) {
+      throw new BadRequestException(
+        'Verification link has expired. Please request a new one.',
+      );
+    }
+
+    await this.usersService.markEmailVerified(user.id);
+
+    return {
+      message: 'Email verified successfully. You can now log in.',
+      email: user.email,
+    };
   }
 
   async verifyEmail(dto: VerifyEmailDto) {
@@ -179,14 +220,15 @@ export class AuthService {
     const delivery = await this.emailService.sendVerificationEmail({
       to: email,
       name: user.name,
+      token: verification.token,
       code: verification.plainCode,
     });
 
     return {
       message:
         delivery === 'sent'
-          ? 'A new verification code has been sent to your email.'
-          : 'Verification email setup is pending. Check server logs for the verification code in development.',
+          ? 'A new verification email has been sent.'
+          : 'Verification email setup is pending. Check server logs for the verification link in development.',
       email,
       emailDelivery: delivery,
     };
@@ -217,7 +259,7 @@ export class AuthService {
 
       if (!user.isEmailVerified) {
         throw new ForbiddenException(
-          'Please verify your email before logging in.',
+          'Please verify your email before continuing.',
         );
       }
 

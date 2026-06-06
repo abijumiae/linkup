@@ -24,9 +24,25 @@ export function validateProductionEnv(): void {
     );
   }
 
-  if (!process.env.FRONTEND_URL?.trim()) {
+  if (!process.env.FRONTEND_URL?.trim() && !process.env.APP_URL?.trim()) {
     console.warn(
-      'FRONTEND_URL not set — email links and OAuth redirects may be incorrect',
+      'APP_URL / FRONTEND_URL not set — email links and OAuth redirects may be incorrect',
+    );
+  }
+
+  const smtpReady = Boolean(
+    process.env.SMTP_HOST?.trim() &&
+      process.env.SMTP_PORT?.trim() &&
+      process.env.SMTP_USER?.trim() &&
+      process.env.SMTP_PASS?.trim() &&
+      (process.env.SMTP_FROM?.trim() ||
+        process.env.MAIL_FROM?.trim() ||
+        process.env.EMAIL_FROM?.trim()),
+  );
+
+  if (!smtpReady) {
+    console.warn(
+      'SMTP not fully configured — signup verification emails will be logged, not sent',
     );
   }
 }

@@ -1,13 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
+import type Transporter from 'nodemailer/lib/mailer';
 import { buildFrontendPath } from '../common/frontend-url';
 import { getMailFromAddress } from '../common/mail-from';
 
 export type VerificationEmailPayload = {
   to: string;
   name: string;
+  token: string;
   code: string;
 };
+
+const VERIFICATION_EXPIRY_MINUTES = 30;
 
 @Injectable()
 export class EmailService {
@@ -23,41 +27,14 @@ export class EmailService {
     );
   }
 
-  async sendVerificationEmail(
-    payload: VerificationEmailPayload,
-  ): Promise<'sent' | 'logged'> {
-    const verifyUrl = buildFrontendPath(
-      `/verify-email?email=${encodeURIComponent(payload.to)}`,
-    );
-    const subject = 'Verify your LinkUp email';
-    const text = [
-      `Hi ${payload.name},`,
-      '',
-      'Welcome to LinkUp. Use this verification code to activate your account:',
-      '',
-      payload.code,
-      '',
-      `Or open LinkUp to verify: ${verifyUrl}`,
-      '',
-      'This code expires in 30 minutes.',
-      '',
-      'If you did not create a LinkUp account, you can ignore this email.',
-    ].join('\n');
-
-    if (!this.isConfigured()) {
-      this.logger.warn(
-        `SMTP not configured. Verification code for ${payload.to}: ${payload.code}`,
-      );
-      return 'logged';
-    }
-
+  private createTransporter(): Transporter {
     const smtpPort = Number(process.env.SMTP_PORT);
     const smtpSecure =
       process.env.SMTP_SECURE === 'true' ||
       process.env.SMTP_SECURE === '1' ||
       smtpPort === 465;
 
-    const transporter = nodemailer.createTransport({
+    return nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: smtpPort,
       secure: smtpSecure,
@@ -66,23 +43,61 @@ export class EmailService {
         pass: process.env.SMTP_PASS,
       },
     });
+  }
+
+  async sendVerificationEmail(
+    payload: VerificationEmailPayload,
+  ): Promise<'sent' | 'logged'> {
+    const verifyUrl = buildFrontendPath(
+      `/verify-email?token=${encodeURIComponent(payload.token)}`,
+    );
+    const subject = 'Verify your LinkUp account';
+    const text = [
+      `Hi ${payload.name},`,
+      '',
+      'Welcome to LinkUp! Please verify your email address to activate your account.',
+      '',
+      `Verify your email: ${verifyUrl}`,
+      '',
+      `Or enter this code on the verification page: ${payload.code}`,
+      '',
+      `This link expires in ${VERIFICATION_EXPIRY_MINUTES} minutes.`,
+      '',
+      'If you did not create a LinkUp account, you can ignore this email.',
+    ].join('\n');
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827; max-width: 560px;">
+        <h2 style="margin-bottom: 8px; color: #4b1f9d;">Verify your LinkUp account</h2>
+        <p>Hi ${payload.name},</p>
+        <p>Welcome to LinkUp! Click the button below to verify your email and activate your account.</p>
+        <p style="margin: 28px 0;">
+          <a href="${verifyUrl}" style="display: inline-block; background: linear-gradient(90deg, #4b1f9d, #3c7be2); color: #ffffff; font-weight: 700; text-decoration: none; padding: 14px 28px; border-radius: 999px;">
+            Verify Email
+          </a>
+        </p>
+        <p style="font-size: 13px; color: #6b7280;">Or copy this link into your browser:<br><a href="${verifyUrl}" style="color: #4b1f9d; word-break: break-all;">${verifyUrl}</a></p>
+        <p style="font-size: 13px; color: #6b7280;">Backup code: <strong style="letter-spacing: 0.2em;">${payload.code}</strong></p>
+        <p style="font-size: 13px; color: #6b7280;">This link expires in ${VERIFICATION_EXPIRY_MINUTES} minutes.</p>
+        <p style="font-size: 13px; color: #9ca3af;">If you did not create a LinkUp account, you can ignore this email.</p>
+      </div>
+    `;
+
+    if (!this.isConfigured()) {
+      this.logger.warn(
+        `SMTP not configured. Verification link for ${payload.to}: ${verifyUrl} (code: ${payload.code})`,
+      );
+      return 'logged';
+    }
+
+    const transporter = this.createTransporter();
 
     await transporter.sendMail({
       from: getMailFromAddress(),
       to: payload.to,
       subject,
       text,
-      html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-          <h2 style="margin-bottom: 8px;">Verify your LinkUp email</h2>
-          <p>Hi ${payload.name},</p>
-          <p>Welcome to LinkUp. Use this verification code to activate your account:</p>
-          <p style="font-size: 28px; font-weight: 700; letter-spacing: 0.3em; color: #6d28d9;">${payload.code}</p>
-          <p><a href="${verifyUrl}" style="color: #6d28d9; font-weight: 600;">Open LinkUp to verify your email</a></p>
-          <p>This code expires in 30 minutes.</p>
-          <p style="color: #6b7280;">If you did not create a LinkUp account, you can ignore this email.</p>
-        </div>
-      `,
+      html,
     });
 
     this.logger.log(`Verification email sent to ${payload.to}`);
@@ -117,21 +132,7 @@ export class EmailService {
       return 'logged';
     }
 
-    const smtpPort = Number(process.env.SMTP_PORT);
-    const smtpSecure =
-      process.env.SMTP_SECURE === 'true' ||
-      process.env.SMTP_SECURE === '1' ||
-      smtpPort === 465;
-
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: smtpPort,
-      secure: smtpSecure,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
+    const transporter = this.createTransporter();
 
     await transporter.sendMail({
       from: getMailFromAddress(),

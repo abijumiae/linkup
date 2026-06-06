@@ -4,6 +4,7 @@ import {
   Get,
   Patch,
   Post,
+  Query,
   Req,
   Res,
   UseGuards,
@@ -47,6 +48,12 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   logout(@Req() req: { user: SafeUser }) {
     return this.authService.logout(req.user.id);
+  }
+
+  @Get('verify-email')
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  verifyEmailByToken(@Query('token') token: string) {
+    return this.authService.verifyEmailByToken(token);
   }
 
   @Post('verify-email')

@@ -46,7 +46,9 @@ export default function SignupPage() {
         language: language.trim() || "en",
       });
       sessionStorage.setItem("linkup_pending_email", email.trim());
-      router.push(`/verify-email?email=${encodeURIComponent(result.email)}`);
+      router.push(
+        `/verify-email?email=${encodeURIComponent(result.email)}&sent=1`,
+      );
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
