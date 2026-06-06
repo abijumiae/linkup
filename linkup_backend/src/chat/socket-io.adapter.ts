@@ -22,9 +22,14 @@ export class SocketIoAdapter extends IoAdapter {
       cors: {
         origin: corsOrigin,
         credentials: true,
+        methods: ['GET', 'POST'],
       },
       transports: ['websocket', 'polling'] as ('websocket' | 'polling')[],
       allowEIO3: true,
+      pingInterval: 30_000,
+      pingTimeout: 45_000,
+      connectTimeout: 45_000,
+      upgradeTimeout: 30_000,
     };
 
     // Always attach to the Nest HTTP server when available (Render single-port deploy).

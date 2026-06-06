@@ -15,7 +15,7 @@ import { WsAuthService } from './ws-auth.service';
     forwardRef(() => GroupsModule),
     JwtModule.register({
       secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: '7d' },
+      signOptions: { expiresIn: '30d' },
     }),
   ],
   providers: [ChatGateway, WsAuthService, RealtimeEmitter, PresenceService],

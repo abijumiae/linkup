@@ -39,12 +39,14 @@ export function getApiBaseUrl(): string {
 }
 
 /**
- * Socket.io connects directly to the API host.
- * Next.js rewrites cannot proxy WebSocket handshakes (308 redirect breaks socket.io).
- * On LAN dev (e.g. 192.168.x.x:3001), use the same host on port 3000.
+ * Realtime server URL — must point at the always-on API host (Render/Railway/VPS).
+ * Never use the Vercel frontend URL; Vercel cannot host persistent WebSockets.
  */
 export function getSocketBaseUrl(): string {
-  const direct = getDirectApiBaseUrl();
+  const socketEnv = process.env.NEXT_PUBLIC_SOCKET_URL?.trim();
+  const direct = socketEnv
+    ? socketEnv.replace(/\/$/, "")
+    : getDirectApiBaseUrl();
 
   if (typeof window === "undefined" || process.env.NODE_ENV !== "development") {
     return direct;

@@ -8,6 +8,10 @@ import { getToken } from "./auth";
 let socket: Socket | null = null;
 let statusSocket: Socket | null = null;
 let reconnectAttempt = 0;
+let heartbeatTimer: number | null = null;
+let loggedSocketUrl = false;
+
+const connectHandlers = new Set<() => void>();
 
 export type SocketConnectionStatus = "connected" | "reconnecting" | "offline";
 
@@ -23,6 +27,42 @@ function notifyStatus(status: SocketConnectionStatus) {
 function notifyReconnectAttempt(attempt: number) {
   reconnectAttempt = attempt;
   attemptListeners.forEach((listener) => listener(attempt));
+}
+
+function runConnectHandlers() {
+  connectHandlers.forEach((handler) => {
+    try {
+      handler();
+    } catch (error) {
+      logLinkUpDiagnostic("socket", "Connect handler failed", error);
+    }
+  });
+}
+
+export function registerSocketConnectHandler(handler: () => void): () => void {
+  connectHandlers.add(handler);
+  if (socket?.connected) {
+    handler();
+  }
+  return () => {
+    connectHandlers.delete(handler);
+  };
+}
+
+function startHeartbeat(activeSocket: Socket) {
+  stopHeartbeat();
+  heartbeatTimer = window.setInterval(() => {
+    if (activeSocket.connected) {
+      activeSocket.emit("client_ping");
+    }
+  }, 30_000);
+}
+
+function stopHeartbeat() {
+  if (heartbeatTimer) {
+    window.clearInterval(heartbeatTimer);
+    heartbeatTimer = null;
+  }
 }
 
 function detachStatusListeners(activeSocket: Socket) {
@@ -53,9 +93,16 @@ function attachStatusListeners(activeSocket: Socket) {
       console.log("Socket connected:", activeSocket.id);
     }
     notifyStatus("connected");
+    runConnectHandlers();
+    startHeartbeat(activeSocket);
+  });
+
+  activeSocket.on("socket_ready", () => {
+    runConnectHandlers();
   });
 
   activeSocket.on("disconnect", (reason) => {
+    stopHeartbeat();
     logLinkUpDiagnostic("socket", `Disconnected (${reason})`);
     if (reason === "io client disconnect") {
       notifyStatus("offline");
@@ -75,6 +122,8 @@ function attachStatusListeners(activeSocket: Socket) {
     notifyReconnectAttempt(0);
     logLinkUpDiagnostic("socket", `Reconnected after ${attempt} attempts`);
     notifyStatus("connected");
+    runConnectHandlers();
+    startHeartbeat(activeSocket);
   });
 
   activeSocket.on("connect_error", (err: Error) => {
@@ -239,12 +288,17 @@ function teardownSocket() {
   if (!socket) {
     return;
   }
+  stopHeartbeat();
   detachStatusListeners(socket);
   socket.removeAllListeners();
   socket.disconnect();
   socket = null;
   statusSocket = null;
 }
+
+connectHandlers.add(() => {
+  socket?.emit("join_pulse");
+});
 
 /** Connect to LinkUp real-time socket with JWT auth. */
 export function connectSocket(token?: string | null): Socket | null {
@@ -260,8 +314,12 @@ export function connectSocket(token?: string | null): Socket | null {
   }
 
   const socketUrl = getSocketBaseUrl();
-  if (process.env.NODE_ENV === "development") {
-    console.log("Socket connecting to:", socketUrl);
+  if (!loggedSocketUrl) {
+    loggedSocketUrl = true;
+    logLinkUpDiagnostic("socket", `Connecting to ${socketUrl}`);
+    if (process.env.NODE_ENV === "development") {
+      console.log("Socket connecting to:", socketUrl);
+    }
   }
 
   const existingToken = (socket?.auth as { token?: string } | undefined)?.token;

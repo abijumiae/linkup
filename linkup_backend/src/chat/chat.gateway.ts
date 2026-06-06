@@ -32,6 +32,7 @@ import {
 } from './chat-rooms.util';
 import { GroupLiveTalkService } from '../groups/group-live-talk.service';
 import { GroupLiveTalkManager } from '../groups/group-live-talk.manager';
+import { getAllowedOrigins } from '../common/cors.config';
 
 type AuthedSocket = Socket & {
   data: {
@@ -53,7 +54,8 @@ type ChatType = 'direct' | 'group';
 @WebSocketGateway({
   path: '/socket.io',
   cors: {
-    origin: true,
+    origin:
+      process.env.NODE_ENV === 'production' ? getAllowedOrigins() : true,
     credentials: true,
   },
   transports: ['websocket', 'polling'],
@@ -97,13 +99,14 @@ export class ChatGateway
       client.data.userAvatarUrl = user.avatarUrl ?? null;
 
       client.join(getUserRoom(user.id));
+      client.join('pulse');
       if (user.role === 'ADMIN' || user.role === 'MODERATOR') {
         client.join('moderation');
       }
 
       await this.presenceService.registerConnection(user.id, client.id);
 
-      client.emit('socket_ready', { userId: user.id });
+      client.emit('socket_ready', { userId: user.id, pulse: true });
       this.logger.log(`Socket connected userId=${user.id} socketId=${client.id}`);
     } catch {
       this.logger.warn('Socket auth failed — connection rejected');
@@ -236,6 +239,15 @@ export class ChatGateway
   handleJoinPulse(@ConnectedSocket() client: AuthedSocket) {
     client.join('pulse');
     client.emit('joined_pulse', { ok: true });
+  }
+
+  @SubscribeMessage('client_ping')
+  handleClientPing(@ConnectedSocket() client: AuthedSocket) {
+    client.emit('client_pong', {
+      ok: true,
+      userId: client.data.userId,
+      time: new Date().toISOString(),
+    });
   }
 
   @SubscribeMessage('join_live_room')
