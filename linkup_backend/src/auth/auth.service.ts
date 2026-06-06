@@ -96,11 +96,25 @@ export class AuthService {
         code: verification.plainCode,
       });
 
+      if (delivery === 'sent') {
+        this.logger.log(`[verify:signup] Verification email sent to ${email}`);
+      } else if (delivery === 'failed') {
+        this.logger.error(
+          `[verify:signup] Verification email failed for ${email} — check SMTP credentials`,
+        );
+      } else {
+        this.logger.warn(
+          `[verify:signup] Verification email logged only for ${email} — SMTP not configured`,
+        );
+      }
+
       return {
         message:
           delivery === 'sent'
             ? 'Account created. Please check your email to verify your account.'
-            : 'Account created. Email delivery is pending — check server logs for the verification link in development.',
+            : delivery === 'failed'
+              ? 'Account created, but we could not send the verification email. Use Resend verification or contact support.'
+              : 'Account created. Email delivery is pending — check server logs for the verification link in development.',
         email,
         emailDelivery: delivery,
       };
@@ -120,6 +134,7 @@ export class AuthService {
     const normalizedToken = token?.trim();
 
     if (!normalizedToken) {
+      this.logger.warn('[verify:token] Invalid verification link (empty token)');
       throw new BadRequestException('Verification link is invalid.');
     }
 
@@ -127,12 +142,14 @@ export class AuthService {
       await this.usersService.findByEmailVerificationToken(normalizedToken);
 
     if (!user) {
+      this.logger.warn('[verify:token] Invalid or used verification token');
       throw new BadRequestException(
         'Verification link is invalid or has already been used.',
       );
     }
 
     if (user.isEmailVerified) {
+      this.logger.log(`[verify:token] Already verified: ${user.email}`);
       return {
         message: 'Email is already verified. You can now log in.',
         email: user.email,
@@ -143,12 +160,14 @@ export class AuthService {
       !user.emailVerificationExpires ||
       user.emailVerificationExpires < new Date()
     ) {
+      this.logger.warn(`[verify:token] Expired token for ${user.email}`);
       throw new BadRequestException(
         'Verification link has expired. Please request a new one.',
       );
     }
 
     await this.usersService.markEmailVerified(user.id);
+    this.logger.log(`[verify:success] Email verified for ${user.email}`);
 
     return {
       message: 'Email verified successfully. You can now log in.',
@@ -184,10 +203,12 @@ export class AuthService {
     );
 
     if (!codeMatches) {
+      this.logger.warn(`[verify:code] Invalid code for ${email}`);
       throw new BadRequestException('Invalid verification code');
     }
 
     await this.usersService.markEmailVerified(user.id);
+    this.logger.log(`[verify:success] Email verified via code for ${email}`);
 
     return {
       message: 'Email verified successfully. You can now log in.',
@@ -224,11 +245,19 @@ export class AuthService {
       code: verification.plainCode,
     });
 
+    if (delivery === 'sent') {
+      this.logger.log(`[verify:resend] Verification email resent to ${email}`);
+    } else if (delivery === 'failed') {
+      this.logger.error(`[verify:resend] Resend failed for ${email}`);
+    }
+
     return {
       message:
         delivery === 'sent'
           ? 'A new verification email has been sent.'
-          : 'Verification email setup is pending. Check server logs for the verification link in development.',
+          : delivery === 'failed'
+            ? 'Could not send verification email. Please try again shortly.'
+            : 'Verification email setup is pending. Check server logs for the verification link in development.',
       email,
       emailDelivery: delivery,
     };

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import type Transporter from 'nodemailer/lib/mailer';
 import { buildFrontendPath } from '../common/frontend-url';
@@ -11,20 +11,69 @@ export type VerificationEmailPayload = {
   code: string;
 };
 
+export type EmailDeliveryResult = 'sent' | 'logged' | 'failed';
+
+export type SmtpStatus = {
+  configured: boolean;
+  host: string | null;
+  port: number | null;
+  user: string | null;
+  from: string | null;
+  appUrl: string;
+  ready: boolean;
+  lastError: string | null;
+};
+
 const VERIFICATION_EXPIRY_MINUTES = 30;
 
 @Injectable()
-export class EmailService {
+export class EmailService implements OnModuleInit {
   private readonly logger = new Logger(EmailService.name);
+  private lastSmtpError: string | null = null;
+  private smtpReady = false;
+
+  async onModuleInit(): Promise<void> {
+    const status = this.getStatus();
+
+    if (!status.configured) {
+      this.logger.warn(
+        'SMTP not configured — verification emails will be logged only. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and SMTP_FROM on Render.',
+      );
+      return;
+    }
+
+    const verified = await this.verifyConnection();
+    if (verified) {
+      this.logger.log(
+        `SMTP ready (${status.host}:${status.port}, from ${status.from})`,
+      );
+    }
+  }
 
   isConfigured(): boolean {
     return Boolean(
-      process.env.SMTP_HOST &&
-        process.env.SMTP_PORT &&
-        process.env.SMTP_USER &&
-        process.env.SMTP_PASS &&
+      process.env.SMTP_HOST?.trim() &&
+        process.env.SMTP_PORT?.trim() &&
+        process.env.SMTP_USER?.trim() &&
+        process.env.SMTP_PASS?.trim() &&
         getMailFromAddress(),
     );
+  }
+
+  getStatus(): SmtpStatus {
+    const host = process.env.SMTP_HOST?.trim() || null;
+    const port = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : null;
+
+    return {
+      configured: this.isConfigured(),
+      host,
+      port: Number.isFinite(port) ? port : null,
+      user: process.env.SMTP_USER?.trim() || null,
+      from: getMailFromAddress() || null,
+      appUrl: buildFrontendPath('/'),
+      ready: this.smtpReady,
+      lastError: this.lastSmtpError,
+    };
   }
 
   private createTransporter(): Transporter {
@@ -45,9 +94,62 @@ export class EmailService {
     });
   }
 
+  private classifySmtpError(error: unknown): string {
+    const message = error instanceof Error ? error.message : String(error);
+    const lower = message.toLowerCase();
+
+    if (
+      lower.includes('auth') ||
+      lower.includes('credentials') ||
+      lower.includes('535') ||
+      lower.includes('invalid login')
+    ) {
+      return 'smtp_authentication_error';
+    }
+
+    if (lower.includes('timeout') || lower.includes('timed out')) {
+      return 'smtp_timeout';
+    }
+
+    return 'smtp_send_failed';
+  }
+
+  private recordSmtpFailure(error: unknown, context: string): void {
+    const kind = this.classifySmtpError(error);
+    const message = error instanceof Error ? error.message : String(error);
+    this.lastSmtpError = message;
+    this.smtpReady = false;
+
+    if (kind === 'smtp_authentication_error') {
+      this.logger.error(
+        `SMTP authentication failed during ${context}: ${message}`,
+      );
+      return;
+    }
+
+    this.logger.error(`Email failed during ${context}: ${message}`);
+  }
+
+  async verifyConnection(): Promise<boolean> {
+    if (!this.isConfigured()) {
+      return false;
+    }
+
+    try {
+      const transporter = this.createTransporter();
+      await transporter.verify();
+      this.smtpReady = true;
+      this.lastSmtpError = null;
+      return true;
+    } catch (error) {
+      this.recordSmtpFailure(error, 'smtp_verify');
+      return false;
+    }
+  }
+
   async sendVerificationEmail(
     payload: VerificationEmailPayload,
-  ): Promise<'sent' | 'logged'> {
+  ): Promise<EmailDeliveryResult> {
     const verifyUrl = buildFrontendPath(
       `/verify-email?token=${encodeURIComponent(payload.token)}`,
     );
@@ -85,30 +187,41 @@ export class EmailService {
 
     if (!this.isConfigured()) {
       this.logger.warn(
-        `SMTP not configured. Verification link for ${payload.to}: ${verifyUrl} (code: ${payload.code})`,
+        `[email:not_sent] SMTP not configured. Verification link for ${payload.to}: ${verifyUrl} (code: ${payload.code})`,
       );
       return 'logged';
     }
 
-    const transporter = this.createTransporter();
+    try {
+      const transporter = this.createTransporter();
+      await transporter.sendMail({
+        from: getMailFromAddress(),
+        to: payload.to,
+        subject,
+        text,
+        html,
+      });
 
-    await transporter.sendMail({
-      from: getMailFromAddress(),
-      to: payload.to,
-      subject,
-      text,
-      html,
-    });
-
-    this.logger.log(`Verification email sent to ${payload.to}`);
-    return 'sent';
+      this.smtpReady = true;
+      this.lastSmtpError = null;
+      this.logger.log(
+        `[email:sent] Verification email delivered to ${payload.to}`,
+      );
+      return 'sent';
+    } catch (error) {
+      this.recordSmtpFailure(error, 'verification_email');
+      this.logger.warn(
+        `[email:fallback] Verification link for ${payload.to}: ${verifyUrl} (code: ${payload.code})`,
+      );
+      return 'failed';
+    }
   }
 
   async sendPasswordResetEmail(payload: {
     to: string;
     name: string;
     token: string;
-  }): Promise<'sent' | 'logged'> {
+  }): Promise<EmailDeliveryResult> {
     const resetUrl = buildFrontendPath(
       `/reset-password?token=${encodeURIComponent(payload.token)}`,
     );
@@ -127,31 +240,39 @@ export class EmailService {
 
     if (!this.isConfigured()) {
       this.logger.warn(
-        `SMTP not configured. Password reset link for ${payload.to}: ${resetUrl}`,
+        `[email:not_sent] SMTP not configured. Password reset link for ${payload.to}: ${resetUrl}`,
       );
       return 'logged';
     }
 
-    const transporter = this.createTransporter();
+    try {
+      const transporter = this.createTransporter();
+      await transporter.sendMail({
+        from: getMailFromAddress(),
+        to: payload.to,
+        subject,
+        text,
+        html: `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
+            <h2 style="margin-bottom: 8px;">Reset your LinkUp password</h2>
+            <p>Hi ${payload.name},</p>
+            <p>We received a request to reset your LinkUp password.</p>
+            <p><a href="${resetUrl}" style="color: #6d28d9; font-weight: 600;">Reset your password</a></p>
+            <p>This link expires in 60 minutes.</p>
+            <p style="color: #6b7280;">If you did not request this, you can ignore this email.</p>
+          </div>
+        `,
+      });
 
-    await transporter.sendMail({
-      from: getMailFromAddress(),
-      to: payload.to,
-      subject,
-      text,
-      html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-          <h2 style="margin-bottom: 8px;">Reset your LinkUp password</h2>
-          <p>Hi ${payload.name},</p>
-          <p>We received a request to reset your LinkUp password.</p>
-          <p><a href="${resetUrl}" style="color: #6d28d9; font-weight: 600;">Reset your password</a></p>
-          <p>This link expires in 60 minutes.</p>
-          <p style="color: #6b7280;">If you did not request this, you can ignore this email.</p>
-        </div>
-      `,
-    });
-
-    this.logger.log(`Password reset email sent to ${payload.to}`);
-    return 'sent';
+      this.smtpReady = true;
+      this.lastSmtpError = null;
+      this.logger.log(
+        `[email:sent] Password reset email delivered to ${payload.to}`,
+      );
+      return 'sent';
+    } catch (error) {
+      this.recordSmtpFailure(error, 'password_reset_email');
+      return 'failed';
+    }
   }
 }

@@ -46,6 +46,32 @@ check "Hub admins /groups/:id/admins (auth required)" "$API_URL/groups/health-ch
 check "Hub admins /hubs/:id/admins (auth required)" "$API_URL/hubs/health-check/admins" "401" || failed=1
 
 echo
+echo "Email / SMTP status:"
+if curl -sS -m 25 "$API_URL/api/health" -o /tmp/linkup_health.json 2>/dev/null || curl -sS -m 25 "$API_URL/health" -o /tmp/linkup_health.json; then
+  python3 - <<'PY' || failed=1
+import json, sys
+with open("/tmp/linkup_health.json") as f:
+    data = json.load(f)
+email = data.get("email", {})
+configured = email.get("configured")
+ready = email.get("ready")
+from_addr = email.get("from")
+if configured:
+    print(f"OK   SMTP configured (from: {from_addr or 'unknown'})")
+else:
+    print("FAIL SMTP not configured — set SMTP_* env vars on Render")
+    sys.exit(1)
+if ready:
+    print("OK   SMTP connection ready")
+else:
+    print("WARN SMTP not ready — verify SMTP_PASS in Render dashboard")
+PY
+else
+  echo "FAIL Could not read health endpoint for SMTP status"
+  failed=1
+fi
+
+echo
 if [ "$failed" -eq 0 ]; then
   echo "All checks passed."
   echo "Set Vercel NEXT_PUBLIC_API_URL=$API_URL"

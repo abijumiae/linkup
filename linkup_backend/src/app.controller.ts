@@ -1,6 +1,7 @@
 import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
 import { RealtimeEmitter } from './chat/realtime.emitter';
+import { EmailService } from './email/email.service';
 import { PrismaService } from './prisma/prisma.service';
 
 @Controller()
@@ -8,6 +9,7 @@ export class AppController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly realtimeEmitter: RealtimeEmitter,
+    private readonly emailService: EmailService,
   ) {}
 
   @SkipThrottle()
@@ -44,16 +46,27 @@ export class AppController {
       });
     }
 
+    const smtp = this.emailService.getStatus();
+
     return {
       status: 'ok',
       service: 'linkup-backend',
       database: 'connected',
+      email: {
+        configured: smtp.configured,
+        ready: smtp.ready,
+        host: smtp.host,
+        from: smtp.from,
+        appUrl: smtp.appUrl,
+        lastError: smtp.lastError,
+      },
       realtime: this.realtimeEmitter.isReady() ? 'socket.io' : 'starting',
       socketPath: '/socket.io',
       socketPingIntervalMs: 25_000,
       features: {
         liveTalk: true,
         hubAdmins: true,
+        emailVerification: smtp.configured,
       },
       time: new Date().toISOString(),
     };

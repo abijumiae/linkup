@@ -23,6 +23,7 @@ import { ConnectionsModule } from './connections/connections.module';
 import { SafetyModule } from './safety/safety.module';
 import { AdminModule } from './admin/admin.module';
 import { PrivacyModule } from './privacy/privacy.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { PrivacyModule } from './privacy/privacy.module';
       },
     ]),
     PrismaModule,
+    EmailModule,
     UsersModule,
     AuthModule,
     ChatModule,
