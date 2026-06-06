@@ -64,6 +64,40 @@ export class UsersService {
     });
   }
 
+  findByPasswordResetToken(token: string): Promise<User | null> {
+    return this.prisma.user.findFirst({
+      where: { passwordResetToken: token },
+    });
+  }
+
+  setPasswordResetToken(
+    userId: string,
+    token: string,
+    expiresAt: Date,
+  ): Promise<User> {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordResetToken: token,
+        passwordResetExpires: expiresAt,
+      },
+    });
+  }
+
+  clearPasswordResetAndUpdatePassword(
+    userId: string,
+    passwordHash: string,
+  ): Promise<User> {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash,
+        passwordResetToken: null,
+        passwordResetExpires: null,
+      },
+    });
+  }
+
   async createTempUsername(): Promise<string> {
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const suffix = Math.random().toString(36).slice(2, 10);

@@ -25,6 +25,7 @@ import { isSocketConnected } from "../../../src/lib/socket";
 import { fetchEvents } from "../../../src/lib/events";
 import { fetchGroups } from "../../../src/lib/groups";
 import { fetchJobs } from "../../../src/lib/jobs";
+import { apiWarningFromError } from "../../../src/lib/apiWarnings";
 import {
   createPost,
   fetchFeed,
@@ -166,6 +167,7 @@ export default function HomeDashboardPage() {
   const currentUserRole = currentUser?.role ?? null;
   const { socket } = useSocket();
   const sparkInputRef = useRef<HTMLTextAreaElement>(null);
+  const feedSentinelRef = useRef<HTMLDivElement>(null);
 
   const [postContent, setPostContent] = useState("");
   const [sparkMedia, setSparkMedia] = useState<{
@@ -250,12 +252,14 @@ export default function HomeDashboardPage() {
           performance.mark("linkup-feed-loaded");
         }
       })
-      .catch(() => {
+      .catch((err) => {
         if (cancelled) {
           return;
         }
-        setFeedError("Could not load your feed. Showing sample Sparks.");
-        setPosts(mapStaticPosts());
+        setFeedError(apiWarningFromError(err, "your feed"));
+        setPosts(
+          process.env.NODE_ENV === "development" ? mapStaticPosts() : [],
+        );
         setFeedHasMore(false);
       })
       .finally(() => {
@@ -351,7 +355,7 @@ export default function HomeDashboardPage() {
     });
   }, [authLoading]);
 
-  async function loadMoreFeed() {
+  const loadMoreFeed = useCallback(async () => {
     if (feedLoadingMore || !feedHasMore) {
       return;
     }
@@ -375,7 +379,26 @@ export default function HomeDashboardPage() {
     } finally {
       setFeedLoadingMore(false);
     }
-  }
+  }, [feedHasMore, feedLoadingMore, feedPage]);
+
+  useEffect(() => {
+    const sentinel = feedSentinelRef.current;
+    if (!sentinel || feedLoading || !feedHasMore) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void loadMoreFeed();
+        }
+      },
+      { rootMargin: "240px" },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [feedHasMore, feedLoading, loadMoreFeed]);
 
   useEffect(() => {
     if (!socket) {
@@ -959,17 +982,9 @@ export default function HomeDashboardPage() {
                     ),
                   )
                 )}
-                {!feedLoading && feedHasMore ? (
-                  <div className="pt-2 text-center">
-                    <button
-                      type="button"
-                      onClick={() => void loadMoreFeed()}
-                      disabled={feedLoadingMore}
-                      className="linkup-btn-secondary min-h-[44px] transition-all duration-200 ease-out disabled:opacity-60"
-                    >
-                      {feedLoadingMore ? "Loading..." : "Load more Sparks"}
-                    </button>
-                  </div>
+                <div ref={feedSentinelRef} className="h-1 w-full" aria-hidden />
+                {feedLoadingMore ? (
+                  <PulseFeedSkeleton count={1} />
                 ) : null}
               </div>
             </section>

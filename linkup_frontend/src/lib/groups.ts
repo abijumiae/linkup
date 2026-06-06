@@ -80,6 +80,25 @@ export async function fetchGroup(id: string): Promise<GroupDetail> {
   );
 }
 
+export type UpdateGroupPayload = {
+  name?: string;
+  description?: string;
+  coverImage?: string | null;
+};
+
+export async function updateGroup(
+  groupId: string,
+  payload: UpdateGroupPayload,
+): Promise<GroupDetail> {
+  return withAuth(() =>
+    apiRequest<GroupDetail>(`/groups/${groupId}`, {
+      method: "PATCH",
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    }),
+  );
+}
+
 export async function createGroup(
   payload: CreateGroupPayload,
 ): Promise<GroupDetail> {

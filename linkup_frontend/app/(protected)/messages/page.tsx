@@ -533,6 +533,47 @@ export default function MessagesPage() {
   }, [socketStatus, chatTab, activeUser?.id]);
 
   useEffect(() => {
+    if (chatTab !== "group" || !activeGroup?.id) {
+      return;
+    }
+
+    if (socketStatus === "connected") {
+      return;
+    }
+
+    let cancelled = false;
+    const pollIntervalMs = 10_000;
+
+    const pollGroupMessages = async () => {
+      if (cancelled || document.hidden) {
+        return;
+      }
+
+      try {
+        const data = await fetchGroupConversation(activeGroup.id);
+        setGroupMessages((current) => {
+          const currentIds = new Set(current.map((item) => item.id));
+          const hasNew = data.messages.some((item) => !currentIds.has(item.id));
+          if (!hasNew && data.messages.length === current.length) {
+            return current;
+          }
+          return data.messages;
+        });
+      } catch {
+        // Polling is a fallback only.
+      }
+    };
+
+    void pollGroupMessages();
+    const intervalId = window.setInterval(pollGroupMessages, pollIntervalMs);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [socketStatus, chatTab, activeGroup?.id]);
+
+  useEffect(() => {
     if (!currentUserId || !socket) {
       return;
     }

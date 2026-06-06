@@ -93,6 +93,8 @@ model User {
   emailVerificationToken String?
   emailVerificationCode String?
   emailVerificationExpires DateTime?
+  passwordResetToken     String?   @unique
+  passwordResetExpires   DateTime?
   profileVisibility String @default("public")
   messagePermission String @default("everyone")
   showOnlineStatus  Boolean @default(true)

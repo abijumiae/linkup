@@ -12,7 +12,9 @@ import AdminTable from "../components/AdminTable";
 type AdminStats = {
   users: number;
   posts: number;
+  groups: number;
   openReports: number;
+  deletedHubs: number;
 };
 
 type AdminReport = {
@@ -99,9 +101,10 @@ export default function AdminPage() {
 
   const statCards = [
     { label: "Total users", value: stats ? String(stats.users) : "—", detail: "Platform members" },
+    { label: "Active hubs", value: stats ? String(stats.groups) : "—", detail: "Live communities" },
     { label: "Total posts", value: stats ? String(stats.posts) : "—", detail: "Sparks & hub posts" },
     { label: "Open reports", value: stats ? String(stats.openReports) : "—", detail: "Needs review" },
-    { label: "Platform", value: "Live", detail: "Production ready" },
+    { label: "Deleted hubs", value: stats ? String(stats.deletedHubs) : "—", detail: "Audit log entries" },
   ];
 
   const reportRows = reports.map((report) => [

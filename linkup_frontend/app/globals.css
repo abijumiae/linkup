@@ -456,7 +456,86 @@ select {
   animation: linkup-lt-speaker-glow 2s ease-in-out infinite;
 }
 
+@keyframes linkup-page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes linkup-card-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes linkup-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.linkup-page-enter {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.linkup-page-enter-active {
+  animation: linkup-page-fade-in 0.28s ease-out forwards;
+}
+
+.linkup-card-enter {
+  animation: linkup-card-rise 0.32s ease-out both;
+}
+
+.linkup-alert-enter {
+  animation: linkup-page-fade-in 0.22s ease-out both;
+}
+
+.linkup-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(148, 163, 184, 0.12) 0%,
+    rgba(148, 163, 184, 0.28) 50%,
+    rgba(148, 163, 184, 0.12) 100%
+  );
+  background-size: 200% 100%;
+  animation: linkup-shimmer 1.4s ease-in-out infinite;
+}
+
+.dark .linkup-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .linkup-page-enter,
+  .linkup-page-enter-active,
+  .linkup-card-enter,
+  .linkup-alert-enter,
+  .linkup-skeleton {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
   .linkup-lt-popover-enter,
   .linkup-lt-emoji-btn-glow,
   .linkup-lt-react-pop,

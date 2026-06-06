@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -17,6 +18,7 @@ import { CreateGroupMessageDto } from './dto/create-group-message.dto';
 import { CreateGroupPostDto } from './dto/create-group-post.dto';
 import { DeleteGroupDto } from './dto/delete-group.dto';
 import { TransferGroupOwnershipDto } from './dto/transfer-group-ownership.dto';
+import { UpdateGroupDto } from './dto/update-group.dto';
 import { GroupsService } from './groups.service';
 
 @Controller('groups')
@@ -49,6 +51,15 @@ export class GroupsController {
   @Get(':id')
   findOne(@Param('id') id: string, @Req() req: { user: SafeUser }) {
     return this.groupsService.findOne(id, req.user.id);
+  }
+
+  @Patch(':id')
+  update(
+    @Param('id') id: string,
+    @Req() req: { user: SafeUser },
+    @Body() dto: UpdateGroupDto,
+  ) {
+    return this.groupsService.updateGroup(id, req.user.id, dto);
   }
 
   @Post(':id/join')

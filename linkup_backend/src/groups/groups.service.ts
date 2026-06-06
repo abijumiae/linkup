@@ -96,6 +96,54 @@ export class GroupsService {
     return this.mapGroupDetail(group, userId, GroupRole.OWNER);
   }
 
+  async updateGroup(
+    groupId: string,
+    userId: string,
+    dto: {
+      name?: string;
+      description?: string;
+      coverImage?: string | null;
+    },
+  ): Promise<GroupDetail> {
+    const group = await this.prisma.group.findUnique({
+      where: { id: groupId },
+      select: { id: true, ownerId: true },
+    });
+
+    if (!group) {
+      throw new NotFoundException('Group not found');
+    }
+
+    if (group.ownerId !== userId) {
+      const membership = await this.prisma.groupMember.findUnique({
+        where: { groupId_userId: { groupId, userId } },
+        select: { role: true },
+      });
+
+      if (
+        membership?.role !== GroupRole.ADMIN &&
+        membership?.role !== GroupRole.OWNER
+      ) {
+        throw new ForbiddenException('Only hub owner or admin can edit this hub');
+      }
+    }
+
+    await this.prisma.group.update({
+      where: { id: groupId },
+      data: {
+        ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
+        ...(dto.description !== undefined
+          ? { description: dto.description.trim() }
+          : {}),
+        ...(dto.coverImage !== undefined
+          ? { coverImage: dto.coverImage?.trim() || null }
+          : {}),
+      },
+    });
+
+    return this.findOne(groupId, userId);
+  }
+
   async findAll(
     userId: string,
     query?: { page?: string; limit?: string },

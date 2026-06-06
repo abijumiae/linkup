@@ -31,6 +31,10 @@ const GroupHubAdminsSection = dynamic(
   { ssr: false },
 );
 
+const GroupHubSettings = dynamic(() => import("./GroupHubSettings"), {
+  ssr: false,
+});
+
 const GroupDangerZone = dynamic(() => import("./GroupDangerZone"), {
   ssr: false,
 });
@@ -269,6 +273,7 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
 
         {group.isMember ? (
           <>
+            <GroupHubSettings group={group} onGroupUpdated={setGroup} />
             <GroupHubAdminsSection
               groupId={groupId}
               isOwner={group.isOwner}

@@ -6,9 +6,12 @@ import { useSocket } from "@/src/components/SocketProvider";
 
 /** Wait before showing any warning — silent retry happens in the background. */
 const BANNER_DELAY_MS = 20_000;
+const SHOW_IN_PRODUCTION = false;
 
 export default function RealtimeStatusBanner() {
   const { status, isConnected, reconnectAttempt } = useSocket();
+  const hideInProduction =
+    process.env.NODE_ENV === "production" && !SHOW_IN_PRODUCTION;
   const [showBanner, setShowBanner] = useState(false);
 
   useEffect(() => {
@@ -32,10 +35,10 @@ export default function RealtimeStatusBanner() {
       return "Reconnecting live updates in the background…";
     }
 
-    return "Live updates paused. New posts and messages sync every 10 seconds.";
+    return "Syncing in the background…";
   }, [status, reconnectAttempt]);
 
-  if (isConnected || !showBanner) {
+  if (hideInProduction || isConnected || !showBanner) {
     return null;
   }
 

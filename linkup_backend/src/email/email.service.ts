@@ -88,4 +88,69 @@ export class EmailService {
     this.logger.log(`Verification email sent to ${payload.to}`);
     return 'sent';
   }
+
+  async sendPasswordResetEmail(payload: {
+    to: string;
+    name: string;
+    token: string;
+  }): Promise<'sent' | 'logged'> {
+    const resetUrl = buildFrontendPath(
+      `/reset-password?token=${encodeURIComponent(payload.token)}`,
+    );
+    const subject = 'Reset your LinkUp password';
+    const text = [
+      `Hi ${payload.name},`,
+      '',
+      'We received a request to reset your LinkUp password.',
+      '',
+      `Reset your password: ${resetUrl}`,
+      '',
+      'This link expires in 60 minutes.',
+      '',
+      'If you did not request this, you can ignore this email.',
+    ].join('\n');
+
+    if (!this.isConfigured()) {
+      this.logger.warn(
+        `SMTP not configured. Password reset link for ${payload.to}: ${resetUrl}`,
+      );
+      return 'logged';
+    }
+
+    const smtpPort = Number(process.env.SMTP_PORT);
+    const smtpSecure =
+      process.env.SMTP_SECURE === 'true' ||
+      process.env.SMTP_SECURE === '1' ||
+      smtpPort === 465;
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: smtpPort,
+      secure: smtpSecure,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: getMailFromAddress(),
+      to: payload.to,
+      subject,
+      text,
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
+          <h2 style="margin-bottom: 8px;">Reset your LinkUp password</h2>
+          <p>Hi ${payload.name},</p>
+          <p>We received a request to reset your LinkUp password.</p>
+          <p><a href="${resetUrl}" style="color: #6d28d9; font-weight: 600;">Reset your password</a></p>
+          <p>This link expires in 60 minutes.</p>
+          <p style="color: #6b7280;">If you did not request this, you can ignore this email.</p>
+        </div>
+      `,
+    });
+
+    this.logger.log(`Password reset email sent to ${payload.to}`);
+    return 'sent';
+  }
 }

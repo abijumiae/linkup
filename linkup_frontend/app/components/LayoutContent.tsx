@@ -6,6 +6,7 @@ import { useAuth } from "@/src/lib/AuthProvider";
 import LinkupNavigation from "./LinkupNavigation";
 import { SidebarNav } from "./SidebarNav";
 import RealtimeStatusBanner from "./RealtimeStatusBanner";
+import PageTransition from "./motion/PageTransition";
 
 const sidebarNavItems = [
   { label: "Pulse", href: "/home", icon: "home" },
@@ -34,6 +35,8 @@ export default function LayoutContent({
     pathname === "/signup" ||
     pathname === "/verify-email" ||
     pathname === "/onboarding" ||
+    pathname === "/forgot-password" ||
+    pathname === "/reset-password" ||
     pathname === "/terms" ||
     pathname === "/privacy" ||
     pathname.startsWith("/auth/") ||
@@ -68,7 +71,7 @@ export default function LayoutContent({
         )}
         <main className="linkup-main linkup-main-content min-w-0 flex-1">
           {showNavigation ? <RealtimeStatusBanner /> : null}
-          {children}
+          <PageTransition>{children}</PageTransition>
         </main>
       </div>
     </>

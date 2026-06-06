@@ -61,12 +61,15 @@ export class AdminController {
 
   @Get('stats')
   async getStats() {
-    const [users, posts, openReports] = await Promise.all([
-      this.prisma.user.count(),
-      this.prisma.post.count(),
-      this.prisma.report.count({ where: { status: 'OPEN' } }),
-    ]);
+    const [users, posts, groups, openReports, deletedHubs] =
+      await Promise.all([
+        this.prisma.user.count(),
+        this.prisma.post.count(),
+        this.prisma.group.count({ where: { archivedAt: null } }),
+        this.prisma.report.count({ where: { status: 'OPEN' } }),
+        this.prisma.groupDeletionLog.count(),
+      ]);
 
-    return { users, posts, openReports };
+    return { users, posts, groups, openReports, deletedHubs };
   }
 }

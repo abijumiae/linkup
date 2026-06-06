@@ -26,6 +26,7 @@ import { VerifyEmailDto } from './dto/verify-email.dto';
 import { GoogleProfilePayload } from './strategies/google.strategy';
 
 const VERIFICATION_EXPIRY_MINUTES = 30;
+const PASSWORD_RESET_EXPIRY_MINUTES = 60;
 
 @Injectable()
 export class AuthService {
@@ -320,6 +321,54 @@ export class AuthService {
         'Unable to sign in with Google. Please try again.',
       );
     }
+  }
+
+  async requestPasswordReset(email: string) {
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await this.usersService.findByEmail(normalizedEmail);
+
+    if (!user?.passwordHash) {
+      return {
+        message:
+          'If an account exists for that email, a password reset link has been sent.',
+      };
+    }
+
+    const token = randomBytes(32).toString('hex');
+    const expiresAt = new Date(
+      Date.now() + PASSWORD_RESET_EXPIRY_MINUTES * 60 * 1000,
+    );
+
+    await this.usersService.setPasswordResetToken(user.id, token, expiresAt);
+    await this.emailService.sendPasswordResetEmail({
+      to: user.email,
+      name: user.name,
+      token,
+    });
+
+    return {
+      message:
+        'If an account exists for that email, a password reset link has been sent.',
+    };
+  }
+
+  async resetPassword(token: string, password: string) {
+    const user = await this.usersService.findByPasswordResetToken(token);
+
+    if (
+      !user?.passwordResetExpires ||
+      user.passwordResetExpires.getTime() < Date.now()
+    ) {
+      throw new BadRequestException('Password reset link is invalid or expired');
+    }
+
+    const passwordHash = await bcrypt.hash(password, this.saltRounds);
+    await this.usersService.clearPasswordResetAndUpdatePassword(
+      user.id,
+      passwordHash,
+    );
+
+    return { message: 'Password updated successfully. You can now sign in.' };
   }
 
   async completeOnboarding(userId: string, dto: CompleteOnboardingDto) {
