@@ -1,11 +1,27 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Wifi, WifiOff } from "lucide-react";
 import { useSocket } from "@/src/components/SocketProvider";
 
+const GRACE_PERIOD_MS = 3_000;
+
 export default function RealtimeStatusBanner() {
   const { status, isConnected, reconnectAttempt } = useSocket();
+  const [graceExpired, setGraceExpired] = useState(false);
+
+  useEffect(() => {
+    if (isConnected) {
+      setGraceExpired(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setGraceExpired(true);
+    }, GRACE_PERIOD_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [isConnected, status]);
 
   const message = useMemo(() => {
     if (status === "reconnecting") {
@@ -19,6 +35,10 @@ export default function RealtimeStatusBanner() {
   }, [status, reconnectAttempt]);
 
   if (isConnected) {
+    return null;
+  }
+
+  if (!graceExpired && status !== "offline" && reconnectAttempt === 0) {
     return null;
   }
 

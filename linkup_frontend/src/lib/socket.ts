@@ -32,6 +32,7 @@ function detachStatusListeners(activeSocket: Socket) {
   activeSocket.off("reconnect");
   activeSocket.off("connect_error");
   activeSocket.off("auth_error");
+  activeSocket.io.off("open");
 }
 
 function attachStatusListeners(activeSocket: Socket) {
@@ -78,6 +79,10 @@ function attachStatusListeners(activeSocket: Socket) {
 
   activeSocket.on("connect_error", (err: Error) => {
     logLinkUpDiagnostic("socket", `Connect error: ${err.message}`);
+    notifyStatus("reconnecting");
+  });
+
+  activeSocket.io.on("open", () => {
     if (!activeSocket.connected) {
       notifyStatus("reconnecting");
     }
@@ -271,7 +276,7 @@ export function connectSocket(token?: string | null): Socket | null {
       socket.connect();
     }
     attachStatusListeners(socket);
-    notifyStatus(socket.connected ? "connected" : "reconnecting");
+    notifyStatus(socket.connected ? "connected" : "offline");
     return socket;
   }
 
@@ -294,7 +299,7 @@ export function connectSocket(token?: string | null): Socket | null {
   });
 
   attachStatusListeners(socket);
-  notifyStatus(socket.connected ? "connected" : "reconnecting");
+  notifyStatus(socket.connected ? "connected" : "offline");
 
   return socket;
 }

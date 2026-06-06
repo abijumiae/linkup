@@ -32,15 +32,8 @@ const nextConfig: NextConfig = {
         source: "/api/:path*",
         destination: `${apiUrl}/:path*`,
       },
-      // Dev: proxy WebSocket/polling so realtime works on LAN IP (not only localhost).
-      {
-        source: "/socket.io",
-        destination: `${apiUrl}/socket.io`,
-      },
-      {
-        source: "/socket.io/:path*",
-        destination: `${apiUrl}/socket.io/:path*`,
-      },
+      // Socket.io connects directly to the API host (see getSocketBaseUrl).
+      // Next.js rewrites break the WS handshake with a 308 redirect.
     ];
   },
 };

@@ -39,15 +39,29 @@ export function getApiBaseUrl(): string {
 }
 
 /**
- * Socket.io must use same-origin in dev (Next.js rewrites /socket.io → backend).
- * In production, connect directly to the API host (Vercel cannot proxy WebSockets).
+ * Socket.io connects directly to the API host.
+ * Next.js rewrites cannot proxy WebSocket handshakes (308 redirect breaks socket.io).
+ * On LAN dev (e.g. 192.168.x.x:3001), use the same host on port 3000.
  */
 export function getSocketBaseUrl(): string {
-  if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
-    return window.location.origin;
+  const direct = getDirectApiBaseUrl();
+
+  if (typeof window === "undefined" || process.env.NODE_ENV !== "development") {
+    return direct;
   }
 
-  return getDirectApiBaseUrl();
+  try {
+    const backend = new URL(direct);
+    const pageHost = window.location.hostname;
+
+    if (pageHost !== "localhost" && pageHost !== "127.0.0.1") {
+      return `${backend.protocol}//${pageHost}:${backend.port || "3000"}`;
+    }
+
+    return direct;
+  } catch {
+    return direct;
+  }
 }
 
 /**
