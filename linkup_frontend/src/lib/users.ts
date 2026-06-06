@@ -108,7 +108,7 @@ export async function fetchUserProfileSafe(): Promise<{
     if (cached) {
       return {
         user: profileFromCachedUser(cached),
-        warning: "Profile data is warming up.",
+        warning: "Could not load profile data. Please try again.",
       };
     }
 

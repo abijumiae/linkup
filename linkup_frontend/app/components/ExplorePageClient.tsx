@@ -220,7 +220,7 @@ export default function ExplorePageClient() {
         setSearchWork([]);
         setSearchHappenings([]);
         setSearchTags([]);
-        setSearchError("Search is warming up. Try again in a moment.");
+        setSearchError("Search is temporarily unavailable. Please try again.");
       } finally {
         setIsSearchLoading(false);
       }
@@ -247,7 +247,7 @@ export default function ExplorePageClient() {
           return;
         }
         setDiscover(EMPTY_DISCOVER_DATA);
-        setDataWarning("Discover data is warming up.");
+        setDataWarning("Could not load discover data. Please try again.");
       } finally {
         setIsLoading(false);
       }

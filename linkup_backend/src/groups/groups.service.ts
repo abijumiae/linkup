@@ -4,8 +4,18 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
-import { GroupRole, Prisma } from '../generated/prisma/client';
+import * as bcrypt from 'bcrypt';
+import {
+  GroupLiveRoomStatus,
+  GroupRole,
+  Prisma,
+} from '../generated/prisma/client';
+import {
+  cleanupLocalUploadFiles,
+  collectUniqueMediaUrls,
+} from '../common/media-cleanup.util';
 import {
   buildPaginatedResult,
   PaginatedResult,
@@ -39,6 +49,7 @@ export type GroupListItem = {
   description: string;
   coverImage: string | null;
   ownerId: string;
+  archivedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   membersCount: number;
@@ -92,6 +103,7 @@ export class GroupsService {
     const pagination = parsePaginationQuery(query ?? {});
 
     const groups = await this.prisma.group.findMany({
+      where: { archivedAt: null },
       orderBy: { createdAt: 'desc' },
       skip: pagination.skip,
       take: pagination.limit + 1,
@@ -180,7 +192,7 @@ export class GroupsService {
 
     if (membership.role === GroupRole.OWNER) {
       throw new BadRequestException(
-        'Group owner cannot leave. Transfer ownership is not supported yet.',
+        'Hub host cannot leave without transferring ownership or permanently deleting the hub.',
       );
     }
 
@@ -269,6 +281,200 @@ export class GroupsService {
     return this.mapPost(post, followingSet);
   }
 
+  async transferOwnership(
+    groupId: string,
+    userId: string,
+    targetUserId: string,
+  ): Promise<GroupDetail> {
+    const group = await this.prisma.group.findUnique({
+      where: { id: groupId },
+      select: { id: true, ownerId: true, archivedAt: true },
+    });
+
+    if (!group) {
+      throw new NotFoundException('Group not found');
+    }
+
+    if (group.ownerId !== userId) {
+      throw new ForbiddenException(
+        'Only the hub host can transfer ownership',
+      );
+    }
+
+    if (targetUserId === userId) {
+      throw new BadRequestException('You already own this hub');
+    }
+
+    const targetMembership = await this.prisma.groupMember.findUnique({
+      where: { groupId_userId: { groupId, userId: targetUserId } },
+    });
+
+    if (!targetMembership) {
+      throw new BadRequestException(
+        'Ownership can only be transferred to an existing hub member',
+      );
+    }
+
+    if (
+      targetMembership.role !== GroupRole.ADMIN &&
+      targetMembership.role !== GroupRole.MODERATOR
+    ) {
+      throw new BadRequestException(
+        'Ownership can only be transferred to a hub admin or moderator',
+      );
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.group.update({
+        where: { id: groupId },
+        data: { ownerId: targetUserId },
+      });
+
+      await tx.groupMember.update({
+        where: { id: targetMembership.id },
+        data: { role: GroupRole.OWNER },
+      });
+
+      const currentOwnerMembership = await tx.groupMember.findUnique({
+        where: { groupId_userId: { groupId, userId } },
+      });
+
+      if (currentOwnerMembership) {
+        await tx.groupMember.update({
+          where: { id: currentOwnerMembership.id },
+          data: { role: GroupRole.ADMIN },
+        });
+      }
+    });
+
+    return this.findOne(groupId, targetUserId);
+  }
+
+  async archiveGroup(groupId: string, userId: string): Promise<GroupDetail> {
+    const group = await this.prisma.group.findUnique({
+      where: { id: groupId },
+      select: { id: true, ownerId: true, archivedAt: true },
+    });
+
+    if (!group) {
+      throw new NotFoundException('Group not found');
+    }
+
+    if (group.ownerId !== userId) {
+      throw new ForbiddenException('Only the hub host can archive this hub');
+    }
+
+    if (group.archivedAt) {
+      throw new BadRequestException('This hub is already archived');
+    }
+
+    await this.prisma.groupLiveRoom.updateMany({
+      where: { groupId, status: GroupLiveRoomStatus.ACTIVE },
+      data: { status: GroupLiveRoomStatus.ENDED, endedAt: new Date() },
+    });
+
+    await this.prisma.group.update({
+      where: { id: groupId },
+      data: { archivedAt: new Date() },
+    });
+
+    return this.findOne(groupId, userId);
+  }
+
+  async permanentlyDelete(
+    groupId: string,
+    userId: string,
+    confirmName: string,
+    password: string,
+  ): Promise<{ deleted: true; groupId: string; groupName: string }> {
+    const group = await this.prisma.group.findUnique({
+      where: { id: groupId },
+    });
+
+    if (!group) {
+      throw new NotFoundException('Group not found');
+    }
+
+    if (group.ownerId !== userId) {
+      throw new ForbiddenException(
+        'Only the hub host can permanently delete this hub',
+      );
+    }
+
+    if (confirmName.trim() !== group.name.trim()) {
+      throw new BadRequestException(
+        'Hub name confirmation does not match',
+      );
+    }
+
+    await this.verifyUserPassword(userId, password);
+
+    const actor = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+
+    const mediaUrls = await this.collectGroupMediaUrls(groupId, group.coverImage);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.groupLiveRoom.updateMany({
+        where: { groupId, status: GroupLiveRoomStatus.ACTIVE },
+        data: { status: GroupLiveRoomStatus.ENDED, endedAt: new Date() },
+      });
+
+      await tx.notification.deleteMany({ where: { groupId } });
+
+      await tx.groupDeletionLog.create({
+        data: {
+          groupId: group.id,
+          groupName: group.name,
+          deletedById: userId,
+          deletedByEmail: actor?.email ?? '',
+        },
+      });
+
+      await tx.group.delete({ where: { id: groupId } });
+    });
+
+    cleanupLocalUploadFiles(mediaUrls);
+
+    return { deleted: true, groupId: group.id, groupName: group.name };
+  }
+
+  private async collectGroupMediaUrls(
+    groupId: string,
+    coverImage: string | null,
+  ): Promise<string[]> {
+    const posts = await this.prisma.post.findMany({
+      where: { groupId },
+      select: { imageUrl: true, videoUrl: true },
+    });
+
+    return collectUniqueMediaUrls([
+      coverImage,
+      ...posts.flatMap((post) => [post.imageUrl, post.videoUrl]),
+    ]);
+  }
+
+  private async verifyUserPassword(userId: string, password: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { passwordHash: true, provider: true },
+    });
+
+    if (!user?.passwordHash) {
+      throw new BadRequestException(
+        'Password confirmation is required for accounts with a local password',
+      );
+    }
+
+    const passwordMatches = await bcrypt.compare(password, user.passwordHash);
+
+    if (!passwordMatches) {
+      throw new UnauthorizedException('Incorrect password');
+    }
+  }
+
   private mapGroupListItem(
     group: {
       id: string;
@@ -276,6 +482,7 @@ export class GroupsService {
       description: string;
       coverImage: string | null;
       ownerId: string;
+      archivedAt?: Date | null;
       createdAt: Date;
       updatedAt: Date;
       _count: { members: number };
@@ -291,6 +498,7 @@ export class GroupsService {
       description: group.description,
       coverImage: group.coverImage,
       ownerId: group.ownerId,
+      archivedAt: group.archivedAt ?? null,
       createdAt: group.createdAt,
       updatedAt: group.updatedAt,
       membersCount: group._count.members,

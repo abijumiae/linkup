@@ -217,7 +217,7 @@ export default function HomeDashboardPage() {
       })
       .catch(() => {
         setMomentGroups([]);
-        setMomentsWarning("Moments are warming up.");
+        setMomentsWarning("Could not load moments. Please try again.");
       })
       .finally(() => setMomentsLoading(false));
   };
@@ -888,7 +888,7 @@ export default function HomeDashboardPage() {
                       <Sparkles className="h-6 w-6" />
                     </div>
                     <h3 className="mt-5 text-xl font-semibold text-slate-900 dark:text-white">
-                      Your Pulse is warming up
+                      Start your Pulse
                     </h3>
                     <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-600 dark:text-slate-400">
                       Connect with people, join hubs, or drop your first Spark.

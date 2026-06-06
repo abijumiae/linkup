@@ -72,4 +72,26 @@ async function bootstrap() {
     console.log('Socket.io gateway available at /socket.io');
   }
 }
+
+function registerProcessRecoveryHandlers(): void {
+  const shutdown = (signal: string) => {
+    console.error(`Received ${signal} — shutting down gracefully`);
+    process.exit(0);
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+
+  process.on('uncaughtException', (error) => {
+    console.error('Uncaught exception — process will exit for auto-restart', error);
+    process.exit(1);
+  });
+
+  process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled rejection — process will exit for auto-restart', reason);
+    process.exit(1);
+  });
+}
+
+registerProcessRecoveryHandlers();
 bootstrap();

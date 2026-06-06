@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -14,6 +15,8 @@ import { MessagesService } from '../messages/messages.service';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { CreateGroupMessageDto } from './dto/create-group-message.dto';
 import { CreateGroupPostDto } from './dto/create-group-post.dto';
+import { DeleteGroupDto } from './dto/delete-group.dto';
+import { TransferGroupOwnershipDto } from './dto/transfer-group-ownership.dto';
 import { GroupsService } from './groups.service';
 
 @Controller('groups')
@@ -56,6 +59,38 @@ export class GroupsController {
   @Post(':id/leave')
   leave(@Param('id') id: string, @Req() req: { user: SafeUser }) {
     return this.groupsService.leave(id, req.user.id);
+  }
+
+  @Post(':id/transfer-ownership')
+  transferOwnership(
+    @Param('id') id: string,
+    @Req() req: { user: SafeUser },
+    @Body() dto: TransferGroupOwnershipDto,
+  ) {
+    return this.groupsService.transferOwnership(
+      id,
+      req.user.id,
+      dto.targetUserId,
+    );
+  }
+
+  @Post(':id/archive')
+  archive(@Param('id') id: string, @Req() req: { user: SafeUser }) {
+    return this.groupsService.archiveGroup(id, req.user.id);
+  }
+
+  @Delete(':id')
+  permanentlyDelete(
+    @Param('id') id: string,
+    @Req() req: { user: SafeUser },
+    @Body() dto: DeleteGroupDto,
+  ) {
+    return this.groupsService.permanentlyDelete(
+      id,
+      req.user.id,
+      dto.confirmName,
+      dto.password,
+    );
   }
 
   @Get(':id/messages')

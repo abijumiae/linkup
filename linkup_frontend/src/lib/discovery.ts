@@ -305,7 +305,7 @@ export async function fetchDiscoverSafe(): Promise<DiscoverLoadResult> {
       data,
       warning: hasDiscoverContent(data)
         ? null
-        : "Discover data is warming up.",
+        : "Could not load discover data. Please try again.",
       usedFallback: true,
     };
   } catch (error) {
@@ -319,13 +319,13 @@ export async function fetchDiscoverSafe(): Promise<DiscoverLoadResult> {
         data,
         warning: hasDiscoverContent(data)
           ? null
-          : "Discover data is warming up.",
+          : "Could not load discover data. Please try again.",
         usedFallback: true,
       };
     } catch {
       return {
         data: { ...EMPTY_DISCOVER_DATA },
-        warning: "Discover data is warming up.",
+        warning: "Could not load discover data. Please try again.",
         usedFallback: true,
       };
     }

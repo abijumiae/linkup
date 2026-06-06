@@ -2,15 +2,20 @@ services:
   - type: web
     name: linkup-backend
     runtime: node
+    # REQUIRED: Starter disables sleep — free tier causes "server waking up" errors.
+    plan: starter
     repo: https://github.com/abijumiae/linkup
     branch: main
     rootDir: linkup_backend
+    autoDeploy: true
     # Migrations run at start (not build) to avoid P1002 advisory lock timeouts
     # when Neon pooler is slow or a prior deploy still holds the lock.
     buildCommand: npm ci --include=dev && npx prisma generate && npm run build
     startCommand: npm run start:render
-    # Upgrade to Starter+ in Render dashboard so the service never sleeps (free tier causes login timeouts).
     healthCheckPath: /api/health
+    # Render auto-restarts on crash when health checks fail.
+    # External monitoring: UptimeRobot/Better Stack → GET /api/health every 1 min.
+    # GitHub Actions: .github/workflows/backend-uptime.yml (every 5 min backup ping).
     envVars:
       - key: NODE_ENV
         value: production

@@ -37,7 +37,7 @@ export type CreateMomentInput = {
 };
 
 function momentsWarningFromError(error: unknown): string {
-  return apiWarningFromError(error, "Moments are warming up.");
+  return apiWarningFromError(error, "moments");
 }
 
 export async function fetchMomentsFeedSafe(): Promise<{

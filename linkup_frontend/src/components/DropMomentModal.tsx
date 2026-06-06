@@ -146,7 +146,7 @@ export default function DropMomentModal({
       }, 700);
     } catch (submitError) {
       if (submitError instanceof ApiError && submitError.status === 404) {
-        setError("Moments are warming up. Restart the backend and try again.");
+        setError("Could not publish moment. Please try again.");
       } else {
         setError(
           submitError instanceof Error

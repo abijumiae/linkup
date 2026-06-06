@@ -137,7 +137,7 @@ export async function fetchJobsSafe(
     return {
       items: [],
       hasMore: false,
-      warning: "Work drops are warming up. Try again shortly.",
+      warning: "Could not load work drops. Please try again.",
     };
   }
 }
@@ -155,7 +155,7 @@ export async function fetchMyApplicationsSafe(): Promise<{
     }
     return {
       applications: [],
-      warning: "Your applications are warming up.",
+      warning: "Could not load your applications. Please try again.",
     };
   }
 }

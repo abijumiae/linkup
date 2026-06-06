@@ -16,6 +16,7 @@ export interface Group {
   description: string;
   coverImage: string | null;
   ownerId: string;
+  archivedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   membersCount: number;
@@ -157,5 +158,44 @@ export async function createGroupPost(
       headers: authHeaders(),
       body: JSON.stringify({ content }),
     }),
+  );
+}
+
+export async function transferGroupOwnership(
+  groupId: string,
+  targetUserId: string,
+): Promise<GroupDetail> {
+  return withAuth(() =>
+    apiRequest<GroupDetail>(`/groups/${groupId}/transfer-ownership`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ targetUserId }),
+    }),
+  );
+}
+
+export async function archiveGroup(groupId: string): Promise<GroupDetail> {
+  return withAuth(() =>
+    apiRequest<GroupDetail>(`/groups/${groupId}/archive`, {
+      method: "POST",
+      headers: authHeaders(),
+    }),
+  );
+}
+
+export async function permanentlyDeleteGroup(
+  groupId: string,
+  confirmName: string,
+  password: string,
+): Promise<{ deleted: true; groupId: string; groupName: string }> {
+  return withAuth(() =>
+    apiRequest<{ deleted: true; groupId: string; groupName: string }>(
+      `/groups/${groupId}`,
+      {
+        method: "DELETE",
+        headers: authHeaders(),
+        body: JSON.stringify({ confirmName, password }),
+      },
+    ),
   );
 }

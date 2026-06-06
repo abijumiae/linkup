@@ -28,8 +28,10 @@ function authHeaders(): HeadersInit {
   return { Authorization: `Bearer ${token}` };
 }
 
+const hubAdminsPath = (groupId: string) => `/hubs/${groupId}/admins`;
+
 export async function fetchHubAdmins(groupId: string): Promise<HubAdminsList> {
-  return apiRequest<HubAdminsList>(`/groups/${groupId}/admins`, {
+  return apiRequest<HubAdminsList>(hubAdminsPath(groupId), {
     headers: authHeaders(),
   });
 }
@@ -39,7 +41,7 @@ export async function addHubAdmin(
   targetUserId: string,
   role: "ADMIN" | "MODERATOR",
 ): Promise<HubAdminMember> {
-  return apiRequest<HubAdminMember>(`/groups/${groupId}/admins`, {
+  return apiRequest<HubAdminMember>(hubAdminsPath(groupId), {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify({ targetUserId, role }),
@@ -51,7 +53,7 @@ export async function removeHubAdmin(
   targetUserId: string,
 ): Promise<HubAdminMember> {
   return apiRequest<HubAdminMember>(
-    `/groups/${groupId}/admins/${targetUserId}`,
+    `${hubAdminsPath(groupId)}/${targetUserId}`,
     {
       method: "DELETE",
       headers: authHeaders(),

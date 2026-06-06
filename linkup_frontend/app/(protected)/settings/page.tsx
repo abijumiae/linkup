@@ -201,7 +201,7 @@ export default function SettingsPage() {
         handleAuthFailure();
         return;
       }
-      setWarning("Settings are warming up. Try again shortly.");
+      setWarning("Could not load settings. Please try again.");
     } finally {
       setIsLoading(false);
     }

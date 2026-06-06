@@ -43,7 +43,11 @@ export class GroupHubAdminsService {
   ) {}
 
   async listAdmins(groupId: string, userId: string): Promise<HubAdminsListDto> {
-    await this.permissions.getHubActor(userId, groupId);
+    const actor = await this.permissions.getHubActor(userId, groupId);
+
+    if (!this.permissions.canManageHub(actor)) {
+      throw new ForbiddenException('Hub admin permission required');
+    }
 
     const group = await this.prisma.group.findUnique({
       where: { id: groupId },

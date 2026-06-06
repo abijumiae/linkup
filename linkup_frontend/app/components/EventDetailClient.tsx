@@ -126,7 +126,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
         router.replace("/login");
         return;
       }
-      setWarning("This event is warming up. Try again shortly.");
+      setWarning("Could not load this event. Please try again.");
     }
   }, [eventId, router]);
 

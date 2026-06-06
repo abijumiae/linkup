@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Shield, UserMinus, UserPlus } from "lucide-react";
+import { RefreshCw, Shield, UserMinus, UserPlus } from "lucide-react";
 import { ApiError } from "@/src/lib/api";
+import { hubAdminWarningFromError } from "@/src/lib/apiWarnings";
 import {
   addHubAdmin,
   fetchHubAdmins,
@@ -118,17 +119,7 @@ export default function GroupHubAdminsSection({
       setList(data);
       setError(null);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 404) {
-        setError(
-          "Hub admins API is not available. Restart linkup_backend (npm run start:dev) or redeploy the API.",
-        );
-      } else {
-        setError(
-          err instanceof ApiError
-            ? err.message
-            : "Could not load hub admins.",
-        );
-      }
+      setError(hubAdminWarningFromError(err));
     } finally {
       setLoading(false);
     }
@@ -208,9 +199,7 @@ export default function GroupHubAdminsSection({
       setTargetUserId("");
       await load();
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Could not add hub role.",
-      );
+      setError(hubAdminWarningFromError(err));
     } finally {
       setBusy(false);
     }
@@ -237,9 +226,7 @@ export default function GroupHubAdminsSection({
         onHubRoleChange(updated.role === "MEMBER" ? "MEMBER" : updated.role);
       }
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Could not remove hub role.",
-      );
+      setError(hubAdminWarningFromError(err));
     } finally {
       setRemovingId(null);
     }
@@ -259,9 +246,23 @@ export default function GroupHubAdminsSection({
       </p>
 
       {error ? (
-        <p className="mb-3 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-200">
-          {error}
-        </p>
+        <div
+          className="linkup-alert-error linkup-alert-enter mb-3 flex flex-wrap items-center justify-between gap-2"
+          role="alert"
+        >
+          <p className="text-sm">{error}</p>
+          <button
+            type="button"
+            onClick={() => void load()}
+            disabled={loading}
+            className="inline-flex min-h-[36px] items-center gap-1.5 rounded-full border border-rose-500/30 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-500/10 dark:text-rose-200"
+          >
+            <RefreshCw
+              className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
+            />
+            Retry
+          </button>
+        </div>
       ) : null}
 
       {loading ? (

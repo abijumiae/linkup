@@ -74,7 +74,7 @@ export default function MarketplaceDetailClient({
         router.replace("/login");
         return;
       }
-      setError("Listing data is warming up. Try again shortly.");
+      setError("Could not load this listing. Please try again.");
     }
   }, [itemId, router]);
 

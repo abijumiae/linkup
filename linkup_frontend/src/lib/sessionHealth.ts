@@ -10,7 +10,7 @@ import {
 } from "./socket";
 
 const SOCKET_WATCH_MS = 25_000;
-const HEALTH_INTERVAL_MS = 5 * 60 * 1000;
+const HEALTH_INTERVAL_MS = 60_000;
 const TOKEN_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 let socketWatchTimer: number | null = null;

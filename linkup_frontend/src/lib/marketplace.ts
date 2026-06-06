@@ -137,7 +137,7 @@ export async function fetchMarketplaceItemsSafe(
     return {
       items: [],
       hasMore: false,
-      warning: "Market listings are warming up. Showing local filters only.",
+      warning: "Could not load market listings. Showing local filters only.",
     };
   }
 }

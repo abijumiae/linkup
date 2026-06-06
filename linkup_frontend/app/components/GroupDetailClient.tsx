@@ -15,6 +15,7 @@ import {
   joinGroup,
   leaveGroup,
 } from "@/src/lib/groups";
+import { fetchHubAdmins, HubAdminMember } from "@/src/lib/hubAdmins";
 import { FeedPost } from "@/src/lib/posts";
 import AuthLoadingScreen from "./AuthLoadingScreen";
 import FeedPostCard from "./FeedPostCard";
@@ -29,6 +30,10 @@ const GroupHubAdminsSection = dynamic(
   () => import("./GroupHubAdminsSection"),
   { ssr: false },
 );
+
+const GroupDangerZone = dynamic(() => import("./GroupDangerZone"), {
+  ssr: false,
+});
 
 const GroupLiveTalkPanel = dynamic(() => import("./GroupLiveTalkPanel"), {
   ssr: false,
@@ -58,6 +63,9 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
   const [membershipLoading, setMembershipLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [liveTalkRoom, setLiveTalkRoom] = useState<LiveTalkRoom | null>(null);
+  const [transferCandidates, setTransferCandidates] = useState<HubAdminMember[]>(
+    [],
+  );
 
   const safePosts = useMemo(() => toFeedPostArray(posts), [posts]);
   const safeLiveTalkRoom =
@@ -77,6 +85,19 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
       setLiveTalkRoom(
         activeLiveTalk?.status === "ACTIVE" ? activeLiveTalk : null,
       );
+      if (groupData.isOwner) {
+        try {
+          const admins = await fetchHubAdmins(groupId);
+          setTransferCandidates([
+            ...admins.admins,
+            ...admins.moderators,
+          ]);
+        } catch {
+          setTransferCandidates([]);
+        }
+      } else {
+        setTransferCandidates([]);
+      }
       setError(null);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -256,6 +277,13 @@ export default function GroupDetailClient({ groupId }: GroupDetailClientProps) {
                 setGroup((g) => (g ? { ...g, role } : g))
               }
             />
+            {group.isOwner ? (
+              <GroupDangerZone
+                group={group}
+                transferCandidates={transferCandidates}
+                onGroupUpdated={setGroup}
+              />
+            ) : null}
             <GroupLiveTalkPanel
               groupId={groupId}
               groupName={group.name}

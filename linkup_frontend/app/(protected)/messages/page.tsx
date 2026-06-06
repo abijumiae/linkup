@@ -276,7 +276,7 @@ export default function MessagesPage() {
         router.replace("/login");
         return [];
       }
-      setError("Chats are warming up. Try again shortly.");
+      setError("Could not load chats. Please try again.");
       return [];
     }
   }, [router]);

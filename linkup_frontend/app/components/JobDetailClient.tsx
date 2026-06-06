@@ -94,7 +94,7 @@ export default function JobDetailClient({ jobId }: JobDetailClientProps) {
         router.replace("/login");
         return;
       }
-      setError("Work drops are warming up. Try again shortly.");
+      setError("Could not load this work drop. Please try again.");
     }
   }, [jobId, router]);
 

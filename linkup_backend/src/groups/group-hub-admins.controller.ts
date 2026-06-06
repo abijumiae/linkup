@@ -13,7 +13,7 @@ import { SafeUser } from '../users/users.service';
 import { SetHubAdminDto } from './dto/set-hub-admin.dto';
 import { GroupHubAdminsService } from './group-hub-admins.service';
 
-@Controller('groups/:groupId/admins')
+@Controller(['groups/:groupId/admins', 'hubs/:groupId/admins'])
 @UseGuards(JwtAuthGuard)
 export class GroupHubAdminsController {
   constructor(private readonly hubAdminsService: GroupHubAdminsService) {}

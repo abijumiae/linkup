@@ -256,7 +256,7 @@ export type WatchVideosResult = {
 };
 
 export function watchWarningFromError(error: unknown): string {
-  return apiWarningFromError(error, "Watch is warming up. Try again shortly.");
+  return apiWarningFromError(error, "watch");
 }
 
 export async function fetchWatchVideosSafe(

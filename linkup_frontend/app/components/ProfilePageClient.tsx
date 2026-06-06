@@ -99,7 +99,7 @@ export default function ProfilePageClient() {
         return;
       }
 
-      setWarning("Profile data is warming up.");
+      setWarning("Could not load profile data. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -380,7 +380,7 @@ export default function ProfilePageClient() {
       <div className="flex min-h-[50vh] items-center justify-center px-4">
         <div className="linkup-panel max-w-md p-6 text-center">
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            Profile data is warming up.
+            Could not load profile data. Please try again.
           </p>
           <button
             type="button"

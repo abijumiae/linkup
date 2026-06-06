@@ -30,3 +30,6 @@ linkup_backend/.env.production
 linkup_frontend/.env
 linkup_frontend/.env.local
 linkup_frontend/.env.production
+
+# Script exports (backups, audits — never commit)
+linkup_backend/scripts/output/

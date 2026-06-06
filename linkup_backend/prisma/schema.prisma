@@ -133,6 +133,7 @@ model User {
   groupLiveTalkMessages   GroupLiveTalkMessage[]
   postReactions         PostReaction[]
   messageReactions      MessageReaction[]
+  groupDeletionLogs     GroupDeletionLog[] @relation("GroupDeletionActor")
 }
 
 model ModerationLog {
@@ -225,13 +226,14 @@ model Post {
 }
 
 model Group {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
   description String
   coverImage  String?
   ownerId     String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  archivedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   owner         User           @relation("OwnedGroups", fields: [ownerId], references: [id], onDelete: Cascade)
   members       GroupMember[]
@@ -241,6 +243,22 @@ model Group {
   liveRooms     GroupLiveRoom[]
 
   @@index([ownerId])
+  @@index([archivedAt])
+}
+
+model GroupDeletionLog {
+  id             String   @id @default(cuid())
+  groupId        String
+  groupName      String
+  deletedById    String
+  deletedByEmail String
+  createdAt      DateTime @default(now())
+
+  deletedBy User @relation("GroupDeletionActor", fields: [deletedById], references: [id], onDelete: Cascade)
+
+  @@index([deletedById])
+  @@index([groupId])
+  @@index([createdAt])
 }
 
 model GroupLiveRoom {

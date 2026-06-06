@@ -107,7 +107,7 @@ export async function fetchNotificationsSafe(
         limit,
         hasMore: false,
       },
-      warning: "Alerts are warming up. Try again shortly.",
+      warning: "Could not load alerts. Please try again.",
     };
   }
 }

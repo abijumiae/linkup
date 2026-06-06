@@ -218,6 +218,7 @@ export class DiscoveryService {
       }),
       this.prisma.group.findMany({
         where: {
+          archivedAt: null,
           OR: [
             { name: { contains: q, mode: 'insensitive' } },
             { description: { contains: q, mode: 'insensitive' } },
@@ -452,6 +453,7 @@ export class DiscoveryService {
 
   private async loadDiscoverHubs(userId: string): Promise<DiscoverHub[]> {
     const groupRows = await this.prisma.group.findMany({
+      where: { archivedAt: null },
       take: DISCOVER_LIMIT,
       orderBy: { members: { _count: 'desc' } },
       include: {

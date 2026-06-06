@@ -127,7 +127,7 @@ export default function NotificationsPage() {
           router.replace("/login");
           return;
         }
-        setWarning("Alerts are warming up. Try again shortly.");
+        setWarning("Could not load alerts. Please try again.");
       } finally {
         setIsLoading(false);
       }

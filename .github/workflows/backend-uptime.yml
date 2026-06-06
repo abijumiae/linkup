@@ -1,0 +1,32 @@
+# Keeps production API warm and alerts on failure.
+# GitHub schedule minimum is 5 minutes — use UptimeRobot (1 min) for tighter monitoring.
+name: Backend uptime ping
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping production health
+        env:
+          API_URL: ${{ vars.LINKUP_API_URL || 'https://api.thelinkupzone.com' }}
+        run: |
+          set -euo pipefail
+          echo "Pinging ${API_URL}/api/health"
+          code=$(curl -sS -o /tmp/health.json -w "%{http_code}" --max-time 45 "${API_URL}/api/health" || echo "000")
+          if [ "$code" != "200" ]; then
+            echo "Primary health failed ($code), trying /health"
+            code=$(curl -sS -o /tmp/health.json -w "%{http_code}" --max-time 45 "${API_URL}/health" || echo "000")
+          fi
+          cat /tmp/health.json || true
+          echo ""
+          if [ "$code" != "200" ]; then
+            echo "::error::Backend health check failed with HTTP $code"
+            exit 1
+          fi
+          echo "Backend is healthy (HTTP $code)"

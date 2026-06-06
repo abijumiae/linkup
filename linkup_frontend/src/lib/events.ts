@@ -117,7 +117,7 @@ export async function fetchEventsSafe(
     return {
       items: [],
       hasMore: false,
-      warning: "Happenings are warming up. Try again shortly.",
+      warning: "Could not load happenings. Please try again.",
     };
   }
 }

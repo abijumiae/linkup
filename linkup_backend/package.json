@@ -28,6 +28,8 @@
     "verify:live-talk": "bash scripts/verify-live-talk.sh http://localhost:3000",
     "verify:live-talk:prod": "bash scripts/verify-live-talk.sh https://api.thelinkupzone.com",
     "verify:production": "bash scripts/verify-production.sh",
+    "uptime:ping": "bash scripts/uptime-ping.sh",
+    "uptime:ping:prod": "bash scripts/uptime-ping.sh https://api.thelinkupzone.com",
     "verify:realtime": "bash scripts/verify-realtime.sh",
     "postinstall": "prisma generate"
   },

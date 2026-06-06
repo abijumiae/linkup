@@ -65,7 +65,7 @@ export default function EventsPageClient() {
           router.replace("/login");
           return;
         }
-        setWarning("Happenings are warming up. Try again shortly.");
+        setWarning("Could not load happenings. Please try again.");
       }
     },
     [router],

@@ -29,6 +29,7 @@ export class PrismaService
 {
   private readonly logger = new Logger(PrismaService.name);
   private readonly pool: Pool;
+  private keepAliveTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     const connectionString = process.env.DATABASE_URL;
@@ -62,6 +63,7 @@ export class PrismaService
         await this.$connect();
         await this.$queryRaw`SELECT 1`;
         this.logger.log('Database connected');
+        this.startConnectionKeepAlive();
         return;
       } catch (error) {
         const message =
@@ -115,7 +117,28 @@ export class PrismaService
     }
   }
 
+  private startConnectionKeepAlive(): void {
+    if (this.keepAliveTimer) {
+      return;
+    }
+
+    const intervalMs = 5 * 60 * 1000;
+
+    this.keepAliveTimer = setInterval(() => {
+      void this.$queryRaw`SELECT 1`.catch((error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        this.logger.warn(`Database keep-alive ping failed: ${message}`);
+      });
+    }, intervalMs);
+
+    this.keepAliveTimer.unref?.();
+  }
+
   async onModuleDestroy(): Promise<void> {
+    if (this.keepAliveTimer) {
+      clearInterval(this.keepAliveTimer);
+      this.keepAliveTimer = null;
+    }
     await this.$disconnect();
     await this.pool.end();
   }
