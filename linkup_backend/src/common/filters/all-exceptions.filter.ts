@@ -6,7 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -14,8 +14,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
+    const request = ctx.getRequest<Request>();
     const response = ctx.getResponse<Response>();
     const isProd = process.env.NODE_ENV === 'production';
+    const route = `${request.method} ${request.url}`;
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let body: Record<string, unknown> = {
@@ -25,6 +27,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
+      if (status >= 500) {
+        this.logger.error(
+          `${route} → ${status}: ${exception.message}`,
+          isProd ? undefined : exception.stack,
+        );
+      }
       const exceptionResponse = exception.getResponse();
 
       if (typeof exceptionResponse === 'string') {
@@ -37,7 +45,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       }
     } else if (exception instanceof Error) {
       this.logger.error(
-        exception.message,
+        `${route} → 500: ${exception.message}`,
         isProd ? undefined : exception.stack,
       );
 
@@ -48,7 +56,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         };
       }
     } else {
-      this.logger.error('Unhandled exception');
+      this.logger.error(`${route} → 500: Unhandled exception`);
     }
 
     response.status(status).json(body);

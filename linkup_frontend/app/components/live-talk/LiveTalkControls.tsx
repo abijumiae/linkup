@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import {
   Hand,
+  LogOut,
   Mic,
   MicOff,
-  PhoneOff,
   Radio,
   Send,
   Square,
@@ -35,21 +35,51 @@ type LiveTalkControlsProps = {
   onSendQuickReaction: (emoji: string) => void;
 };
 
-const actionBtnBase =
-  "flex h-11 w-11 min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full transition active:scale-95 disabled:opacity-45";
+type ControlActionProps = {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  variant?: "primary" | "ghost" | "danger" | "amber";
+  icon: ReactNode;
+  ariaLabel: string;
+};
 
-const actionBtnGhost =
-  "bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-slate-100";
+function ControlAction({
+  label,
+  onClick,
+  disabled,
+  variant = "ghost",
+  icon,
+  ariaLabel,
+}: ControlActionProps) {
+  const variantClass =
+    variant === "primary"
+      ? "bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-sm"
+      : variant === "danger"
+        ? "bg-red-600/90 text-white"
+        : variant === "amber"
+          ? "bg-amber-500 text-white"
+          : "bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-slate-100";
 
-const actionBtnPrimary =
-  "bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-md shadow-brand-primary/20";
-
-const actionBtnDanger = "bg-red-600/90 text-white";
-
-const actionBtnHandActive = "bg-amber-500/90 text-white";
-
-const actionBtnHandIdle =
-  "bg-slate-100 text-brand-primary dark:bg-white/10 dark:text-brand-secondary";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={ariaLabel}
+      className="flex min-w-[3.5rem] flex-col items-center gap-1 disabled:opacity-45"
+    >
+      <span
+        className={`flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full transition active:scale-95 ${variantClass}`}
+      >
+        {icon}
+      </span>
+      <span className="max-w-[4.5rem] truncate text-center text-[10px] font-medium text-slate-600 dark:text-slate-400">
+        {label}
+      </span>
+    </button>
+  );
+}
 
 function statusLine(
   holdingMic: boolean,
@@ -64,7 +94,7 @@ function statusLine(
     return `${micHolderName} has the mic`;
   }
   if (micAvailable) {
-    return "Mic available";
+    return "Tap Open Mic to speak";
   }
   return null;
 }
@@ -107,16 +137,12 @@ export default function LiveTalkControls({
 
   return (
     <footer
-      className="shrink-0 border-t border-slate-200/70 bg-white/95 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/95"
+      className="shrink-0 border-t border-slate-200/60 bg-white/95 backdrop-blur-md dark:border-white/10 dark:bg-slate-950/95"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
       {status ? (
         <p
-          className={`truncate px-3 py-1.5 text-center text-[11px] font-medium ${
-            micAvailable && !holdingMic && !micBusy
-              ? "text-emerald-700 dark:text-emerald-300"
-              : "text-slate-600 dark:text-slate-300"
-          }`}
+          className="truncate px-3 py-1 text-center text-[11px] text-slate-500 dark:text-slate-400"
           aria-live="polite"
         >
           {status}
@@ -124,7 +150,7 @@ export default function LiveTalkControls({
       ) : null}
 
       <div className="flex items-end gap-2 px-3 py-2">
-        <div className="flex min-w-0 flex-1 items-end gap-1 rounded-2xl border border-slate-200/80 bg-slate-50 py-1 pl-1 pr-2 focus-within:border-brand-primary/40 focus-within:ring-2 focus-within:ring-brand-primary/15 dark:border-white/10 dark:bg-white/5 dark:focus-within:ring-brand-primary/20">
+        <div className="flex min-w-0 flex-1 items-end gap-1 rounded-2xl border border-slate-200/70 bg-slate-50/80 py-1 pl-0.5 pr-1.5 focus-within:border-brand-primary/35 dark:border-white/10 dark:bg-white/[0.04]">
           <ChatInputActions
             draft={messageDraft}
             onDraftChange={onMessageDraftChange}
@@ -146,9 +172,9 @@ export default function LiveTalkControls({
                 onSendMessage();
               }
             }}
-            placeholder="Message the room…"
+            placeholder="Message…"
             aria-label="Room message"
-            className="max-h-[7.5rem] min-h-11 min-w-0 flex-1 resize-none border-0 bg-transparent px-1 py-2 text-base leading-snug text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500 sm:text-sm"
+            className="max-h-[6rem] min-h-10 min-w-0 flex-1 resize-none border-0 bg-transparent px-1 py-2 text-sm leading-snug text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
             maxLength={2000}
           />
         </div>
@@ -157,144 +183,118 @@ export default function LiveTalkControls({
           onClick={onSendMessage}
           disabled={!messageDraft.trim() || loading}
           aria-label="Send message"
-          className={`${actionBtnBase} ${actionBtnPrimary} mb-0.5 h-9 w-9 min-h-[36px] min-w-[36px] sm:mb-0`}
+          className="mb-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-sm disabled:opacity-45"
         >
           <Send className="h-4 w-4" />
         </button>
       </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-2 px-3 pb-3">
+      <div className="flex items-start justify-around gap-1 px-2 pb-3 pt-0.5">
         {holdingMic ? (
           <>
-            <button
-              type="button"
+            <ControlAction
+              label="Release"
+              ariaLabel="Release microphone"
+              variant="primary"
               disabled={loading}
               onClick={onReleaseMic}
-              aria-label="Release microphone"
-              title="Release mic"
-              className={`${actionBtnBase} ${actionBtnPrimary} sm:order-1`}
-            >
-              <MicOff className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
+              icon={<MicOff className="h-5 w-5" />}
+            />
+            <ControlAction
+              label={muted ? "Unmute" : "Mute"}
+              ariaLabel={muted ? "Unmute" : "Mute"}
+              variant={muted ? "danger" : "ghost"}
               onClick={onToggleMute}
-              aria-label={muted ? "Unmute microphone" : "Mute microphone"}
-              title={muted ? "Unmute" : "Mute"}
-              className={`${actionBtnBase} ${
-                muted ? actionBtnDanger : actionBtnGhost
-              } sm:order-2`}
-            >
-              {muted ? (
-                <MicOff className="h-5 w-5" />
-              ) : (
-                <Mic className="h-5 w-5" />
-              )}
-            </button>
-            <button
-              type="button"
+              icon={
+                muted ? (
+                  <MicOff className="h-5 w-5" />
+                ) : (
+                  <Mic className="h-5 w-5" />
+                )
+              }
+            />
+            <ControlAction
+              label="Leave"
+              ariaLabel="Leave room"
+              variant="danger"
               disabled={loading}
               onClick={onLeave}
-              aria-label="Leave room"
-              title="Leave"
-              className={`${actionBtnBase} ${actionBtnDanger} sm:order-3`}
-            >
-              <PhoneOff className="h-5 w-5" />
-            </button>
+              icon={<LogOut className="h-5 w-5" />}
+            />
             {canEnd ? (
-              <button
-                type="button"
+              <ControlAction
+                label="End"
+                ariaLabel="End Live Talk"
+                variant="ghost"
                 disabled={loading}
                 onClick={onEnd}
-                aria-label="End Live Talk for everyone"
-                title="End Live Talk"
-                className={`${actionBtnBase} ${actionBtnGhost} sm:order-4`}
-              >
-                <Square className="h-4 w-4" />
-              </button>
+                icon={<Square className="h-4 w-4" />}
+              />
             ) : null}
           </>
         ) : micBusy ? (
           <>
-            <button
-              type="button"
+            <ControlAction
+              label={handRaised ? "Lower" : "Hand"}
+              ariaLabel={handRaised ? "Lower hand" : "Raise hand"}
+              variant={handRaised ? "amber" : "ghost"}
               disabled={loading}
               onClick={onToggleHand}
-              aria-label={handRaised ? "Lower hand" : "Raise hand"}
-              title={handRaised ? "Lower hand" : "Raise hand"}
-              className={`${actionBtnBase} ${
-                handRaised ? actionBtnHandActive : actionBtnHandIdle
-              }`}
-            >
-              <Hand className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
+              icon={<Hand className="h-5 w-5" />}
+            />
+            <ControlAction
+              label="Leave"
+              ariaLabel="Leave room"
+              variant="danger"
               disabled={loading}
               onClick={onLeave}
-              aria-label="Leave room"
-              title="Leave"
-              className={`${actionBtnBase} ${actionBtnDanger}`}
-            >
-              <PhoneOff className="h-5 w-5" />
-            </button>
+              icon={<LogOut className="h-5 w-5" />}
+            />
             {canEnd ? (
-              <button
-                type="button"
+              <ControlAction
+                label="End"
+                ariaLabel="End Live Talk"
+                variant="ghost"
                 disabled={loading}
                 onClick={onEnd}
-                aria-label="End Live Talk for everyone"
-                title="End Live Talk"
-                className={`${actionBtnBase} ${actionBtnGhost}`}
-              >
-                <Square className="h-4 w-4" />
-              </button>
+                icon={<Square className="h-4 w-4" />}
+              />
             ) : null}
           </>
         ) : (
           <>
-            <button
-              type="button"
+            <ControlAction
+              label="Open Mic"
+              ariaLabel="Open microphone"
+              variant="primary"
               disabled={loading}
               onClick={onOpenMic}
-              aria-label="Open microphone"
-              title="Open mic"
-              className={`${actionBtnBase} ${actionBtnPrimary}`}
-            >
-              <Radio className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
+              icon={<Radio className="h-5 w-5" />}
+            />
+            <ControlAction
+              label={handRaised ? "Lower" : "Hand"}
+              ariaLabel={handRaised ? "Lower hand" : "Raise hand"}
+              variant={handRaised ? "amber" : "ghost"}
               onClick={onToggleHand}
-              aria-label={handRaised ? "Lower hand" : "Raise hand"}
-              title={handRaised ? "Lower hand" : "Raise hand"}
-              className={`${actionBtnBase} ${
-                handRaised ? actionBtnHandActive : actionBtnGhost
-              }`}
-            >
-              <Hand className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
+              icon={<Hand className="h-5 w-5" />}
+            />
+            <ControlAction
+              label="Leave"
+              ariaLabel="Leave room"
+              variant="danger"
               disabled={loading}
               onClick={onLeave}
-              aria-label="Leave room"
-              title="Leave"
-              className={`${actionBtnBase} ${actionBtnDanger}`}
-            >
-              <PhoneOff className="h-5 w-5" />
-            </button>
+              icon={<LogOut className="h-5 w-5" />}
+            />
             {canEnd ? (
-              <button
-                type="button"
+              <ControlAction
+                label="End"
+                ariaLabel="End Live Talk for everyone"
+                variant="ghost"
                 disabled={loading}
                 onClick={onEnd}
-                aria-label="End Live Talk for everyone"
-                title="End Live Talk"
-                className={`${actionBtnBase} ${actionBtnGhost}`}
-              >
-                <Square className="h-4 w-4" />
-              </button>
+                icon={<Square className="h-4 w-4" />}
+              />
             ) : null}
           </>
         )}
@@ -313,7 +313,7 @@ export function LiveTalkAudioUnlockBanner({
       type="button"
       onClick={onUnlock}
       aria-label="Tap to enable audio"
-      className="mx-3 mb-1 flex min-h-10 w-[calc(100%-1.5rem)] items-center justify-center gap-2 rounded-full bg-brand-primary/10 px-4 text-sm font-medium text-brand-primary dark:text-brand-secondary"
+      className="mx-3 mb-1 flex min-h-10 items-center justify-center gap-2 rounded-full border border-brand-primary/20 bg-brand-primary/5 px-4 text-sm font-medium text-brand-primary dark:text-brand-secondary"
     >
       <Volume2 className="h-4 w-4 shrink-0" />
       <span className="truncate">Tap to enable audio</span>

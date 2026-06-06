@@ -1,4 +1,4 @@
-import { getApiBaseUrl, ApiError, extractErrorMessage } from "./api";
+import { buildApiRequestUrl, ApiError, extractErrorMessage } from "./api";
 import { AccountType, clearAuth, getToken } from "./auth";
 import { fetchEventsSafe } from "./events";
 import { fetchGroups } from "./groups";
@@ -199,9 +199,8 @@ export function hasDiscoverContent(data: DiscoverData): boolean {
 }
 
 async function fetchDiscoverEndpoint(path: "/discover" | "/explore") {
-  const apiUrl = getApiBaseUrl();
   const token = getToken();
-  const url = `${apiUrl}${path}`;
+  const url = buildApiRequestUrl(path);
 
   const response = await fetch(url, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -336,7 +335,7 @@ export async function fetchDiscoverSafe(): Promise<DiscoverLoadResult> {
 export async function searchAll(query: string): Promise<SearchResults> {
   const params = new URLSearchParams({ q: query.trim() });
   return withAuth(() =>
-    fetch(`${getApiBaseUrl()}/search?${params.toString()}`, {
+    fetch(buildApiRequestUrl(`/search?${params.toString()}`), {
       headers: authHeaders(),
     }).then(async (response) => {
       const text = await response.text();
@@ -371,7 +370,7 @@ export async function searchAll(query: string): Promise<SearchResults> {
 
 export async function fetchExplorePosts(): Promise<FeedPost[]> {
   return withAuth(() =>
-    fetch(`${getApiBaseUrl()}/explore`, { headers: authHeaders() }).then(
+    fetch(buildApiRequestUrl("/explore"), { headers: authHeaders() }).then(
       async (response) => {
         const parsed = parseJsonBody(await response.text());
         if (!response.ok) {

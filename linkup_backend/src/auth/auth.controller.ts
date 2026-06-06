@@ -65,6 +65,12 @@ export class AuthController {
     return { user: req.user };
   }
 
+  @Post('refresh')
+  @UseGuards(JwtAuthGuard)
+  refresh(@Req() req: { user: SafeUser }) {
+    return this.authService.refreshSession(req.user);
+  }
+
   @Patch('onboarding')
   @UseGuards(JwtAuthGuard)
   completeOnboarding(

@@ -1,4 +1,4 @@
-import { apiRequest, ApiError, getApiBaseUrl } from "./api";
+import { apiRequest, ApiError, buildApiRequestUrl } from "./api";
 import { clearAuth, getToken } from "./auth";
 
 export type LiveTalkUser = {
@@ -129,10 +129,8 @@ function isLiveTalkRouteMissing(error: ApiError): boolean {
 }
 
 async function liveTalkBackendHint(): Promise<string> {
-  const base = getApiBaseUrl();
-
   try {
-    const probe = await fetch(`${base}/groups/probe/live-talk/active`, {
+    const probe = await fetch(buildApiRequestUrl("/groups/probe/live-talk/active"), {
       signal: AbortSignal.timeout(4000),
     });
     if (probe.status === 401) {
@@ -143,7 +141,7 @@ async function liveTalkBackendHint(): Promise<string> {
   }
 
   try {
-    const health = await fetch(`${base}/health`, {
+    const health = await fetch(buildApiRequestUrl("/health"), {
       signal: AbortSignal.timeout(4000),
     });
     if (!health.ok) {

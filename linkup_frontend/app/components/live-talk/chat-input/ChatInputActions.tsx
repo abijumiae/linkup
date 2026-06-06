@@ -84,7 +84,7 @@ export default function ChatInputActions({
   return (
     <div
       ref={rootRef}
-      className="relative flex max-w-[48%] shrink-0 items-center gap-0.5 overflow-x-auto overscroll-x-contain sm:max-w-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="relative flex max-w-[42%] shrink-0 items-center gap-0.5 overflow-x-auto overscroll-x-contain sm:max-w-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       <ChatPopoverShell
         open={openPanel === "emoji"}

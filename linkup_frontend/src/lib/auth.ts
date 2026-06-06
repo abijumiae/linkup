@@ -139,11 +139,43 @@ export async function login(
     {
       method: "POST",
       body: JSON.stringify({ email, password }),
+      retries: 4,
+      timeoutMs: 60_000,
     },
   );
 
   setAuth(data.accessToken, data.user);
   return data;
+}
+
+export async function refreshAccessToken(): Promise<string | null> {
+  const token = getToken();
+
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const data = await apiRequest<{ accessToken: string; user: User }>(
+      "/auth/refresh",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        retries: 1,
+      },
+    );
+
+    setAuth(data.accessToken, data.user);
+    return data.accessToken;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      clearAuth();
+    }
+
+    return null;
+  }
 }
 
 export function needsOnboarding(
@@ -206,12 +238,17 @@ export async function fetchMe(): Promise<User | null> {
       headers: {
         Authorization: `Bearer ${token}`,
       },
+      retries: 1,
     });
 
     saveUser(data.user);
     return data.user;
-  } catch {
-    clearAuth();
-    return null;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      clearAuth();
+      return null;
+    }
+
+    return getCurrentUser();
   }
 }

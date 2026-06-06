@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
-import { ApiError, getApiBaseUrl } from "@/src/lib/api";
+import { ApiError, buildApiRequestUrl } from "@/src/lib/api";
 import { getCurrentUser, getToken } from "@/src/lib/auth";
 import { useSocket } from "@/src/components/SocketProvider";
 
@@ -55,7 +55,7 @@ export default function AdminModerationPage() {
     try {
       const query =
         statusFilter === "ALL" ? "" : `?status=${encodeURIComponent(statusFilter)}`;
-      const response = await fetch(`${getApiBaseUrl()}/admin/reports${query}`, {
+      const response = await fetch(buildApiRequestUrl(`/admin/reports${query}`), {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -122,7 +122,7 @@ export default function AdminModerationPage() {
 
     try {
       const response = await fetch(
-        `${getApiBaseUrl()}/admin/reports/${selectedReport.id}/status`,
+        buildApiRequestUrl(`/admin/reports/${selectedReport.id}/status`),
         {
           method: "PATCH",
           headers: {

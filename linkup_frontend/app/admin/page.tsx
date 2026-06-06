@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ShieldCheck, Sparkles, Users } from "lucide-react";
-import { getApiBaseUrl } from "@/src/lib/api";
+import { buildApiRequestUrl } from "@/src/lib/api";
 import { getCurrentUser, getToken } from "@/src/lib/auth";
 import AdminStatCard from "../components/AdminStatCard";
 import AdminTable from "../components/AdminTable";
@@ -54,10 +54,9 @@ export default function AdminPage() {
     async function loadAdminData() {
       try {
         const headers = { Authorization: `Bearer ${token}` };
-        const base = getApiBaseUrl();
         const [statsRes, reportsRes] = await Promise.all([
-          fetch(`${base}/admin/stats`, { headers }),
-          fetch(`${base}/admin/reports`, { headers }),
+          fetch(buildApiRequestUrl("/admin/stats"), { headers }),
+          fetch(buildApiRequestUrl("/admin/reports"), { headers }),
         ]);
 
         if (statsRes.status === 403 || reportsRes.status === 403) {

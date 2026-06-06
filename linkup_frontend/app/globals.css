@@ -401,6 +401,61 @@ select {
   animation: linkup-lt-react-wiggle-kf 0.38s ease-in-out;
 }
 
+/* Live Talk — voice activity & active speaker */
+@keyframes linkup-lt-wave {
+  0%,
+  100% {
+    height: 3px;
+    opacity: 0.45;
+  }
+  50% {
+    height: 12px;
+    opacity: 1;
+  }
+}
+
+@keyframes linkup-lt-speaker-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
+  }
+}
+
+.linkup-lt-wave-bar {
+  display: block;
+  width: 2px;
+  min-height: 3px;
+  border-radius: 999px;
+  background: currentColor;
+  animation: linkup-lt-wave 0.85s ease-in-out infinite;
+  will-change: height;
+}
+
+.linkup-lt-wave-bar-0 {
+  animation-delay: 0s;
+}
+.linkup-lt-wave-bar-1 {
+  animation-delay: 0.12s;
+}
+.linkup-lt-wave-bar-2 {
+  animation-delay: 0.24s;
+}
+.linkup-lt-wave-bar-3 {
+  animation-delay: 0.36s;
+}
+
+.linkup-lt-speaker-avatar {
+  background: linear-gradient(
+    135deg,
+    rgb(16 185 129) 0%,
+    rgb(5 150 105) 100%
+  );
+  animation: linkup-lt-speaker-glow 2s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .linkup-lt-popover-enter,
   .linkup-lt-emoji-btn-glow,
@@ -408,7 +463,9 @@ select {
   .linkup-lt-react-rise,
   .linkup-lt-react-pulse,
   .linkup-lt-react-wiggle,
-  .linkup-lt-chat-icon-btn {
+  .linkup-lt-chat-icon-btn,
+  .linkup-lt-wave-bar,
+  .linkup-lt-speaker-avatar {
     animation: none !important;
     transition: none !important;
   }

@@ -171,7 +171,7 @@ export default function GroupLiveTalkPanel({
 
       {showRoom && talk.room ? (
         <div
-          className="fixed inset-0 z-50 flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-slate-100 text-slate-900 dark:bg-gradient-to-b dark:from-slate-950 dark:via-[#0a0f1f] dark:to-slate-950 dark:text-white"
+          className="fixed inset-0 z-50 flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-white"
           role="dialog"
           aria-label="Live Talk room"
         >
@@ -190,7 +190,7 @@ export default function GroupLiveTalkPanel({
             </div>
           ) : null}
           <header
-            className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200/70 bg-white/90 px-3 py-2 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/90 sm:gap-3 sm:px-4 sm:py-2.5"
+            className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200/60 bg-white px-3 py-2 dark:border-white/10 dark:bg-slate-950 sm:px-4 sm:py-2.5"
             style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top, 0px))" }}
           >
             <div className="min-w-0 flex-1">

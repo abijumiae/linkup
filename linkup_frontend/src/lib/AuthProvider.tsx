@@ -14,6 +14,7 @@ import {
   getCurrentUser,
   getToken,
   logout as clearAuthStorage,
+  refreshAccessToken,
 } from "./auth";
 import { disconnectSocket } from "./socket";
 import { notifyLogout } from "./presence";
@@ -39,9 +40,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return null;
     }
 
+    await refreshAccessToken();
     const currentUser = await fetchMe();
-    setUser(currentUser);
-    return currentUser;
+    const resolvedUser = currentUser ?? getCurrentUser();
+    setUser(resolvedUser);
+    return resolvedUser;
   }, []);
 
   useEffect(() => {

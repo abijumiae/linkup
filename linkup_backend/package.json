@@ -27,6 +27,7 @@
     "db:check": "node scripts/check-database.mjs",
     "verify:live-talk": "bash scripts/verify-live-talk.sh http://localhost:3000",
     "verify:live-talk:prod": "bash scripts/verify-live-talk.sh https://api.thelinkupzone.com",
+    "verify:production": "bash scripts/verify-production.sh",
     "postinstall": "prisma generate"
   },
   "dependencies": {

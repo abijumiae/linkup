@@ -39,23 +39,78 @@ export class PrismaService
 
     const pool = new Pool({
       connectionString: normalizeDatabaseUrl(connectionString),
-      connectionTimeoutMillis: 10_000,
+      connectionTimeoutMillis: 20_000,
       idleTimeoutMillis: 30_000,
-      max: 5,
+      keepAlive: true,
+      max: 10,
     });
     const adapter = new PrismaPg(pool);
     super({ adapter });
     this.pool = pool;
+
+    this.pool.on('error', (error) => {
+      this.logger.error(`PostgreSQL pool error: ${error.message}`);
+    });
   }
 
   async onModuleInit(): Promise<void> {
+    const maxAttempts = 5;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await this.$connect();
+        await this.$queryRaw`SELECT 1`;
+        this.logger.log('Database connected');
+        return;
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : String(error);
+        this.logger.warn(
+          `Database connection attempt ${attempt}/${maxAttempts} failed: ${message}`,
+        );
+
+        if (attempt === maxAttempts) {
+          this.logger.error(
+            'Database unavailable after retries — API will start in degraded mode',
+          );
+          return;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 2_000 * attempt));
+      }
+    }
+  }
+
+  async ensureConnection(): Promise<boolean> {
     try {
-      await this.$connect();
-      this.logger.log('Database connected');
-    } catch {
-      this.logger.warn(
-        'Database connection failed — check DATABASE_URL and run migrations',
-      );
+      await Promise.race([
+        this.$queryRaw`SELECT 1`,
+        new Promise<never>((_, reject) => {
+          setTimeout(
+            () => reject(new Error('Database health check timed out')),
+            8_000,
+          );
+        }),
+      ]);
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Database ping failed (${message}), reconnecting...`);
+
+      try {
+        await this.$disconnect();
+        await this.$connect();
+        await this.$queryRaw`SELECT 1`;
+        this.logger.log('Database reconnected');
+        return true;
+      } catch (reconnectError) {
+        const reconnectMessage =
+          reconnectError instanceof Error
+            ? reconnectError.message
+            : String(reconnectError);
+        this.logger.error(`Database reconnect failed: ${reconnectMessage}`);
+        return false;
+      }
     }
   }
 

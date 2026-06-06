@@ -2,7 +2,7 @@ import {
   apiRequest,
   ApiError,
   extractErrorMessage,
-  getApiBaseUrl,
+  buildApiRequestUrl,
   resolveMediaUrl,
 } from "./api";
 import { clearAuth, getToken } from "./auth";
@@ -163,8 +163,6 @@ type UploadVoiceResult = {
 
 export async function uploadVoiceNote(file: File): Promise<UploadVoiceResult> {
   const token = getToken();
-  const apiUrl = getApiBaseUrl();
-
   if (!token) {
     throw new ApiError("Not authenticated", 401);
   }
@@ -177,7 +175,7 @@ export async function uploadVoiceNote(file: File): Promise<UploadVoiceResult> {
   formData.append("file", file, file.name || `voice-${Date.now()}.webm`);
 
   // Production + local: always POST /messages/upload-audio (never /uploads).
-  const response = await fetch(`${apiUrl}/messages/upload-audio`, {
+  const response = await fetch(buildApiRequestUrl("/messages/upload-audio"), {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -237,7 +235,6 @@ export async function sendVoiceMessageByUrl(
   }
 
   const token = getToken();
-  const apiUrl = getApiBaseUrl();
 
   if (!token) {
     throw new ApiError("Not authenticated", 401);
@@ -254,14 +251,17 @@ export async function sendVoiceMessageByUrl(
     requestBody.content = payload.content.trim();
   }
 
-  const response = await fetch(`${apiUrl}/messages/${encodeURIComponent(receiverId)}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
+  const response = await fetch(
+    buildApiRequestUrl(`/messages/${encodeURIComponent(receiverId)}`),
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestBody),
     },
-    body: JSON.stringify(requestBody),
-  });
+  );
 
   const responseText = await response.text();
   const responseBody = parseJsonBody(responseText);

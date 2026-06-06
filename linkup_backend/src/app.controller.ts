@@ -19,29 +19,19 @@ export class AppController {
   @SkipThrottle()
   @Get('health')
   async health() {
-    const timeoutMs = 5_000;
+    return this.buildHealthResponse();
+  }
 
-    try {
-      await Promise.race([
-        this.prisma.$queryRaw`SELECT 1`,
-        new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('Database health check timed out')), timeoutMs);
-        }),
-      ]);
+  @SkipThrottle()
+  @Get('api/health')
+  async apiHealth() {
+    return this.buildHealthResponse();
+  }
 
-      return {
-        status: 'ok',
-        service: 'linkup-backend',
-        database: 'connected',
-        realtime: 'socket.io',
-        socketPath: '/socket.io',
-        features: {
-          liveTalk: true,
-          hubAdmins: true,
-        },
-        time: new Date().toISOString(),
-      };
-    } catch {
+  private async buildHealthResponse() {
+    const databaseConnected = await this.prisma.ensureConnection();
+
+    if (!databaseConnected) {
       throw new ServiceUnavailableException({
         status: 'degraded',
         service: 'linkup-backend',
@@ -49,5 +39,18 @@ export class AppController {
         time: new Date().toISOString(),
       });
     }
+
+    return {
+      status: 'ok',
+      service: 'linkup-backend',
+      database: 'connected',
+      realtime: 'socket.io',
+      socketPath: '/socket.io',
+      features: {
+        liveTalk: true,
+        hubAdmins: true,
+      },
+      time: new Date().toISOString(),
+    };
   }
 }

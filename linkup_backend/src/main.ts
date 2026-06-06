@@ -8,9 +8,11 @@ import helmet from 'helmet';
 import { join } from 'path';
 import { AppModule } from './app.module';
 import { isOriginAllowed } from './common/cors.config';
+import { validateProductionEnv } from './common/validate-production-env';
 import { SocketIoAdapter } from './chat/socket-io.adapter';
 
 async function bootstrap() {
+  validateProductionEnv();
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   const socketAdapter = new SocketIoAdapter(app);

@@ -248,6 +248,21 @@ export class AuthService {
     return { ok: true };
   }
 
+  async refreshSession(user: { id: string; email: string }) {
+    const freshUser = await this.usersService.findById(user.id);
+
+    if (!freshUser) {
+      throw new UnauthorizedException('Session expired');
+    }
+
+    const accessToken = await this.createAccessToken(freshUser);
+
+    return {
+      accessToken,
+      user: this.usersService.sanitize(freshUser),
+    };
+  }
+
   async handleGoogleUser(profile: GoogleProfilePayload) {
     try {
       let user =

@@ -1,4 +1,4 @@
-import { ApiError, getApiBaseUrl } from "./api";
+import { ApiError, buildApiRequestUrl } from "./api";
 import { clearAuth, getToken } from "./auth";
 
 export type UploadMediaType = "image" | "video" | "audio";
@@ -131,7 +131,7 @@ export async function uploadFile(
   formData.append("file", file);
 
   if (!onProgress) {
-    const response = await fetch(`${getApiBaseUrl()}/uploads`, {
+    const response = await fetch(buildApiRequestUrl("/uploads"), {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -165,7 +165,7 @@ export async function uploadFile(
 
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `${getApiBaseUrl()}/uploads`);
+    xhr.open("POST", buildApiRequestUrl("/uploads"));
     xhr.setRequestHeader("Authorization", `Bearer ${token}`);
 
     xhr.upload.onprogress = (event) => {
