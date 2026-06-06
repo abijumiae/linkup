@@ -15,8 +15,8 @@ export default function RealtimeStatusBanner() {
       role="status"
     >
       {status === "reconnecting"
-        ? "Realtime reconnecting. Your actions will still save."
-        : "You are offline. Messages and posts still work — updates may be delayed."}
+        ? "Realtime reconnecting… Live updates resume shortly. Posts and messages still save."
+        : "Realtime offline. Posts and messages still work — live updates may be delayed."}
     </div>
   );
 }

@@ -31,8 +31,20 @@ export function getDirectApiBaseUrl(): string {
   return PRODUCTION_API_URL;
 }
 
-/** Direct backend URL — sockets, OAuth redirects, and media asset URLs. */
+/** Direct backend URL — OAuth redirects and media asset URLs. */
 export function getApiBaseUrl(): string {
+  return getDirectApiBaseUrl();
+}
+
+/**
+ * Socket.io must use same-origin in dev (Next.js rewrites /socket.io → backend).
+ * In production, connect directly to the API host (Vercel cannot proxy WebSockets).
+ */
+export function getSocketBaseUrl(): string {
+  if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+    return window.location.origin;
+  }
+
   return getDirectApiBaseUrl();
 }
 

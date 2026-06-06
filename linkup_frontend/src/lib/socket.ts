@@ -1,7 +1,7 @@
 "use client";
 
 import { io, Socket } from "socket.io-client";
-import { getApiBaseUrl } from "./api";
+import { getSocketBaseUrl } from "./api";
 import { getToken } from "./auth";
 
 let socket: Socket | null = null;
@@ -33,6 +33,7 @@ function detachStatusListeners(activeSocket: Socket) {
   activeSocket.off("reconnect_attempt");
   activeSocket.off("reconnect");
   activeSocket.off("connect_error");
+  activeSocket.off("auth_error");
 }
 
 function attachStatusListeners(activeSocket: Socket) {
@@ -58,7 +59,11 @@ function attachStatusListeners(activeSocket: Socket) {
     if (process.env.NODE_ENV === "development") {
       console.log("Socket disconnected:", reason);
     }
-    notifyStatus("offline");
+    if (reason === "io client disconnect") {
+      notifyStatus("offline");
+      return;
+    }
+    notifyStatus("reconnecting");
   });
 
   activeSocket.on("reconnect_attempt", () => {
@@ -74,6 +79,12 @@ function attachStatusListeners(activeSocket: Socket) {
     if (!activeSocket.connected) {
       notifyStatus("reconnecting");
     }
+  });
+
+  activeSocket.on("auth_error", () => {
+    activeSocket.io.opts.reconnection = false;
+    notifyStatus("offline");
+    activeSocket.disconnect();
   });
 }
 
@@ -237,9 +248,9 @@ export function connectSocket(token?: string | null): Socket | null {
     return null;
   }
 
-  const apiUrl = getApiBaseUrl();
+  const socketUrl = getSocketBaseUrl();
   if (process.env.NODE_ENV === "development") {
-    console.log("Socket connecting to:", apiUrl);
+    console.log("Socket connecting to:", socketUrl);
   }
 
   const existingToken = (socket?.auth as { token?: string } | undefined)?.token;
@@ -247,20 +258,30 @@ export function connectSocket(token?: string | null): Socket | null {
     return socket;
   }
 
+  if (socket && existingToken === authToken) {
+    socket.auth = { token: authToken };
+    if (!socket.connected) {
+      socket.connect();
+    }
+    attachStatusListeners(socket);
+    notifyStatus(socket.connected ? "connected" : "reconnecting");
+    return socket;
+  }
+
   if (socket) {
     teardownSocket();
   }
 
-  socket = io(apiUrl, {
+  socket = io(socketUrl, {
     path: "/socket.io",
     auth: { token: authToken },
     transports: ["websocket", "polling"],
     autoConnect: true,
     reconnection: true,
-    reconnectionAttempts: 30,
+    reconnectionAttempts: Infinity,
     reconnectionDelay: 1000,
-    reconnectionDelayMax: 5000,
-    timeout: 20000,
+    reconnectionDelayMax: 8000,
+    timeout: process.env.NODE_ENV === "production" ? 45_000 : 20_000,
     withCredentials: true,
   });
 
@@ -295,6 +316,11 @@ export function isSocketConnected(): boolean {
 export function disconnectSocket() {
   teardownSocket();
   notifyStatus("offline");
+}
+
+/** Reconnect with the latest JWT (e.g. after token refresh). */
+export function reconnectSocket(): Socket | null {
+  return connectSocket(getToken());
 }
 
 /** @deprecated Use connectSocket */

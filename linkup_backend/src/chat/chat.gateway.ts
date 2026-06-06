@@ -107,6 +107,7 @@ export class ChatGateway
       this.logger.log(`Socket connected userId=${user.id} socketId=${client.id}`);
     } catch {
       this.logger.warn('Socket auth failed — connection rejected');
+      client.emit('auth_error', { message: 'Session expired or invalid' });
       client.disconnect(true);
     }
   }

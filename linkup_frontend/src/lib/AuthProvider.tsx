@@ -16,7 +16,7 @@ import {
   logout as clearAuthStorage,
   refreshAccessToken,
 } from "./auth";
-import { disconnectSocket } from "./socket";
+import { disconnectSocket, reconnectSocket } from "./socket";
 import { notifyLogout } from "./presence";
 
 type AuthContextValue = {
@@ -41,6 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     await refreshAccessToken();
+    reconnectSocket();
     const currentUser = await fetchMe();
     const resolvedUser = currentUser ?? getCurrentUser();
     setUser(resolvedUser);

@@ -32,6 +32,15 @@ const nextConfig: NextConfig = {
         source: "/api/:path*",
         destination: `${apiUrl}/:path*`,
       },
+      // Dev: proxy WebSocket/polling so realtime works on LAN IP (not only localhost).
+      {
+        source: "/socket.io",
+        destination: `${apiUrl}/socket.io`,
+      },
+      {
+        source: "/socket.io/:path*",
+        destination: `${apiUrl}/socket.io/:path*`,
+      },
     ];
   },
 };
