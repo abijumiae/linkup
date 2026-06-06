@@ -1,4 +1,5 @@
 import { apiRequest, ApiError } from "./api";
+import { logLinkUpDiagnostic } from "./diagnostics";
 
 export type AccountType =
   | "PERSONAL"
@@ -164,6 +165,7 @@ export async function refreshAccessToken(): Promise<string | null> {
           Authorization: `Bearer ${token}`,
         },
         retries: 1,
+        timeoutMs: 12_000,
       },
     );
 
@@ -171,9 +173,12 @@ export async function refreshAccessToken(): Promise<string | null> {
     return data.accessToken;
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
+      logLinkUpDiagnostic("auth", "Refresh token rejected — clearing session");
       clearAuth();
+      return null;
     }
 
+    logLinkUpDiagnostic("auth", "Token refresh failed — keeping existing session", error);
     return null;
   }
 }
@@ -239,16 +244,19 @@ export async function fetchMe(): Promise<User | null> {
         Authorization: `Bearer ${token}`,
       },
       retries: 1,
+      timeoutMs: 12_000,
     });
 
     saveUser(data.user);
     return data.user;
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
+      logLinkUpDiagnostic("auth", "Session invalid — clearing credentials");
       clearAuth();
       return null;
     }
 
+    logLinkUpDiagnostic("auth", "Profile sync failed — using cached user", error);
     return getCurrentUser();
   }
 }

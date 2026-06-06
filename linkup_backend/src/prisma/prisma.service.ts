@@ -40,8 +40,9 @@ export class PrismaService
     const pool = new Pool({
       connectionString: normalizeDatabaseUrl(connectionString),
       connectionTimeoutMillis: 20_000,
-      idleTimeoutMillis: 30_000,
+      idleTimeoutMillis: 60_000,
       keepAlive: true,
+      min: 2,
       max: 10,
     });
     const adapter = new PrismaPg(pool);

@@ -5,6 +5,7 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
   ServiceUnavailableException,
   UnauthorizedException,
@@ -28,6 +29,7 @@ const VERIFICATION_EXPIRY_MINUTES = 30;
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   private readonly saltRounds = 10;
 
   constructor(
@@ -249,18 +251,33 @@ export class AuthService {
   }
 
   async refreshSession(user: { id: string; email: string }) {
-    const freshUser = await this.usersService.findById(user.id);
+    try {
+      const freshUser = await this.usersService.findById(user.id);
 
-    if (!freshUser) {
-      throw new UnauthorizedException('Session expired');
+      if (!freshUser) {
+        this.logger.warn(`Session refresh rejected — user not found (${user.id})`);
+        throw new UnauthorizedException('Session expired');
+      }
+
+      const accessToken = await this.createAccessToken(freshUser);
+
+      return {
+        accessToken,
+        user: this.usersService.sanitize(freshUser),
+      };
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+
+      this.logger.error(
+        `Session refresh failed for ${user.id}`,
+        error instanceof Error ? error.message : error,
+      );
+      throw new InternalServerErrorException(
+        'Unable to refresh session. Please try again.',
+      );
     }
-
-    const accessToken = await this.createAccessToken(freshUser);
-
-    return {
-      accessToken,
-      user: this.usersService.sanitize(freshUser),
-    };
   }
 
   async handleGoogleUser(profile: GoogleProfilePayload) {

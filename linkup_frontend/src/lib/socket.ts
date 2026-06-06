@@ -2,15 +2,17 @@
 
 import { io, Socket } from "socket.io-client";
 import { getSocketBaseUrl } from "./api";
+import { logLinkUpDiagnostic } from "./diagnostics";
 import { getToken } from "./auth";
 
 let socket: Socket | null = null;
 let statusSocket: Socket | null = null;
-let lastConnectErrorLogAt = 0;
+let reconnectAttempt = 0;
 
 export type SocketConnectionStatus = "connected" | "reconnecting" | "offline";
 
 const statusListeners = new Set<(status: SocketConnectionStatus) => void>();
+const attemptListeners = new Set<(attempt: number) => void>();
 let currentStatus: SocketConnectionStatus = "offline";
 
 function notifyStatus(status: SocketConnectionStatus) {
@@ -18,13 +20,9 @@ function notifyStatus(status: SocketConnectionStatus) {
   statusListeners.forEach((listener) => listener(status));
 }
 
-function logConnectError(message: string) {
-  const now = Date.now();
-  if (now - lastConnectErrorLogAt < 10_000) {
-    return;
-  }
-  lastConnectErrorLogAt = now;
-  console.warn("Socket connect_error:", message);
+function notifyReconnectAttempt(attempt: number) {
+  reconnectAttempt = attempt;
+  attemptListeners.forEach((listener) => listener(attempt));
 }
 
 function detachStatusListeners(activeSocket: Socket) {
@@ -48,7 +46,8 @@ function attachStatusListeners(activeSocket: Socket) {
   statusSocket = activeSocket;
 
   activeSocket.on("connect", () => {
-    lastConnectErrorLogAt = 0;
+    reconnectAttempt = 0;
+    notifyReconnectAttempt(0);
     if (process.env.NODE_ENV === "development") {
       console.log("Socket connected:", activeSocket.id);
     }
@@ -56,9 +55,7 @@ function attachStatusListeners(activeSocket: Socket) {
   });
 
   activeSocket.on("disconnect", (reason) => {
-    if (process.env.NODE_ENV === "development") {
-      console.log("Socket disconnected:", reason);
-    }
+    logLinkUpDiagnostic("socket", `Disconnected (${reason})`);
     if (reason === "io client disconnect") {
       notifyStatus("offline");
       return;
@@ -66,22 +63,31 @@ function attachStatusListeners(activeSocket: Socket) {
     notifyStatus("reconnecting");
   });
 
-  activeSocket.on("reconnect_attempt", () => {
+  activeSocket.on("reconnect_attempt", (attempt) => {
+    notifyReconnectAttempt(attempt);
     notifyStatus("reconnecting");
+    logLinkUpDiagnostic("socket", `Reconnect attempt ${attempt}`);
   });
 
-  activeSocket.on("reconnect", () => {
+  activeSocket.on("reconnect", (attempt) => {
+    reconnectAttempt = 0;
+    notifyReconnectAttempt(0);
+    logLinkUpDiagnostic("socket", `Reconnected after ${attempt} attempts`);
     notifyStatus("connected");
   });
 
   activeSocket.on("connect_error", (err: Error) => {
-    logConnectError(err.message);
+    logLinkUpDiagnostic("socket", `Connect error: ${err.message}`);
     if (!activeSocket.connected) {
       notifyStatus("reconnecting");
     }
   });
 
-  activeSocket.on("auth_error", () => {
+  activeSocket.on("auth_error", (payload: { message?: string }) => {
+    logLinkUpDiagnostic(
+      "socket",
+      payload?.message ?? "Socket authentication failed",
+    );
     activeSocket.io.opts.reconnection = false;
     notifyStatus("offline");
     activeSocket.disconnect();
@@ -260,6 +266,7 @@ export function connectSocket(token?: string | null): Socket | null {
 
   if (socket && existingToken === authToken) {
     socket.auth = { token: authToken };
+    socket.io.opts.reconnection = true;
     if (!socket.connected) {
       socket.connect();
     }
@@ -279,8 +286,9 @@ export function connectSocket(token?: string | null): Socket | null {
     autoConnect: true,
     reconnection: true,
     reconnectionAttempts: Infinity,
-    reconnectionDelay: 1000,
-    reconnectionDelayMax: 8000,
+    reconnectionDelay: 1_000,
+    reconnectionDelayMax: 30_000,
+    randomizationFactor: 0.4,
     timeout: process.env.NODE_ENV === "production" ? 45_000 : 20_000,
     withCredentials: true,
   });
@@ -299,6 +307,10 @@ export function getSocketStatus(): SocketConnectionStatus {
   return currentStatus;
 }
 
+export function getSocketReconnectAttempt(): number {
+  return reconnectAttempt;
+}
+
 export function subscribeSocketStatus(
   listener: (status: SocketConnectionStatus) => void,
 ): () => void {
@@ -309,12 +321,24 @@ export function subscribeSocketStatus(
   };
 }
 
+export function subscribeSocketReconnectAttempt(
+  listener: (attempt: number) => void,
+): () => void {
+  attemptListeners.add(listener);
+  listener(reconnectAttempt);
+  return () => {
+    attemptListeners.delete(listener);
+  };
+}
+
 export function isSocketConnected(): boolean {
   return Boolean(socket?.connected);
 }
 
 export function disconnectSocket() {
   teardownSocket();
+  reconnectAttempt = 0;
+  notifyReconnectAttempt(0);
   notifyStatus("offline");
 }
 

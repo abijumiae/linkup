@@ -14,32 +14,36 @@ import {
   connectSocket,
   disconnectSocket,
   getSocket,
+  getSocketReconnectAttempt,
   SocketConnectionStatus,
+  subscribeSocketReconnectAttempt,
   subscribeSocketStatus,
 } from "@/src/lib/socket";
 
 type SocketContextValue = {
   socket: Socket | null;
   status: SocketConnectionStatus;
+  reconnectAttempt: number;
   isConnected: boolean;
 };
 
 const SocketContext = createContext<SocketContextValue | null>(null);
 
 export function SocketProvider({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [status, setStatus] = useState<SocketConnectionStatus>("offline");
+  const [reconnectAttempt, setReconnectAttempt] = useState(0);
 
   useEffect(() => {
     return subscribeSocketStatus(setStatus);
   }, []);
 
   useEffect(() => {
-    if (isLoading) {
-      return;
-    }
+    return subscribeSocketReconnectAttempt(setReconnectAttempt);
+  }, []);
 
+  useEffect(() => {
     if (!isAuthenticated || !getToken()) {
       disconnectSocket();
       setSocket(null);
@@ -48,19 +52,16 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
     const activeSocket = connectSocket();
     setSocket(activeSocket);
-
-    return () => {
-      // Keep the shared socket alive for the app session; auth logout disconnects explicitly.
-    };
-  }, [isAuthenticated, isLoading]);
+  }, [isAuthenticated]);
 
   const value = useMemo(
     () => ({
       socket: socket ?? getSocket(),
       status,
+      reconnectAttempt: reconnectAttempt || getSocketReconnectAttempt(),
       isConnected: status === "connected",
     }),
-    [socket, status],
+    [socket, status, reconnectAttempt],
   );
 
   return (

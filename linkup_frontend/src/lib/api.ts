@@ -1,3 +1,5 @@
+import { logLinkUpDiagnostic } from "./diagnostics";
+
 const PRODUCTION_API_URL = "https://api.thelinkupzone.com";
 const LOCAL_API_URL = "http://localhost:3000";
 
@@ -235,6 +237,16 @@ export async function apiRequest<T>(
       ) {
         await sleep(1_500 * (attempt + 1));
         continue;
+      }
+
+      if (attempt >= retries) {
+        logLinkUpDiagnostic(
+          "api",
+          `Request failed for ${path}`,
+          error instanceof ApiError
+            ? { status: error.status, message: error.message }
+            : error,
+        );
       }
 
       throw error;
