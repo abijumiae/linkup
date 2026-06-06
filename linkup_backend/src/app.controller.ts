@@ -50,7 +50,7 @@ export class AppController {
       database: 'connected',
       realtime: this.realtimeEmitter.isReady() ? 'socket.io' : 'starting',
       socketPath: '/socket.io',
-      socketPingIntervalMs: 30_000,
+      socketPingIntervalMs: 25_000,
       features: {
         liveTalk: true,
         hubAdmins: true,

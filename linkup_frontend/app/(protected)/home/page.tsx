@@ -20,6 +20,8 @@ import { homePosts } from "../../data/linkupData";
 import { fetchConnectionSuggestionsSafe, fetchMyConnections } from "../../../src/lib/connections";
 import { getLocalProfilePrefs, markDailySparkComplete } from "../../../src/lib/linkupFeatures";
 import { useAuth } from "../../../src/lib/AuthProvider";
+import { subscribeRealtimeFallbackSync } from "../../../src/lib/realtimeFallback";
+import { isSocketConnected } from "../../../src/lib/socket";
 import { fetchEvents } from "../../../src/lib/events";
 import { fetchGroups } from "../../../src/lib/groups";
 import { fetchJobs } from "../../../src/lib/jobs";
@@ -314,6 +316,39 @@ export default function HomeDashboardPage() {
       cancelled = true;
       window.clearTimeout(deferSecondary);
     };
+  }, [authLoading]);
+
+  useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
+    return subscribeRealtimeFallbackSync(() => {
+      if (isSocketConnected()) {
+        return;
+      }
+
+      void fetchFeed(1)
+        .then((data) => {
+          setPosts((current) => {
+            const incoming = data.items.map(mapPostToFeedPost);
+            const incomingIds = new Set(incoming.map((post) => post.id));
+            const kept = current.filter(
+              (post) => post.isStatic || incomingIds.has(post.id),
+            );
+            const keptIds = new Set(kept.map((post) => post.id));
+            const novel = incoming.filter((post) => !keptIds.has(post.id));
+            if (novel.length === 0) {
+              return current;
+            }
+            return [...novel, ...kept.filter((post) => !post.isStatic)];
+          });
+          setFeedHasMore(data.hasMore);
+        })
+        .catch(() => {
+          // Silent fallback — primary path is still the open socket.
+        });
+    });
   }, [authLoading]);
 
   async function loadMoreFeed() {

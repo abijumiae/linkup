@@ -3,14 +3,36 @@
 import { checkApiHealth } from "./api";
 import { logLinkUpDiagnostic } from "./diagnostics";
 import { getToken, refreshAccessToken } from "./auth";
-import { getSocketStatus, reconnectSocket } from "./socket";
+import {
+  getSocketStatus,
+  isSocketConnected,
+  reconnectSocket,
+} from "./socket";
 
+const SOCKET_WATCH_MS = 25_000;
 const HEALTH_INTERVAL_MS = 5 * 60 * 1000;
 const TOKEN_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
+let socketWatchTimer: number | null = null;
 let healthTimer: number | null = null;
 let tokenTimer: number | null = null;
 let started = false;
+
+async function ensureSocketConnected(): Promise<void> {
+  if (!getToken()) {
+    return;
+  }
+
+  if (isSocketConnected()) {
+    return;
+  }
+
+  logLinkUpDiagnostic(
+    "socket",
+    `Watchdog reconnect (status=${getSocketStatus()})`,
+  );
+  reconnectSocket();
+}
 
 async function runHealthCheck(): Promise<void> {
   const ok = await checkApiHealth();
@@ -19,11 +41,7 @@ async function runHealthCheck(): Promise<void> {
     return;
   }
 
-  const socketStatus = getSocketStatus();
-  if (getToken() && socketStatus !== "connected") {
-    logLinkUpDiagnostic("socket", `Socket status is ${socketStatus} — reconnecting`);
-    reconnectSocket();
-  }
+  await ensureSocketConnected();
 }
 
 async function runTokenRefresh(): Promise<void> {
@@ -63,6 +81,11 @@ export function startSessionHealthMonitor(): void {
   document.addEventListener("visibilitychange", onVisible);
 
   void runHealthCheck();
+  void ensureSocketConnected();
+
+  socketWatchTimer = window.setInterval(() => {
+    void ensureSocketConnected();
+  }, SOCKET_WATCH_MS);
 
   healthTimer = window.setInterval(() => {
     void runHealthCheck();
@@ -74,6 +97,11 @@ export function startSessionHealthMonitor(): void {
 }
 
 export function stopSessionHealthMonitor(): void {
+  if (socketWatchTimer) {
+    clearInterval(socketWatchTimer);
+    socketWatchTimer = null;
+  }
+
   if (healthTimer) {
     clearInterval(healthTimer);
     healthTimer = null;

@@ -15,6 +15,8 @@ import {
   disconnectSocket,
   getSocket,
   getSocketReconnectAttempt,
+  isSocketConnected,
+  reconnectSocket,
   SocketConnectionStatus,
   subscribeSocketReconnectAttempt,
   subscribeSocketStatus,
@@ -28,6 +30,8 @@ type SocketContextValue = {
 };
 
 const SocketContext = createContext<SocketContextValue | null>(null);
+
+const SOCKET_KEEPALIVE_MS = 25_000;
 
 export function SocketProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -44,14 +48,27 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated || !getToken()) {
+    const token = getToken();
+    if (!isAuthenticated || !token) {
       disconnectSocket();
       setSocket(null);
       return;
     }
 
-    const activeSocket = connectSocket();
+    const activeSocket = connectSocket(token);
     setSocket(activeSocket);
+
+    const keepAlive = window.setInterval(() => {
+      if (!getToken()) {
+        return;
+      }
+
+      if (!isSocketConnected()) {
+        reconnectSocket();
+      }
+    }, SOCKET_KEEPALIVE_MS);
+
+    return () => window.clearInterval(keepAlive);
   }, [isAuthenticated]);
 
   const value = useMemo(

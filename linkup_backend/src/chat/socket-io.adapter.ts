@@ -26,7 +26,7 @@ export class SocketIoAdapter extends IoAdapter {
       },
       transports: ['websocket', 'polling'] as ('websocket' | 'polling')[],
       allowEIO3: true,
-      pingInterval: 30_000,
+      pingInterval: 25_000,
       pingTimeout: 45_000,
       connectTimeout: 45_000,
       upgradeTimeout: 30_000,

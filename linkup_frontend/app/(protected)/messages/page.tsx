@@ -501,7 +501,7 @@ export default function MessagesPage() {
     }
 
     let cancelled = false;
-    const pollIntervalMs = 4000;
+    const pollIntervalMs = 10_000;
 
     const pollMessages = async () => {
       if (cancelled || document.hidden) {

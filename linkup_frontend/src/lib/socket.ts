@@ -3,13 +3,16 @@
 import { io, Socket } from "socket.io-client";
 import { getSocketBaseUrl } from "./api";
 import { logLinkUpDiagnostic } from "./diagnostics";
-import { getToken } from "./auth";
+import { getToken, refreshAccessToken } from "./auth";
 
 let socket: Socket | null = null;
 let statusSocket: Socket | null = null;
 let reconnectAttempt = 0;
 let heartbeatTimer: number | null = null;
 let loggedSocketUrl = false;
+let authRetryInFlight = false;
+
+const HEARTBEAT_MS = 25_000;
 
 const connectHandlers = new Set<() => void>();
 
@@ -55,7 +58,7 @@ function startHeartbeat(activeSocket: Socket) {
     if (activeSocket.connected) {
       activeSocket.emit("client_ping");
     }
-  }, 30_000);
+  }, HEARTBEAT_MS);
 }
 
 function stopHeartbeat() {
@@ -140,11 +143,29 @@ function attachStatusListeners(activeSocket: Socket) {
   activeSocket.on("auth_error", (payload: { message?: string }) => {
     logLinkUpDiagnostic(
       "socket",
-      payload?.message ?? "Socket authentication failed",
+      payload?.message ?? "Socket authentication failed — refreshing session",
     );
-    activeSocket.io.opts.reconnection = false;
-    notifyStatus("offline");
-    activeSocket.disconnect();
+    notifyStatus("reconnecting");
+
+    if (authRetryInFlight) {
+      return;
+    }
+
+    authRetryInFlight = true;
+    void refreshAccessToken()
+      .then((token) => {
+        if (!token || !socket) {
+          notifyStatus("offline");
+          return;
+        }
+
+        socket.auth = { token };
+        socket.io.opts.reconnection = true;
+        socket.connect();
+      })
+      .finally(() => {
+        authRetryInFlight = false;
+      });
   });
 }
 
@@ -334,13 +355,15 @@ export function connectSocket(token?: string | null): Socket | null {
       socket.connect();
     }
     attachStatusListeners(socket);
-    notifyStatus(socket.connected ? "connected" : "offline");
+    notifyStatus(socket.connected ? "connected" : "reconnecting");
     return socket;
   }
 
   if (socket) {
     teardownSocket();
   }
+
+  notifyStatus("reconnecting");
 
   socket = io(socketUrl, {
     path: "/socket.io",
@@ -357,7 +380,6 @@ export function connectSocket(token?: string | null): Socket | null {
   });
 
   attachStatusListeners(socket);
-  notifyStatus(socket.connected ? "connected" : "offline");
 
   return socket;
 }

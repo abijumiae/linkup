@@ -20,6 +20,7 @@ import {
 } from "./browserNotifications";
 import { fetchUnreadCount, Notification } from "./notifications";
 import { useSocket } from "@/src/components/SocketProvider";
+import { subscribeRealtimeFallbackSync } from "./realtimeFallback";
 import AlertToast from "@/app/components/AlertToast";
 
 type NotificationsContextValue = {
@@ -40,7 +41,7 @@ export function NotificationsProvider({
   children: React.ReactNode;
 }) {
   const { isAuthenticated } = useAuth();
-  const { socket } = useSocket();
+  const { socket, isConnected } = useSocket();
   const activeChat = useOptionalActiveChat();
   const pathname = usePathname();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -113,6 +114,16 @@ export function NotificationsProvider({
   useEffect(() => {
     void refreshUnreadCount();
   }, [refreshUnreadCount]);
+
+  useEffect(() => {
+    if (isConnected) {
+      return;
+    }
+
+    return subscribeRealtimeFallbackSync(() => {
+      void refreshUnreadCount();
+    });
+  }, [isConnected, refreshUnreadCount]);
 
   useEffect(() => {
     if (!socket) {

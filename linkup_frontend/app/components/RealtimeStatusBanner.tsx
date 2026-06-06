@@ -4,41 +4,38 @@ import { useEffect, useMemo, useState } from "react";
 import { Wifi, WifiOff } from "lucide-react";
 import { useSocket } from "@/src/components/SocketProvider";
 
-const GRACE_PERIOD_MS = 3_000;
+/** Wait before showing any warning — silent retry happens in the background. */
+const BANNER_DELAY_MS = 20_000;
 
 export default function RealtimeStatusBanner() {
   const { status, isConnected, reconnectAttempt } = useSocket();
-  const [graceExpired, setGraceExpired] = useState(false);
+  const [showBanner, setShowBanner] = useState(false);
 
   useEffect(() => {
     if (isConnected) {
-      setGraceExpired(false);
+      setShowBanner(false);
       return;
     }
 
     const timer = window.setTimeout(() => {
-      setGraceExpired(true);
-    }, GRACE_PERIOD_MS);
+      setShowBanner(true);
+    }, BANNER_DELAY_MS);
 
     return () => window.clearTimeout(timer);
-  }, [isConnected, status]);
+  }, [isConnected, status, reconnectAttempt]);
 
   const message = useMemo(() => {
     if (status === "reconnecting") {
-      if (reconnectAttempt > 0) {
-        return `Reconnecting live updates (attempt ${reconnectAttempt})… Your posts and messages still save.`;
+      if (reconnectAttempt >= 3) {
+        return `Reconnecting live updates (attempt ${reconnectAttempt})… Posts and messages still save.`;
       }
-      return "Connecting live updates… Your posts and messages still save.";
+      return "Reconnecting live updates in the background…";
     }
 
-    return "Live updates paused. Posts and messages still work — refresh if this persists.";
+    return "Live updates paused. New posts and messages sync every 10 seconds.";
   }, [status, reconnectAttempt]);
 
-  if (isConnected) {
-    return null;
-  }
-
-  if (!graceExpired && status !== "offline" && reconnectAttempt === 0) {
+  if (isConnected || !showBanner) {
     return null;
   }
 
